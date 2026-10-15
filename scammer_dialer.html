@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scammer Dialer</title>
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.15.0/dist/livekit-client.umd.min.js"></script>
+<style>
+  :root { --bg:#101114; --fg:#f2f2f2; --mute:#8b8f98; --card:#1a1c21; --line:#2b2e36; --red:#e5484d; --green:#30a46c; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, sans-serif; display:grid; place-items:center; min-height:100vh; padding:16px; }
+  main { width:100%; max-width:420px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p.sub { margin:0 0 20px; color:var(--mute); font-size:14px; }
+  label { display:block; font-size:13px; color:var(--mute); margin:14px 0 4px; }
+  input { width:100%; padding:12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); font-size:16px; }
+  button { width:100%; margin-top:20px; padding:14px; border:0; border-radius:12px; font-size:17px; font-weight:600; background:var(--green); color:#fff; cursor:pointer; }
+  button.hang { background:var(--red); }
+  button:disabled { opacity:.5; cursor:default; }
+  #status { margin-top:16px; font-size:14px; color:var(--mute); min-height:20px; }
+  #meter { height:8px; background:var(--bg); border-radius:4px; margin-top:12px; overflow:hidden; }
+  #meter i { display:block; height:100%; width:0; background:var(--green); transition:width .08s; }
+  details { margin-top:18px; font-size:13px; color:var(--mute); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Scammer Dialer</h1>
+  <p class="sub">Join the Chaukanna room as the caller and speak into your headset.</p>
+
+  <label for="num">Spoofed number / label</label>
+  <input id="num" value="+91 9876543210 - CBI Officer" autocomplete="off">
+
+  <label for="room">Room</label>
+  <input id="room" value="chaukanna" autocomplete="off">
+
+  <button id="go">Call victim</button>
+  <div id="meter"><i></i></div>
+  <div id="status">Idle.</div>
+
+  <details>
+    <summary>Advanced (no token server)</summary>
+    <label for="url">LiveKit URL</label>
+    <input id="url" placeholder="wss://your-project.livekit.cloud">
+    <label for="tok">Access token</label>
+    <input id="tok" placeholder="paste a JWT to skip /token">
+  </details>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const status = t => $('status').textContent = t;
+let room = null;
+let meterTimer = null;
+
+async function getToken() {
+  if ($('tok').value.trim()) return { token: $('tok').value.trim(), url: $('url').value.trim() };
+  const phone = $('num').value.trim();
+  const q = new URLSearchParams({
+    room: $('room').value.trim(),
+    identity: 'caller-' + Math.random().toString(36).slice(2, 8),
+    name: phone,
+    phone,
+  });
+  const r = await fetch('/token?' + q);
+  if (!r.ok) throw new Error('token server returned ' + r.status + ' (run token_server.py and open this page from it)');
+  return r.json();
+}
+
+async function dial() {
+  $('go').disabled = true;
+  try {
+    status('Getting token…');
+    const { token, url } = await getToken();
+    if (!url) throw new Error('no LiveKit URL');
+    room = new LivekitClient.Room({ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true } });
+    room.on(LivekitClient.RoomEvent.Disconnected, hangup);
+    room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {   // victim's voice
+      if (track.kind === 'audio') document.body.appendChild(track.attach());
+    });
+    await room.connect(url, token);
+    await room.localParticipant.setMicrophoneEnabled(true);
+    $('go').textContent = 'Hang up';
+    $('go').classList.add('hang');
+    $('go').disabled = false;
+    $('go').onclick = hangup;
+    status('Connected as "' + $('num').value + '". Speak now.');
+    startMeter();
+  } catch (e) {
+    status('Failed: ' + e.message);
+    $('go').disabled = false;
+    if (room) { room.disconnect(); room = null; }
+  }
+}
+
+function startMeter() {
+  meterTimer = setInterval(() => {
+    const lvl = room && room.localParticipant ? room.localParticipant.audioLevel : 0;
+    $('meter').firstElementChild.style.width = Math.min(100, lvl * 160) + '%';
+  }, 80);
+}
+
+function hangup() {
+  clearInterval(meterTimer);
+  $('meter').firstElementChild.style.width = '0';
+  if (room) { room.disconnect(); room = null; }
+  $('go').textContent = 'Call victim';
+  $('go').classList.remove('hang');
+  $('go').disabled = false;
+  $('go').onclick = dial;
+  status('Call ended.');
+}
+
+$('go').onclick = dial;
+</script>
+</body>
+</html>
