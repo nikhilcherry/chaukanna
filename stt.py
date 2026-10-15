@@ -1,7 +1,9 @@
 """Speech-to-text engines. Each returns (text, language) where language is hi | kn | en."""
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 
 import httpx
 
@@ -27,11 +29,14 @@ class MockSTT:
 
     name = "mock"
 
-    def __init__(self, script: list[str] | None = None) -> None:
+    def __init__(self, script: list[str] | None = None, delay_ms: float | None = None) -> None:
         self.script = script or MOCK_SCRIPT
         self.i = 0
+        self.delay = (float(os.getenv("MOCK_STT_DELAY_MS", "0")) if delay_ms is None else delay_ms) / 1000
 
     async def transcribe(self, wav: bytes, pcm: bytes) -> tuple[str, str]:
+        if self.delay:
+            await asyncio.sleep(self.delay)                   # behave like a real network STT
         text = self.script[self.i % len(self.script)]
         self.i += 1
         return text, "en"

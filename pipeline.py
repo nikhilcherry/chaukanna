@@ -148,9 +148,31 @@ class CallState:
     ended: bool = False
     events: deque = field(default_factory=deque)
     sender: asyncio.Task | None = None
+    stats: list[dict] = field(default_factory=list)          # per transcribed chunk latencies
+    skipped: int = 0                                          # silent / empty chunks
+    stt_failures: int = 0
+    first_whisper_t: float | None = None                      # seconds into the call
 
     def rel(self, mono: float) -> float:
         return max(0.0, mono - self.started_mono)
+
+
+def _pct(xs: list[int], q: float) -> int:
+    xs = sorted(xs)
+    return xs[min(len(xs) - 1, int(round(q * (len(xs) - 1))))] if xs else 0
+
+
+def call_summary(st: CallState) -> dict:
+    s = st.stats
+    out = {"call_id": st.call_id, "duration_s": round(time.time() - st.started, 1), "chunks": len(s),
+           "skipped": st.skipped, "stt_failures": st.stt_failures, "peak_pressure": st.peak_pressure,
+           "first_whisper_s": round(st.first_whisper_t, 1) if st.first_whisper_t is not None else None}
+    for k in ("stt_ms", "classify_ms", "queue_ms", "e2e_ms"):
+        xs = [x[k] for x in s]
+        out[k] = {"p50": _pct(xs, .5), "p90": _pct(xs, .9), "max": max(xs) if xs else 0}
+    w = [x["e2e_ms"] for x in s if x["whisper"] != "none"]
+    out["whisper_e2e_ms"] = w
+    return out
 
 
 def fmt_t(t: float) -> str:
@@ -193,6 +215,13 @@ class Pipeline:
         dur = time.time() - st.started
         log.info("[%s] call ended after %.0fs, peak pressure %d, %d transcript lines",
                  st.call_id, dur, st.peak_pressure, len(st.transcript))
+        sm = call_summary(st)
+        log.info("[%s] latency summary: %d chunks (%d skipped, %d STT failures); STT p50 %d / p90 %d ms; "
+                 "classify p50 %d / p90 %d ms; speech-end -> victim p50 %d / p90 %d / max %d ms; "
+                 "first whisper %s s into the call", st.call_id, sm["chunks"], sm["skipped"], sm["stt_failures"],
+                 sm["stt_ms"]["p50"], sm["stt_ms"]["p90"], sm["classify_ms"]["p50"], sm["classify_ms"]["p90"],
+                 sm["e2e_ms"]["p50"], sm["e2e_ms"]["p90"], sm["e2e_ms"]["max"], sm["first_whisper_s"])
+        log.info("SUMMARY %s", json.dumps(sm))
         await self.publish({"type": "call_ended", "call_id": st.call_id, "ts": time.time(),
                             "peak_pressure": st.peak_pressure, "high_risk": st.peak_pressure >= 2,
                             "duration_seconds": round(dur, 1)})
@@ -209,16 +238,20 @@ class Pipeline:
             log.debug("classifier reset failed for %s: %s", call_id, e)
 
     # ---- one chunk ----------------------------------------------------------------------
-    async def process_chunk(self, st: CallState, speaker: str, pcm: bytes,
-                            t_start: float | None = None, audio_end: float | None = None) -> dict | None:
-        """t_start: seconds since call start where this audio begins; audio_end: monotonic time the
-        last sample of the chunk arrived (latency reference)."""
+    async def process_chunk(self, st: CallState, speaker: str, pcm: bytes, t_start: float | None = None,
+                            speech_end: float | None = None, cut_at: float | None = None) -> dict | None:
+        """t_start: seconds since call start where this audio begins. speech_end: monotonic time the
+        last voiced audio of the chunk was heard (latency is measured from here to the victim).
+        cut_at: monotonic time the chunk was cut (queue wait is measured from here)."""
         if st.ended:
             return None
-        audio_end = audio_end if audio_end is not None else time.monotonic()
+        t_proc = time.monotonic()
+        speech_end = speech_end if speech_end is not None else t_proc
+        cut_at = cut_at if cut_at is not None else t_proc
         if t_start is None:
-            t_start = max(0.0, st.rel(audio_end) - len(pcm) / 2 / SAMPLE_RATE)
+            t_start = max(0.0, st.rel(speech_end) - len(pcm) / 2 / SAMPLE_RATE)
         if rms(pcm) < self.cfg.silence_rms:
+            st.skipped += 1
             log.debug("%s/%s: silent chunk skipped", st.call_id, speaker)
             return None
         wav = pcm_to_wav(pcm)
@@ -226,21 +259,34 @@ class Pipeline:
             text, lang = await self.stt.transcribe(wav, pcm)
         except SarvamError as e:
             log.warning("STT failed: %s", e)
+            st.stt_failures += 1
             return None
+        t_stt = time.monotonic()
         if not text or st.ended:
+            st.skipped += 1
             return None
         entry = {"t": round(t_start, 2), "ts": round(st.started + t_start, 3), "speaker": speaker, "text": text}
         bisect.insort(st.transcript, entry, key=lambda e: e["t"])
         del st.transcript[:-300]
         verdict = self.merge(st, await self.classify(st, speaker, text, lang))
+        t_cls = time.monotonic()
         clip = self.decide_whisper(st, verdict)
         msg = self.verdict_msg(st, speaker, text, lang, verdict, clip)
-        msg["latency_ms"] = int((time.monotonic() - audio_end) * 1000)
-        if await self.publish(msg) and clip != "none":
+        lat = {"audio_ms": int(len(pcm) / 2 / SAMPLE_RATE * 1000), "queue_ms": int((t_proc - cut_at) * 1000),
+               "stt_ms": int((t_stt - t_proc) * 1000), "classify_ms": int((t_cls - t_stt) * 1000)}
+        lat["e2e_ms"] = int((time.monotonic() - speech_end) * 1000)
+        msg["latency_ms"], msg["latency"] = lat["e2e_ms"], lat
+        delivered = await self.publish(msg)
+        if delivered and clip != "none":
             st.delivered_whispers.add(clip)
         st.last_message = msg
-        log.info("[%s] %s: %r -> %s p=%d%s", st.call_id, speaker, text[:70], verdict["scam_type"],
-                 verdict["pressure"], f" WHISPER {clip}" if clip != "none" else "")
+        lat["publish_ms"] = int((time.monotonic() - speech_end) * 1000) - lat["e2e_ms"]
+        st.stats.append({**lat, "speaker": speaker, "whisper": clip, "t": t_start})
+        if clip != "none" and st.first_whisper_t is None:
+            st.first_whisper_t = st.rel(time.monotonic())
+        log.info("[%s] %s: %r -> %s p=%d%s  (stt %d ms, classify %d ms, speech-end->victim %d ms)",
+                 st.call_id, speaker, text[:70], verdict["scam_type"], verdict["pressure"],
+                 f" WHISPER {clip}" if clip != "none" else "", lat["stt_ms"], lat["classify_ms"], lat["e2e_ms"])
         ev = self.n8n_event_for(st, verdict)
         if ev:
             self.queue_event(st, ev)

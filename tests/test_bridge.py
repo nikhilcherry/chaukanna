@@ -8,14 +8,29 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import audio  # noqa: E402
 import bridge  # noqa: E402
 import pipeline  # noqa: E402
-from config import CHUNK_BYTES, Config, new_call_id  # noqa: E402
+from config import Config, new_call_id  # noqa: E402
 
 LOUD = b"\x05\x10" * 64000          # 4 s of non-silent PCM
+
+
+def speech_np(seconds, seed=0):
+    rng = np.random.default_rng(seed)
+    n = int(16000 * seconds)
+    t = np.arange(n) / 16000
+    return rng.normal(0, 3000, n) * (0.6 + 0.4 * np.sin(2 * np.pi * 4 * t))
+
+
+def speechlike(bursts, gap=0.7, seed=0):
+    parts = []
+    for i, b in enumerate(bursts):
+        parts += [speech_np(b, seed + i), np.zeros(int(16000 * gap))]
+    return np.clip(np.concatenate(parts), -32768, 32767).astype(np.int16).tobytes()
 
 
 def verdict(p=0, clip="none", otp=False, secrecy=False, scam="digital_arrest", **kw):
@@ -59,15 +74,35 @@ def cfg(**kw):
 
 
 class Audio(unittest.TestCase):
-    def test_chunker_exact_4s(self):
-        c = audio.Chunker()
-        self.assertEqual(CHUNK_BYTES, 128_000)
-        self.assertEqual(c.push(b"\x01\x00" * 40_000), [])
-        out = c.push(b"\x01\x00" * 40_000)
-        self.assertEqual([len(x) for x in out], [128_000])
-        self.assertEqual(len(c.buf), 32_000)
-        self.assertEqual(len(c.tail()), 32_000)   # a 1 s tail is flushed
-        self.assertIsNone(c.tail())
+    def test_pause_chunker_cuts_at_pauses(self):
+        pcm = speechlike([2.0, 1.0, 2.5], gap=0.6)                    # 2.0 | 1.0 (+0.6) 2.5
+        cs = audio.chunk_stream(pcm)
+        spans = [(round(c.start / 16000, 1), round(c.end / 16000, 1)) for c in cs]
+        self.assertEqual(len(cs), 3, spans)
+        self.assertAlmostEqual(cs[0].speech_end / 16000, 2.0, delta=0.05)
+        self.assertLess(cs[0].end / 16000, 2.4)                        # cut ~300 ms into the pause
+        self.assertAlmostEqual(cs[1].speech_end / 16000, 3.6, delta=0.05)  # pre-roll + 1.0 s + pause >= 1.5 s
+        self.assertLess(cs[1].end / 16000 - cs[1].speech_end / 16000, 0.35)
+
+    def test_pause_chunker_never_exceeds_max(self):
+        cs = audio.chunk_stream(speechlike([9.0], gap=0.5))
+        self.assertTrue(all(c.seconds <= 4.0 + 1e-6 for c in cs), [c.seconds for c in cs])
+        self.assertGreaterEqual(len(cs), 3)
+
+    def test_pause_chunker_skips_silence_and_short_tails(self):
+        ch = audio.PauseChunker()
+        self.assertEqual(ch.push(b"\x00\x00" * 16000 * 5), [])
+        self.assertLessEqual(len(ch.frames), 10)                      # only the pre-roll is kept
+        self.assertIsNone(ch.tail())
+        ch.push(speechlike([0.3], gap=0.0))
+        self.assertIsNone(ch.tail())                                  # < 0.5 s of audio: not worth STT
+
+    def test_pause_chunker_noisy_room_raises_threshold(self):
+        rng = np.random.default_rng(5)
+        noise = rng.normal(0, 300, 16000 * 4)
+        sig = np.concatenate([noise, noise[:16000 * 2] + speech_np(2.0), noise])
+        cs = audio.chunk_stream(np.clip(sig, -32768, 32767).astype(np.int16).tobytes())
+        self.assertEqual(len(cs), 1, [(c.start / 16000, c.end / 16000) for c in cs])
 
     def test_wav_header(self):
         wav = audio.pcm_to_wav(b"\x00\x00" * 16000)
@@ -324,7 +359,7 @@ class Consumer(unittest.IsolatedAsyncioTestCase):
             s.on_join(person("caller-a", "+919000000001"))
             c = bridge.TrackConsumer(s, None, person("caller-a"), "caller", "TR_1")
             w = asyncio.create_task(c._worker())
-            c.chunker.push(b"\x05\x10" * 24000)               # 1.5 s tail, never reaches a full chunk
+            c.chunker.push(speech_np(1.2).astype(np.int16).tobytes())   # mid-utterance: no pause yet
             await c.flush()
             w.cancel()
         self.assertEqual([m["type"] for m in s.sent].count("verdict"), 1)

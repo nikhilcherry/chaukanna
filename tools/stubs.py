@@ -31,7 +31,7 @@ INCIDENT_DELAY = 0.5
 
 def classify(body: dict) -> dict:
     with LOCK:
-        STATE["classify"].append(body)
+        STATE["classify"].append({**body, "_rx": time.time()})
         call = STATE["calls"].setdefault(body["call_id"], {"text": [], "peak": 0, "otp": False, "secrecy": False,
                                                            "clips": set()})
         call["text"].append(body.get("chunk_text", ""))

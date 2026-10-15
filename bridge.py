@@ -23,8 +23,8 @@ import httpx
 from dotenv import load_dotenv
 
 import tokens
-from audio import Chunker, load_wav_16k_mono
-from config import CHUNK_BYTES, CHUNK_SECONDS, DATA_TOPIC, GUARDIAN_IDENTITY, SAMPLE_RATE, Config, new_call_id
+from audio import Chunk, PauseChunker, chunk_stream, load_wav_16k_mono
+from config import DATA_TOPIC, GUARDIAN_IDENTITY, SAMPLE_RATE, Config, new_call_id
 from pipeline import CallState, Pipeline
 
 log = logging.getLogger("chaukanna.bridge")
@@ -51,20 +51,22 @@ class TrackConsumer:
     def __init__(self, session: "LiveSession", track, participant, speaker: str, sid: str) -> None:
         self.session, self.track, self.participant, self.speaker, self.sid = session, track, participant, speaker, sid
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=3)
-        self.chunker = Chunker()
+        self.chunker = PauseChunker(**session.cfg.chunker_kw())
         self.task: asyncio.Task | None = None
+        self.last_frame = time.monotonic()
 
-    def enqueue(self, pcm: bytes) -> None:
+    def enqueue(self, chunk: Chunk) -> None:
         st = self.session.call
         if st is None or st.ended:
             return                                            # no call in progress: nothing to judge
         now = time.monotonic()
-        t_start = max(0.0, st.rel(now) - len(pcm) / 2 / SAMPLE_RATE)
+        speech_end = now - self.chunker.lag_seconds(chunk.speech_end)
+        t_start = st.rel(now - self.chunker.lag_seconds(chunk.start))
         if self.queue.full():                                 # STT is behind: drop oldest, stay live
             self.queue.get_nowait()
             self.queue.task_done()
             log.warning("%s: STT behind, dropped a queued chunk", self.speaker)
-        self.queue.put_nowait((st, pcm, t_start, now))
+        self.queue.put_nowait((st, chunk.pcm, t_start, speech_end, now))
 
     async def flush(self, timeout: float = 15.0) -> None:
         """Send the buffered tail and wait until every queued chunk has been processed."""
@@ -79,24 +81,46 @@ class TrackConsumer:
     async def _worker(self) -> None:
         pipe = self.session.pipe
         while True:
-            st, pcm, t_start, audio_end = await self.queue.get()
+            st, pcm, t_start, speech_end, cut_at = await self.queue.get()
             try:
-                await pipe.process_chunk(st, self.speaker, pcm, t_start, audio_end)
+                await pipe.process_chunk(st, self.speaker, pcm, t_start, speech_end, cut_at)
             except Exception:
                 log.exception("chunk processing failed")
             finally:
                 self.queue.task_done()
 
+    def stop(self, why: str) -> None:
+        if self.task and not self.task.done():
+            log.info("stopping %s track (%s)", self.participant.identity, why)
+            self.session.stopping.add(self)                   # end_call waits for its last chunk
+            self.task.cancel()
+        if self.session.consumers.get(self.sid) is self:
+            self.session.consumers.pop(self.sid, None)
+
+    async def _idle_flush(self) -> None:
+        """A muted or stalled track stops sending frames: cut whatever speech is buffered."""
+        while True:
+            await asyncio.sleep(0.25)
+            if time.monotonic() - self.last_frame > 0.6 and self.chunker.frames:
+                tail = self.chunker.tail()
+                if tail:
+                    self.enqueue(tail)
+
     async def run(self) -> None:
         from livekit import rtc
         worker = asyncio.create_task(self._worker())
+        idle = asyncio.create_task(self._idle_flush())
         stream = rtc.AudioStream(self.track, sample_rate=SAMPLE_RATE, num_channels=1)
         log.info("subscribed to %s (%s)", self.participant.identity, self.speaker)
         try:
             async for ev in stream:
-                for chunk in self.chunker.push(ev.frame.data.tobytes()):
+                self.last_frame = time.monotonic()
+                pcm = ev.frame.data.tobytes()
+                self.session.on_audio(self.speaker, pcm)
+                for chunk in self.chunker.push(pcm):
                     self.enqueue(chunk)
         finally:
+            idle.cancel()
             try:
                 await self.flush()                            # never lose the last words of a track
             finally:
@@ -105,7 +129,9 @@ class TrackConsumer:
                     await asyncio.wait_for(stream.aclose(), 2)
                 except Exception:
                     pass
-                self.session.consumers.pop(self.sid, None)
+                if self.session.consumers.get(self.sid) is self:
+                    self.session.consumers.pop(self.sid, None)
+                self.session.stopping.discard(self)
                 log.info("track from %s ended", self.participant.identity)
 
 
@@ -122,12 +148,16 @@ class LiveSession:
         self.callers: dict[str, dict] = {}                    # identity -> {"phone", "label"}
         self.call: CallState | None = None
         self.consumers: dict[str, TrackConsumer] = {}
+        self.stopping: set[TrackConsumer] = set()             # cancelled, still flushing their tail
         self.pipe = Pipeline(cfg, http, self.publish, **pipe_kw)
         self.stop = asyncio.Event()
         self.stdout = False                                   # replay --no-livekit: print messages
         self._tasks: set[asyncio.Task] = set()
         self._end_task: asyncio.Task | None = None
         self._start_after_end = False
+
+    def on_audio(self, speaker: str, pcm: bytes) -> None:
+        """Every received frame, per leg (the recorder hooks in here)."""
 
     def spawn(self, coro) -> asyncio.Task:
         t = asyncio.create_task(coro)
@@ -231,7 +261,10 @@ class LiveSession:
             return
         st.ending = True
         log.info("[%s] ending call: %s", st.call_id, reason or "done")
+        stopping = [c.task for c in self.stopping if c.task]
         await asyncio.gather(*(c.flush() for c in list(self.consumers.values())), return_exceptions=True)
+        if stopping:                                          # tracks that just ended: their tail first
+            await asyncio.wait(stopping, timeout=15)
         if self.call is st:
             self.call = None
         await self.pipe.end_call(st)
@@ -275,6 +308,7 @@ class LiveSession:
             self._cancel_pending_end()
 
     def on_leave(self, p) -> None:
+        self._stop_tracks_of(p.identity)
         role = self.role_of(p)
         if role == "victim" and p.identity == self.victim:
             self.victim = None
@@ -300,6 +334,19 @@ class LiveSession:
             old.task.cancel()
         self.consumers[publication.sid] = c
         c.task = self.spawn(c.run())
+
+    def on_untrack(self, track, publication, participant) -> None:
+        """Stop reading a track the moment it is unsubscribed. The SDK does not always end the
+        AudioStream, and WebRTC can recycle the dead receiver for the next participant's track,
+        so a stale reader would hear the new caller and label them with the old speaker."""
+        c = self.consumers.get(publication.sid)
+        if c:
+            c.stop("unsubscribed")
+
+    def _stop_tracks_of(self, identity: str) -> None:
+        for c in list(self.consumers.values()):
+            if c.participant.identity == identity:
+                c.stop("participant left")
 
     def sync_presence(self, room) -> None:
         """After (re)connecting: adopt who is in the room now, forget who left while we were away."""
@@ -331,6 +378,7 @@ class LiveSession:
         room.on("reconnected", lambda: log.info("LiveKit reconnected"))
         if subscribe:
             room.on("track_subscribed", self.on_track)
+            room.on("track_unsubscribed", self.on_untrack)
         token = os.getenv("LIVEKIT_TOKEN") or guardian_token(self.cfg, self.identity)
         await asyncio.wait_for(room.connect(self.cfg.livekit_url, token,
                                             options=rtc.RoomOptions(auto_subscribe=subscribe)), 20)
@@ -388,20 +436,18 @@ class LiveSession:
 
 
 # --------------------------------------------------------------------------- replay mode
-def replay_chunks(args) -> list[tuple[float, str, float, bytes]]:
-    """(end_s, speaker, start_s, pcm) for each chunk of the replay file, in time order."""
+def replay_chunks(cfg: Config, args) -> list[tuple[float, str, float, float, bytes]]:
+    """(end_s, speaker, start_s, speech_end_s, pcm) per chunk, cut exactly as the live path would."""
     pcm = load_wav_16k_mono(args.replay_file)
-    pcm += b"\x00" * ((-len(pcm)) % CHUNK_BYTES)               # pad the tail to a full chunk
     out = []
-    for i, chunk in enumerate(Chunker().push(pcm)):
-        start = i * CHUNK_SECONDS
-        out.append((start + CHUNK_SECONDS, args.replay_speaker, float(start), chunk))
-    return out
+    for c in chunk_stream(pcm, **cfg.chunker_kw()):
+        out.append((c.end / SAMPLE_RATE, args.replay_speaker, c.start / SAMPLE_RATE, c.speech_end / SAMPLE_RATE, c.pcm))
+    return sorted(out, key=lambda x: x[0])
 
 
 async def run_replay(cfg: Config, http: httpx.AsyncClient, args) -> CallState:
     session = LiveSession(cfg, http, identity=GUARDIAN_IDENTITY + "-replay", manage_calls=False)
-    items = replay_chunks(args)
+    items = replay_chunks(cfg, args)
     log.info("replay: %d chunks from %s at %.1fx", len(items), args.replay_file, args.speed)
     hb = None
     if args.no_livekit:
@@ -425,9 +471,9 @@ async def run_replay(cfg: Config, http: httpx.AsyncClient, args) -> CallState:
 
     async def worker(q: asyncio.Queue, speaker: str) -> None:
         while True:
-            pcm, t_start, audio_end = await q.get()
+            pcm, t_start, speech_end, cut_at = await q.get()
             try:
-                await session.pipe.process_chunk(st, speaker, pcm, t_start, audio_end)
+                await session.pipe.process_chunk(st, speaker, pcm, t_start, speech_end, cut_at)
             except Exception:
                 log.exception("chunk processing failed")
             finally:
@@ -436,12 +482,12 @@ async def run_replay(cfg: Config, http: httpx.AsyncClient, args) -> CallState:
     workers = []
     t0 = time.monotonic()
     try:
-        for end_s, speaker, start_s, pcm in items:
+        for end_s, speaker, start_s, speech_end_s, pcm in items:
             await asyncio.sleep(max(0.0, t0 + end_s / args.speed - time.monotonic()))   # real-time pacing
             if speaker not in queues:
                 queues[speaker] = asyncio.Queue()
                 workers.append(asyncio.create_task(worker(queues[speaker], speaker)))
-            queues[speaker].put_nowait((pcm, start_s, time.monotonic()))
+            queues[speaker].put_nowait((pcm, start_s, t0 + speech_end_s / args.speed, time.monotonic()))
         for q in queues.values():
             await q.join()
         await session.end_call(st, "replay finished")

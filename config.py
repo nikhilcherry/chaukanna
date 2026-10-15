@@ -6,9 +6,6 @@ import uuid
 from dataclasses import dataclass
 
 SAMPLE_RATE = 16000
-CHUNK_SECONDS = 4
-CHUNK_BYTES = SAMPLE_RATE * CHUNK_SECONDS * 2          # int16 mono -> 128,000
-MIN_FLUSH_BYTES = SAMPLE_RATE * 2                      # flush a track tail only if >= 1 s
 DATA_TOPIC = "chaukanna.verdict"
 GUARDIAN_IDENTITY = "chaukanna-guardian"
 SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text"
@@ -46,6 +43,9 @@ class Config:
     call_end_grace: float = 6.0
     heartbeat_seconds: float = 5.0
     silence_rms: float = 120.0
+    chunk_min_s: float = 1.5
+    chunk_max_s: float = 4.0
+    pause_ms: int = 300
     mock_stt: bool = False
 
     @classmethod
@@ -69,7 +69,14 @@ class Config:
             call_end_grace=float(e("CALL_END_GRACE_SECONDS", "6")),
             heartbeat_seconds=float(e("HEARTBEAT_SECONDS", "5")),
             silence_rms=float(e("SILENCE_RMS", "120")),
+            chunk_min_s=float(e("CHUNK_MIN_SECONDS", "1.5")),
+            chunk_max_s=float(e("CHUNK_MAX_SECONDS", "4")),
+            pause_ms=int(e("PAUSE_MS", "300")),
         )
+
+    def chunker_kw(self) -> dict:
+        return {"min_s": self.chunk_min_s, "max_s": self.chunk_max_s, "pause_ms": self.pause_ms,
+                "silence_rms": self.silence_rms}
 
     @property
     def reset_url_base(self) -> str:

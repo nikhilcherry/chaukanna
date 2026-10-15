@@ -27,6 +27,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 import tokens  # noqa: E402
+from audio import chunk_stream  # noqa: E402
 from pipeline import mock_verdict  # noqa: E402
 from tools import stubs  # noqa: E402
 from tools.fake_victim import Victim  # noqa: E402
@@ -81,7 +82,8 @@ class LiveE2E(unittest.IsolatedAsyncioTestCase):
         env = {**os.environ, "LIVEKIT_URL": LK_URL, "LIVEKIT_API_KEY": LK_KEY, "LIVEKIT_API_SECRET": LK_SECRET,
                "LIVEKIT_ROOM": cls.room, "CLASSIFIER_URL": f"http://127.0.0.1:{cls.stub_port}/classify",
                "N8N_WEBHOOK_URL": f"http://127.0.0.1:{cls.stub_port}/webhook/chaukanna-verdict",
-               "HEARTBEAT_SECONDS": "2", "CALL_END_GRACE_SECONDS": "2", "PYTHONUNBUFFERED": "1"}
+               "HEARTBEAT_SECONDS": "2", "CALL_END_GRACE_SECONDS": "2", "PYTHONUNBUFFERED": "1",
+               "MOCK_STT_DELAY_MS": "500"}                         # like a real STT round trip
         cls.bridge_log = cls.tmp / "bridge.log"
         cls.bridge = subprocess.Popen([sys.executable, str(ROOT / "bridge.py"), "--mock-stt", *cls.bridge_args()],
                                       cwd=ROOT, env=env, stdout=open(cls.bridge_log, "w"), stderr=subprocess.STDOUT)
@@ -131,7 +133,9 @@ class LiveE2E(unittest.IsolatedAsyncioTestCase):
         await victim.join(LK_URL, self.token("victim"))
         try:
             # ---- call 1: scam caller + victim speaking
-            scam = speechlike([2.6, 2.2, 2.8, 1.6], seed=1)          # ~12 s, ends on a short tail
+            # ~11 s; the last burst runs right up to the hang-up, so its chunk only exists if the
+            # bridge flushes the track tail after the caller leaves
+            scam = speechlike([2.6, 2.2, 2.8, 1.6], seed=1)[: -int(16000 * 0.7) * 2]
             victim_task = asyncio.create_task(victim.speak(speechlike([1.8, 1.5], seed=2), lead_in=4.0))
             hangup_at = {}
 
@@ -177,8 +181,11 @@ class LiveE2E(unittest.IsolatedAsyncioTestCase):
             self.assertEqual({t["speaker"] for t in final["transcript"]}, {"caller", "victim"})
             self.assertIn(cid1, log["reset"])
             # the chunk cut after the hang-up (the 1.6 s tail) still reached the classifier
-            late = [c for c in log["classify"] if c["call_id"] == cid1 and c["speaker"] == "caller"]
-            self.assertGreaterEqual(len(late), 3)
+            caller_cls = [c for c in log["classify"] if c["call_id"] == cid1 and c["speaker"] == "caller"]
+            # same audio through the same chunker offline: every chunk, the last one included, made it
+            offline = chunk_stream(b"\x00\x00" * 16000 + scam)
+            self.assertEqual(len(caller_cls), len(offline),
+                             "caller chunks lost (the last one is only cut after the hang-up)")
 
             # ---- call 2: back to back, fresh state
             n_before = len(victim.messages)
@@ -194,6 +201,9 @@ class LiveE2E(unittest.IsolatedAsyncioTestCase):
             v2 = [m for m in m2 if m["type"] == "verdict"]
             self.assertTrue(v2, "call 2 produced no verdicts")
             self.assertTrue(all(m["call_id"] == cid2 for m in v2))
+            # the victim is silent in call 2: a stale reader on a recycled receiver would label the
+            # new caller's voice "victim"
+            self.assertEqual({m["speaker"] for m in v2}, {"caller"}, [m["speaker"] for m in v2])
             # its first verdict is what that first line alone scores: nothing carried over from call 1
             alone = mock_verdict(cid2, v2[0]["chunk_text"], "en")["pressure"]
             self.assertEqual(v2[0]["pressure"], alone, "call 2 inherited call 1's pressure")
