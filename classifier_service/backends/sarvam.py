@@ -1,21 +1,27 @@
 import os
 
+import httpx
+
 from backends._openai_compat import chat_verdict
-from backends.base import Backend
-from schemas import Verdict
-from store import CallState
+from backends.base import Backend, LLMContext
+from schemas import LLMVerdict
 
 
 class SarvamBackend(Backend):
-    """Sarvam chat-completions API (OpenAI-compatible)."""
+    """Sarvam chat-completions API (OpenAI-compatible). Untested against the live API."""
 
     name = "sarvam"
 
     def __init__(self) -> None:
+        super().__init__()
         self.url = os.getenv("SARVAM_URL", "https://api.sarvam.ai/v1/chat/completions")
         self.model = os.getenv("SARVAM_MODEL", "sarvam-m")
-        self.key = os.getenv("SARVAM_API_KEY", "")
+        key = os.getenv("SARVAM_API_KEY", "")
+        self.headers = {"api-subscription-key": key, "Authorization": f"Bearer {key}"}
+        self.client = httpx.AsyncClient()
 
-    async def classify(self, call_id: str, st: CallState) -> Verdict:
-        headers = {"api-subscription-key": self.key, "Authorization": f"Bearer {self.key}"}
-        return await chat_verdict(self.url, self.model, call_id, st, headers, timeout=4.0)
+    async def classify(self, ctx: LLMContext) -> LLMVerdict:
+        return await chat_verdict(self.client, self.url, self.model, ctx, self.headers, timeout=4.0)
+
+    async def aclose(self) -> None:
+        await self.client.aclose()
