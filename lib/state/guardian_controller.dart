@@ -191,8 +191,8 @@ class GuardianController extends ChangeNotifier {
   GuardianStatus get guardianStatus {
     final hb = lastHeartbeatAt;
     if (hb != null && _now().difference(hb) <= heartbeatTimeout) return GuardianStatus.protected;
-    if (_transport == null) return GuardianStatus.offline;
     if (hb != null && !_lastHeartbeatSimulated) return GuardianStatus.stale;
+    if (_transport == null) return GuardianStatus.offline;
     return GuardianStatus.waiting;
   }
 
