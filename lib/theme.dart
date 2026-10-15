@@ -26,6 +26,9 @@ const kIndicFallback = ['NotoSansDevanagari', 'NotoSansKannada'];
 
 ThemeData buildTheme() {
   final base = ThemeData.dark().textTheme.apply(bodyColor: Pal.text, displayColor: Pal.text);
+  // Button text styles replace (not merge with) the theme style, so derive them
+  // from it to keep the font family and the Indic fallbacks.
+  final label = base.labelLarge!.copyWith(fontSize: 20, fontFamilyFallback: kIndicFallback);
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
@@ -34,17 +37,22 @@ ThemeData buildTheme() {
     colorScheme: const ColorScheme.dark(primary: Pal.safe, onPrimary: Colors.black, surface: Pal.card),
     textTheme: base,
     materialTapTargetSize: MaterialTapTargetSize.padded,
-    snackBarTheme: const SnackBarThemeData(
+    snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      contentTextStyle: TextStyle(fontSize: 18, fontFamilyFallback: kIndicFallback),
+      contentTextStyle: base.bodyLarge!.copyWith(fontSize: 18, fontFamilyFallback: kIndicFallback),
     ),
     dialogTheme: const DialogThemeData(backgroundColor: Pal.card),
     filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(minimumSize: const Size(64, 56), textStyle: const TextStyle(fontSize: 20)),
+      style: FilledButton.styleFrom(minimumSize: const Size(64, 56), textStyle: label),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(minimumSize: const Size(64, 56), textStyle: const TextStyle(fontSize: 20)),
+      style: TextButton.styleFrom(minimumSize: const Size(64, 56), textStyle: label),
     ),
-    outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(minimumSize: const Size(64, 56))),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(minimumSize: const Size(64, 56), textStyle: label),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(minimumSize: const Size(0, 52), textStyle: label.copyWith(fontSize: 19)),
+    ),
   );
 }

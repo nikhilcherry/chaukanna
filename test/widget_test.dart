@@ -50,7 +50,10 @@ void main() {
       expect(find.text(w.local!), findsOneWidget);
       expect(find.text('Hang up now'), findsOneWidget);
       expect(find.text('Speaking the warning…'), findsOneWidget);
-      expect(find.textContaining('🔊'), findsOneWidget, reason: 'caption of the clip being spoken');
+      expect(find.textContaining('🔊'), findsNothing, reason: 'short clip = the headline, no duplicate caption');
+      h.engine.nextClip();
+      await tester.pump();
+      expect(find.textContaining('🔊'), findsOneWidget, reason: 'caption of the full clip being spoken');
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await tester.tap(find.text('I understand'));
       await tester.pump();

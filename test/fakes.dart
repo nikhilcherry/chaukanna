@@ -28,10 +28,21 @@ class FakeWhisperEngine implements WhisperEngine {
     _current?.complete(WhisperOutcome.stopped);
     played.add(clip);
     sequences.add(sequence);
+    _onClip = onClip;
+    _index = 0;
     onClip?.call(sequence.first);
     final c = Completer<WhisperOutcome>();
     _current = c;
     return c.future;
+  }
+
+  void Function(ClipRef ref)? _onClip;
+  int _index = 0;
+
+  /// The short clip ended and the next one (the full clip) started.
+  void nextClip() {
+    final seq = sequences.last;
+    if (playing && _index + 1 < seq.length) _onClip?.call(seq[++_index]);
   }
 
   /// The sequence played to the end.

@@ -34,7 +34,6 @@ class SimulatorDrawer extends StatelessWidget {
             const Text('Call language', style: TextStyle(color: Pal.dim, fontSize: 15)),
             const SizedBox(height: 6),
             SegmentedButton<String>(
-              style: SegmentedButton.styleFrom(minimumSize: const Size(0, 48)),
               segments: const [
                 ButtonSegment(value: 'en', label: Text('EN')),
                 ButtonSegment(value: 'hi', label: Text('हिंदी')),

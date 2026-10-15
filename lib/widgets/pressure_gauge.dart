@@ -26,12 +26,13 @@ class PressureGauge extends StatelessWidget {
           label: 'Scam pressure ${Pal.labelFor(pressure)}, level $pressure of 3',
           child: SizedBox(
             height: height,
-            child: Stack(
-              alignment: Alignment.bottomCenter,
+            child: Column(
               children: [
-                Positioned.fill(child: CustomPaint(painter: _ArcPainter(v))),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                Expanded(
+                  child: CustomPaint(painter: _ArcPainter(v), size: Size.infinite),
+                ),
+                SizedBox(
+                  height: height * 0.32,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Column(
@@ -39,7 +40,7 @@ class PressureGauge extends StatelessWidget {
                       children: [
                         Text(
                           Pal.labelFor(pressure),
-                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color),
+                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color, height: 1.1),
                         ),
                         const Text('SCAM PRESSURE', style: TextStyle(fontSize: 15, color: Pal.dim, letterSpacing: 2)),
                       ],
@@ -62,8 +63,8 @@ class _ArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     const stroke = 22.0;
-    final r = math.min(size.width / 2, size.height - 20) - stroke / 2;
-    final center = Offset(size.width / 2, size.height - 20);
+    final r = math.min(size.width / 2 - 8, size.height - 10) - stroke / 2;
+    final center = Offset(size.width / 2, size.height - 6);
     final rect = Rect.fromCircle(center: center, radius: r);
     const sweepTotal = math.pi;
     final seg = sweepTotal / 4;

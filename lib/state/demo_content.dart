@@ -187,18 +187,17 @@ String simFamilyAlert({
   required bool secrecy,
   required bool known,
 }) {
-  final flags = [
-    if (known) 'the number is on the shared scam list',
-    if (secrecy) 'the caller demanded secrecy',
-    if (otp) 'the caller asked for an OTP',
-  ];
+  final did = [if (secrecy) 'demanded secrecy', if (otp) 'asked for an OTP'];
+  final what = [
+    if (known) 'The number is on the shared scam list.',
+    if (did.isNotEmpty) 'The caller ${did.join(' and ')}.',
+    if (!known && did.isEmpty) 'Chaukanna flagged high pressure.',
+  ].join(' ');
   return [
     '• $victimName got a ${scamNameIn(scamType, 'en')} call from $number.',
-    '• ${flags.isEmpty ? 'Chaukanna flagged high pressure' : _cap(flags.join(' and '))}. '
-        'Chaukanna warned $victimName; no OTP was shared.',
+    '• $what Chaukanna warned $victimName; no OTP was shared.',
     '• Please call $victimName now. The 1930 complaint is drafted and waits for their OK.',
   ].join('\n');
 }
 
 String _two(int n) => n.toString().padLeft(2, '0');
-String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);

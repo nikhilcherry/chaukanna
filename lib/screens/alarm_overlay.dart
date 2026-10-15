@@ -182,7 +182,8 @@ class _VoiceStatus extends StatelessWidget {
       WhisperStatus.stopped => (Icons.stop_circle_outlined, 'Voice warning stopped', Pal.dim),
       WhisperStatus.idle => (Icons.volume_up, 'Read the warning above', Pal.dim),
     };
-    final caption = whisper.playing ? whisper.current?.text : null;
+    // The short clip's words are already the headline; caption the longer full clip.
+    final caption = whisper.playing && whisper.current?.variant == 'full' ? whisper.current?.text : null;
     return Column(
       children: [
         Row(

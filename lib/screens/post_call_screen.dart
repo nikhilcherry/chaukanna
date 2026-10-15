@@ -186,10 +186,6 @@ class _ComplaintState extends State<_Complaint> {
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: SegmentedButton<bool>(
-              style: SegmentedButton.styleFrom(
-                minimumSize: const Size(0, 52),
-                textStyle: const TextStyle(fontSize: 19),
-              ),
               segments: [
                 ButtonSegment(value: false, label: Text(_langNames[c.complaintLocalLang] ?? c.complaintLocalLang)),
                 const ButtonSegment(value: true, label: Text('English')),

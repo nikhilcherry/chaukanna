@@ -14,7 +14,7 @@ complaint draft in the call language + English, Confirm & Submit 1930 Report).
 
 ```bash
 export PATH=$PATH:~/flutter/bin
-flutter test                      # 49 tests, no device needed
+flutter test                      # 53 tests, no device needed
 flutter build apk --debug         # build/app/outputs/flutter-apk/app-debug.apk
 ```
 

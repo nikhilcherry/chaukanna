@@ -350,7 +350,8 @@ class GuardianController extends ChangeNotifier {
     if (v.isScam) scamType = v.scamType;
     if (v.summaryForFamily.isNotEmpty) summaryForFamily = v.summaryForFamily;
     if (peakPressure >= 2) firstHighRiskAt ??= now;
-    if (pressure >= 2 || v.asksOtpOrPin || v.demandsSecrecy) {
+    final victimSaidOtp = m.speaker == 'victim' && text.contains('••••');
+    if ((m.speaker != 'victim' && (pressure >= 2 || v.asksOtpOrPin || v.demandsSecrecy)) || victimSaidOtp) {
       _addEvidence(now, '${_flagSummary(pressure, v)}${text.isEmpty ? '' : ' - ${m.speaker}: "${_snippet(text)}"'}');
     }
     if (m.latencyMs != null) _log('Verdict p$pressure ${v.scamType} from ${m.speaker} (${m.latencyMs} ms)');
