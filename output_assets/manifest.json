@@ -1,0 +1,27 @@
+{
+  "model": "bulbul:v3",
+  "speaker": "ritu",
+  "sample_rate": 24000,
+  "files": {
+    "warn_otp": {
+      "hi": "warn_otp_hi.wav",
+      "kn": "warn_otp_kn.wav",
+      "en": "warn_otp_en.wav"
+    },
+    "warn_digital_arrest": {
+      "hi": "warn_digital_arrest_hi.wav",
+      "kn": "warn_digital_arrest_kn.wav",
+      "en": "warn_digital_arrest_en.wav"
+    },
+    "warn_secrecy": {
+      "hi": "warn_secrecy_hi.wav",
+      "kn": "warn_secrecy_kn.wav",
+      "en": "warn_secrecy_en.wav"
+    },
+    "warn_known_scammer": {
+      "hi": "warn_known_scammer_hi.wav",
+      "kn": "warn_known_scammer_kn.wav",
+      "en": "warn_known_scammer_en.wav"
+    }
+  }
+}
