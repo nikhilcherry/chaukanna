@@ -71,11 +71,11 @@ class SentRequest {
 /// Builds a controller with no platform plugins, a controllable clock and a
 /// recording HTTP client.
 class Harness {
-  Harness({DateTime? start, int Function(Uri url)? status, DateTime Function()? clock})
+  Harness({DateTime? start, int Function(Uri url)? status, String Function(Uri url)? body, DateTime Function()? clock})
     : now = start ?? DateTime(2026, 10, 17, 11, 0, 0) {
     final client = MockClient((req) async {
       sent.add(SentRequest(req.url, jsonDecode(req.body) as Map<String, dynamic>));
-      return http.Response('{"ok":true}', status?.call(req.url) ?? 200);
+      return http.Response(body?.call(req.url) ?? '{"ok":true}', status?.call(req.url) ?? 200);
     });
     c = GuardianController(
       whisper: engine,

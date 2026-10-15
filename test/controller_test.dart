@@ -300,6 +300,16 @@ void main() {
       expect(h.c.submitRoute, 'webhook');
     });
 
+    test('a resume URL that answers 2xx without ok:true falls back to the webhook', () async {
+      h.dispose();
+      h = Harness(body: (u) => u.path.contains('webhook-waiting') ? '{"message":"Workflow was started"}' : '');
+      await highRiskCall();
+      await h.c.submit1930();
+      expect(h.sent.map((r) => r.url.path), ['/webhook-waiting/123', '/webhook/chaukanna-approve']);
+      expect(h.c.submitRoute, 'webhook');
+      expect(h.c.submitState, SubmitState.done);
+    });
+
     test('no incident (n8n silent) -> webhook with call_id and the local draft', () async {
       h.callStarted('room-7');
       h.verdict('room-7', pressure: 2, otp: true, scam: 'kyc_update', clip: 'warn_otp');

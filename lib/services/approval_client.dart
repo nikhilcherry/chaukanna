@@ -49,16 +49,31 @@ class ApprovalClient {
         final res = await _client
             .post(uri, headers: const {'Content-Type': 'application/json'}, body: jsonEncode(payload))
             .timeout(timeout);
-        if (res.statusCode >= 200 && res.statusCode < 300) {
+        final ok = _okFlag(res.body);
+        // A Wait-node resume URL can answer 2xx without resuming (execution no
+        // longer waiting), so it only counts with {"ok": true}, as in the n8n
+        // test script. The webhook counts on any 2xx unless it says ok: false.
+        final accepted =
+            res.statusCode >= 200 && res.statusCode < 300 && (route == 'approve_url' ? ok == true : ok != false);
+        if (accepted) {
           log?.call('Approval sent via $route (${uri.host}) HTTP ${res.statusCode}');
           return ApprovalOutcome(ok: true, route: route, target: uri, detail: 'HTTP ${res.statusCode}');
         }
-        last = '$route replied HTTP ${res.statusCode}';
+        last = '$route replied HTTP ${res.statusCode}${ok == null ? '' : ' ok=$ok'}';
       } catch (e) {
         last = '$route failed (${e.runtimeType})';
       }
       log?.call('Approval: $last');
     }
     return ApprovalOutcome(ok: false, route: rs.last.$1, target: rs.last.$2, detail: last);
+  }
+
+  static bool? _okFlag(String body) {
+    try {
+      final j = jsonDecode(body);
+      final first = j is List && j.isNotEmpty ? j.first : j; // n8n may wrap the reply in a list
+      if (first is Map && first['ok'] is bool) return first['ok'] as bool;
+    } catch (_) {}
+    return null;
   }
 }
