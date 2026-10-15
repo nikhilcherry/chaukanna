@@ -3,19 +3,19 @@ import 'package:flutter/material.dart';
 import '../models/verdict.dart';
 import '../theme.dart';
 
-/// Phrases that get highlighted in the live transcript (English + Hindi + Kannada).
+/// Phrases highlighted in the caller's words (English + Hindi + Kannada), plus masked OTPs.
 final _suspicious = RegExp(
-  r'(otp|pin|cvv|password|arrest|warrant|cbi|police|court|narcotics|customs|kyc|blocked|block|'
-  r'do not tell|don.t tell|tell anyone|do not disconnect|transfer|urgent|immediately|fine|penalty|'
-  r'ओटीपी|वारंट|अरेस्ट|गिरफ्तार|किसी को मत|कॉल मत काटिए|खाता|बंद|तुरंत|ट्रांसफर|'
-  r'ಅರೆಸ್ಟ್|ವಾರಂಟ್|ಬ್ಲಾಕ್|ಯಾರಿಗೂ ಹೇಳಬೇಡಿ|ಕಟ್ ಮಾಡಬೇಡಿ|ತಕ್ಷಣ|ವರ್ಗಾವಣೆ|OTP|CBI|KYC)',
+  r'(otp|pin|cvv|password|arrest|warrant|cbi|police|court|narcotics|customs|kyc|aadhaar|money laundering|'
+  r'blocked|block|do not tell|don.t tell|tell anyone|do not disconnect|transfer|urgent|immediately|fine|penalty|'
+  r'ओटीपी|वारंट|अरेस्ट|गिरफ्तार|किसी को मत|कॉल मत काटिए|खाता|बंद|तुरंत|ट्रांसफर|आधार|मनी लॉन्ड्रिंग|'
+  r'ಅರೆಸ್ಟ್|ವಾರಂಟ್|ಬ್ಲಾಕ್|ಯಾರಿಗೂ ಹೇಳಬೇಡಿ|ಕಟ್ ಮಾಡಬೇಡಿ|ತಕ್ಷಣ|ವರ್ಗಾವಣೆ|ಆಧಾರ್|ಮನಿ ಲಾಂಡರಿಂಗ್|•{4,8})',
   caseSensitive: false,
   unicode: true,
 );
 
 class TranscriptView extends StatefulWidget {
-  final List<TranscriptLine> lines;
   const TranscriptView({super.key, required this.lines});
+  final List<TranscriptLine> lines;
 
   @override
   State<TranscriptView> createState() => _TranscriptViewState();
@@ -23,10 +23,13 @@ class TranscriptView extends StatefulWidget {
 
 class _TranscriptViewState extends State<TranscriptView> {
   final _scroll = ScrollController();
+  int _seen = 0;
 
   @override
   void didUpdateWidget(covariant TranscriptView old) {
     super.didUpdateWidget(old);
+    if (widget.lines.length == _seen) return;
+    _seen = widget.lines.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
         _scroll.animateTo(_scroll.position.maxScrollExtent,
@@ -49,7 +52,12 @@ class _TranscriptViewState extends State<TranscriptView> {
       out.add(TextSpan(
           text: m.group(0),
           style: const TextStyle(
-              backgroundColor: Pal.critical, fontWeight: FontWeight.w900, color: Colors.white)));
+            backgroundColor: Pal.critical,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            decoration: TextDecoration.underline,
+            decorationColor: Colors.white,
+          )));
       i = m.end;
     }
     if (i < text.length) out.add(TextSpan(text: text.substring(i)));
@@ -60,7 +68,10 @@ class _TranscriptViewState extends State<TranscriptView> {
   Widget build(BuildContext context) {
     if (widget.lines.isEmpty) {
       return const Center(
-          child: Text('Listening to the caller…', style: TextStyle(fontSize: 20, color: Pal.dim)));
+          child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('Listening to the caller…', style: TextStyle(fontSize: 20, color: Pal.dim)),
+      ));
     }
     return ListView.separated(
       controller: _scroll,
@@ -70,17 +81,18 @@ class _TranscriptViewState extends State<TranscriptView> {
       itemBuilder: (_, i) {
         final l = widget.lines[i];
         final last = i == widget.lines.length - 1;
-        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-              width: 6,
-              height: 6,
-              margin: const EdgeInsets.only(top: 12, right: 10),
-              decoration: BoxDecoration(color: Pal.forPressure(l.pressure), shape: BoxShape.circle)),
-          Expanded(
-            child: Text.rich(
-              TextSpan(children: _spans(l.text)),
-              style: TextStyle(fontSize: 21, height: 1.4, color: last ? Pal.text : Pal.dim),
-            ),
+        final you = l.fromVictim;
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(you ? 'YOU' : 'CALLER',
+              style: TextStyle(
+                  fontSize: 14,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w900,
+                  color: you ? Pal.safe : Pal.forPressure(l.pressure))),
+          const SizedBox(height: 2),
+          Text.rich(
+            TextSpan(children: you ? [TextSpan(text: l.text)] : _spans(l.text)),
+            style: TextStyle(fontSize: 21, height: 1.4, color: last ? Pal.text : Pal.dim),
           ),
         ]);
       },

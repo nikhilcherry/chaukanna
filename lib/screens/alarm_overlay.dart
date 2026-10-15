@@ -1,50 +1,29 @@
 import 'package:flutter/material.dart';
 
 import '../models/verdict.dart';
+import '../services/clip_catalog.dart';
+import '../state/guardian_controller.dart';
 import '../theme.dart';
 
-const _warnings = <String, Map<String, String>>{
-  'warn_otp': {
-    'en': 'STOP! Do NOT share your OTP or PIN!',
-    'hi': 'रुकिए! OTP या PIN किसी को न बताएं!',
-    'kn': 'ನಿಲ್ಲಿ! OTP ಅಥವಾ PIN ಯಾರಿಗೂ ಹೇಳಬೇಡಿ!',
-  },
-  'warn_digital_arrest': {
-    'en': 'SCAM! No police arrest over phone. Hang up!',
-    'hi': 'धोखा! फोन पर कोई गिरफ्तारी नहीं होती। कॉल काटें!',
-    'kn': 'ವಂಚನೆ! ಫೋನ್‌ನಲ್ಲಿ ಯಾವುದೇ ಅರೆಸ್ಟ್ ಇಲ್ಲ. ಕರೆ ಕಟ್ ಮಾಡಿ!',
-  },
-  'warn_secrecy': {
-    'en': 'DANGER! Tell your family right now!',
-    'hi': 'खतरा! अभी अपने परिवार को बताएं!',
-    'kn': 'ಅಪಾಯ! ಈಗಲೇ ಕುಟುಂಬಕ್ಕೆ ತಿಳಿಸಿ!',
-  },
-  'warn_known_scammer': {
-    'en': 'KNOWN SCAMMER! Call blocked.',
-    'hi': 'जाना-पहचाना ठग! कॉल ब्लॉक की गई।',
-    'kn': 'ಗೊತ್ತಿರುವ ವಂಚಕ! ಕರೆ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ.',
-  },
-};
-
-const _generic = {
-  'en': 'DANGER! This call looks like a scam!',
-  'hi': 'खतरा! यह कॉल धोखा हो सकती है!',
-  'kn': 'ಅಪಾಯ! ಈ ಕರೆ ವಂಚನೆ ಆಗಿರಬಹುದು!',
-};
-
-String _warningFor(Verdict v, String lang) {
-  final m = _warnings[v.recommendedWhisperClip] ?? _generic;
-  return m[lang] ?? m['en']!;
-}
-
-/// Screen 2: pulsing crimson border, giant bilingual warning, whisper plays
-/// from the controller.
+/// Screen 2: pulsing crimson border, giant bilingual warning (the words of the
+/// whisper the victim is hearing), voice status, and two big actions.
 class AlarmOverlay extends StatefulWidget {
-  final Verdict verdict;
-  final bool whisperPlaying;
+  const AlarmOverlay({
+    super.key,
+    required this.alarm,
+    required this.warning,
+    required this.whisper,
+    required this.micPaused,
+    required this.onDismiss,
+    required this.onHangUp,
+  });
+
+  final AlarmInfo alarm;
+  final WarningText warning;
+  final WhisperState whisper;
+  final bool micPaused;
   final VoidCallback onDismiss;
-  const AlarmOverlay(
-      {super.key, required this.verdict, required this.whisperPlaying, required this.onDismiss});
+  final VoidCallback onHangUp;
 
   @override
   State<AlarmOverlay> createState() => _AlarmOverlayState();
@@ -62,10 +41,11 @@ class _AlarmOverlayState extends State<AlarmOverlay> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final v = widget.verdict;
-    final lang = v.language;
-    final english = _warningFor(v, 'en');
-    final local = lang == 'en' ? null : _warningFor(v, lang);
+    final a = widget.alarm;
+    final w = widget.warning;
+    final title = a.knownScammer
+        ? 'KNOWN SCAMMER'
+        : (a.scamType != 'none' ? scamLabelFor(a.scamType).toUpperCase() : 'SCAM WARNING');
     return AnimatedBuilder(
       animation: _pulse,
       builder: (context, child) {
@@ -79,48 +59,105 @@ class _AlarmOverlayState extends State<AlarmOverlay> with SingleTickerProviderSt
         );
       },
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.warning_amber_rounded, size: 96, color: Colors.white),
-            const SizedBox(height: 16),
-            Semantics(
-              liveRegion: true,
-              child: Text(english,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, height: 1.15)),
-            ),
-            if (local != null) ...[
-              const SizedBox(height: 24),
-              Text(local,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 38, fontWeight: FontWeight.w900, height: 1.25, color: Color(0xFFFFD6DD))),
-            ],
-            const SizedBox(height: 28),
-            AnimatedOpacity(
-              opacity: widget.whisperPlaying ? 1 : 0.4,
-              duration: const Duration(milliseconds: 250),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.record_voice_over, size: 28),
-                const SizedBox(width: 10),
-                Text(widget.whisperPlaying ? 'Playing voice warning…' : 'Voice warning',
-                    style: const TextStyle(fontSize: 18, color: Pal.dim)),
+        child: LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight - 40),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Icon(Icons.warning_amber_rounded, size: 84, color: Colors.white),
+                const SizedBox(height: 6),
+                Text(title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 2, color: Color(0xFFFFB3C0))),
+                const SizedBox(height: 14),
+                Semantics(
+                  liveRegion: true,
+                  child: Text(w.en,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w900, height: 1.15)),
+                ),
+                if (w.local != null) ...[
+                  const SizedBox(height: 18),
+                  Text(w.local!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 36, fontWeight: FontWeight.w900, height: 1.3, color: Color(0xFFFFE0E6))),
+                ],
+                const SizedBox(height: 22),
+                _VoiceStatus(whisper: widget.whisper),
+                if (widget.micPaused) ...[
+                  const SizedBox(height: 10),
+                  const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.mic_off, size: 24, color: Pal.caution),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text('Your microphone is paused. The caller cannot hear this.',
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                    ),
+                  ]),
+                ],
+                const SizedBox(height: 26),
+                SizedBox(
+                  width: double.infinity,
+                  height: 76,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(backgroundColor: Pal.critical, foregroundColor: Colors.white),
+                    onPressed: widget.onHangUp,
+                    icon: const Icon(Icons.call_end, size: 34),
+                    label: const Text('Hang up now', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 68,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black),
+                    onPressed: widget.onDismiss,
+                    child: const Text('I understand', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+                  ),
+                ),
               ]),
             ),
-            const SizedBox(height: 36),
-            SizedBox(
-              width: double.infinity,
-              height: 72,
-              child: FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Pal.crimson),
-                onPressed: widget.onDismiss,
-                child: const Text('I understand', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-              ),
-            ),
-          ]),
+          ),
         ),
       ),
     );
+  }
+}
+
+class _VoiceStatus extends StatelessWidget {
+  const _VoiceStatus({required this.whisper});
+  final WhisperState whisper;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, label, color) = switch (whisper.status) {
+      WhisperStatus.playing => (Icons.record_voice_over, 'Speaking the warning…', Colors.white),
+      WhisperStatus.done => (Icons.check_circle_outline, 'Voice warning played', Pal.dim),
+      WhisperStatus.failed => (Icons.volume_off, 'Voice warning could not play. Please read this screen.', Pal.caution),
+      WhisperStatus.stopped => (Icons.stop_circle_outlined, 'Voice warning stopped', Pal.dim),
+      WhisperStatus.idle => (Icons.volume_up, 'Read the warning above', Pal.dim),
+    };
+    final caption = whisper.playing ? whisper.current?.text : null;
+    return Column(children: [
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 28, color: color),
+        const SizedBox(width: 10),
+        Flexible(child: Text(label, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: color))),
+      ]),
+      if (caption != null && caption.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
+          child: Text('🔊 $caption',
+              textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, height: 1.35, color: Colors.white)),
+        ),
+      ],
+    ]);
   }
 }

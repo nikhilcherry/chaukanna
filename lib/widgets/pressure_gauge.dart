@@ -7,7 +7,8 @@ import '../theme.dart';
 /// Smooth animated semicircle meter: 0 Safe → 3 Critical.
 class PressureGauge extends StatelessWidget {
   final int pressure;
-  const PressureGauge({super.key, required this.pressure});
+  final double height;
+  const PressureGauge({super.key, required this.pressure, this.height = 170});
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +20,9 @@ class PressureGauge extends StatelessWidget {
         final color = Color.lerp(
             Pal.forPressure(v.floor()), Pal.forPressure((v.floor() + 1).clamp(0, 3)), v - v.floor())!;
         return Semantics(
-          label: 'Scam pressure ${Pal.labelFor(pressure)}',
+          label: 'Scam pressure ${Pal.labelFor(pressure)}, level $pressure of 3',
           child: SizedBox(
-            height: 170,
+            height: height,
             child: Stack(alignment: Alignment.bottomCenter, children: [
               Positioned.fill(child: CustomPaint(painter: _ArcPainter(v))),
               Padding(
@@ -29,7 +30,7 @@ class PressureGauge extends StatelessWidget {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(Pal.labelFor(pressure),
                       style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color)),
-                  const Text('SCAM PRESSURE', style: TextStyle(fontSize: 13, color: Pal.dim, letterSpacing: 2)),
+                  const Text('SCAM PRESSURE', style: TextStyle(fontSize: 15, color: Pal.dim, letterSpacing: 2)),
                 ]),
               ),
             ]),

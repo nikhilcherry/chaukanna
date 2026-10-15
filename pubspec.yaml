@@ -1,5 +1,5 @@
 name: chaukanna_app
-description: "A new Flutter project."
+description: "Chaukanna: live scam-call guardian for elders (Android client)."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -39,6 +39,7 @@ dependencies:
   provider: ^6.1.5+1
   http: ^1.6.0
   vibration: ^3.2.1
+  audio_session: ^0.2.4
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +65,19 @@ flutter:
 
   assets:
     - assets/audio/
+
+  # Bundled so Hindi and Kannada render (with real bold) on any phone. OFL-1.1, see assets/fonts/OFL.txt.
+  fonts:
+    - family: NotoSansDevanagari
+      fonts:
+        - asset: assets/fonts/NotoSansDevanagari-Regular.ttf
+        - asset: assets/fonts/NotoSansDevanagari-Bold.ttf
+          weight: 700
+    - family: NotoSansKannada
+      fonts:
+        - asset: assets/fonts/NotoSansKannada-Regular.ttf
+        - asset: assets/fonts/NotoSansKannada-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:
