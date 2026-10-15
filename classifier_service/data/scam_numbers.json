@@ -1,0 +1,20 @@
+{
+  "_comment": "Seed list of known scam numbers (demo data, not real reports). Numbers are E.164. Runtime additions via POST /scam_numbers go to scam_numbers.local.json (gitignored). Keep in sync with the scam_numbers table the n8n incident responder seeds.",
+  "numbers": [
+    {
+      "number": "+919988776655",
+      "scam_type": "kyc_update",
+      "note": "Flutter demo 'Simulate Known Scammer' number"
+    },
+    {
+      "number": "+919123400011",
+      "scam_type": "digital_arrest",
+      "note": "eval-set listed number"
+    },
+    {
+      "number": "+918045671234",
+      "scam_type": "bank_impersonation",
+      "note": "eval-set listed number"
+    }
+  ]
+}

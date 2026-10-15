@@ -1,2 +1,6 @@
 .env
 __pycache__/
+uv.log
+*.log
+data/scam_numbers.local.json
+.pytest_cache/

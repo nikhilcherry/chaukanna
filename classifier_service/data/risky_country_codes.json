@@ -1,0 +1,15 @@
+{
+  "_comment": "Country codes that Indian advisories (I4C / DoT / bank alerts) repeatedly associate with scam calls to Indian numbers: scam compounds in South-East Asia and WhatsApp 'international call' scams. A match is a weak signal (pressure floor 1, no whisper), not proof. Longest prefix wins.",
+  "codes": {
+    "+92": "Pakistan",
+    "+855": "Cambodia",
+    "+856": "Laos",
+    "+95": "Myanmar",
+    "+84": "Vietnam",
+    "+62": "Indonesia",
+    "+63": "Philippines",
+    "+60": "Malaysia",
+    "+254": "Kenya",
+    "+251": "Ethiopia"
+  }
+}
