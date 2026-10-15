@@ -737,7 +737,7 @@ def check(specs: list[Spec], only: str | None, recheck: bool) -> int:
         cache = json.loads(CHECK_FILE.read_text(encoding="utf-8")).get("results", {})
     except (OSError, ValueError):
         cache = {}
-    results, bad, calls = {}, 0, 0
+    results, bad, calls, checked = {}, 0, 0, 0
     key = None
     for spec in specs:
         path = OUT_DIR / spec.file
@@ -745,6 +745,7 @@ def check(specs: list[Spec], only: str | None, recheck: bool) -> int:
             if spec.file in cache:
                 results[spec.file] = cache[spec.file]
             continue
+        checked += 1
         if not path.is_file():
             print(f"MISSING   {spec.file}")
             bad += 1
@@ -756,8 +757,14 @@ def check(specs: list[Spec], only: str | None, recheck: bool) -> int:
             heard = prev["heard"]
         else:
             key = key or api_key()
-            heard = transcribe(data, spec.lang, key)
-            calls += 1
+            try:
+                heard = transcribe(data, spec.lang, key)
+            except RuntimeError as e:  # keep going; one bad call shouldn't lose the rest
+                print(f"ERROR     {spec.file}: {e}", file=sys.stderr)
+                bad += 1
+                continue
+            finally:
+                calls += 1
         res = score(spec.text, heard, spec.lang)
         results[spec.file] = {"sha256": sha256(data), "stt_model": STT_MODEL,
                               "expected": spec.text, "heard": heard, **res}
@@ -766,7 +773,7 @@ def check(specs: list[Spec], only: str | None, recheck: bool) -> int:
         print(f"{'OK' if res['ok'] else 'MISMATCH':9s} {spec.file:32s} "
               f"{res['score']:.3f}{diff}")
     write_json(CHECK_FILE, {"stt_model": STT_MODEL, "results": results})
-    print(f"{len(results) - bad}/{len(results)} match  ({calls} STT call"
+    print(f"{checked - bad}/{checked} match  ({calls} STT call"
           f"{'s' * (calls != 1)}; details in {CHECK_FILE.name})")
     return bad
 
