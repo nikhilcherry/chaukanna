@@ -22,6 +22,7 @@ import time
 import httpx
 from dotenv import load_dotenv
 
+import tokens
 from audio import Chunker, load_wav_16k_mono
 from config import CHUNK_BYTES, CHUNK_SECONDS, DATA_TOPIC, GUARDIAN_IDENTITY, SAMPLE_RATE, Config, new_call_id
 from pipeline import CallState, Pipeline
@@ -30,11 +31,7 @@ log = logging.getLogger("chaukanna.bridge")
 
 
 def guardian_token(cfg: Config, identity: str = GUARDIAN_IDENTITY) -> str:
-    from livekit import api
-    grants = api.VideoGrants(room_join=True, room=cfg.room, hidden=True, can_publish=False,
-                             can_subscribe=True, can_publish_data=True)
-    return (api.AccessToken(cfg.api_key, cfg.api_secret).with_identity(identity)
-            .with_name("Chaukanna Guardian").with_grants(grants).to_jwt())
+    return tokens.mint("guardian", cfg.room, identity, key=cfg.api_key, secret=cfg.api_secret)
 
 
 def participant_info(p) -> dict:
