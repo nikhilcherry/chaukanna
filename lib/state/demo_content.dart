@@ -51,9 +51,12 @@ const fullScamScript = <ScriptLine>[
     'kn': 'ನಾನು CBI ಮುಂಬೈನಿಂದ ಇನ್ಸ್‌ಪೆಕ್ಟರ್ ವಿಕ್ರಮ್ ಶರ್ಮಾ. ನಿಮ್ಮ ಆಧಾರ್ ನಂಬರ್ ಮನಿ ಲಾಂಡರಿಂಗ್ ಕೇಸ್‌ಗೆ ಲಿಂಕ್ ಆಗಿದೆ.',
   }, _arrest1),
   ScriptLine('caller', {
-    'en': 'A warrant is issued in your name. You are under digital arrest. Do not tell anyone, not even your family, and do not disconnect this call.',
-    'hi': 'आपके नाम पर वारंट जारी हुआ है। आप डिजिटल अरेस्ट में हैं। किसी को मत बताइए, परिवार को भी नहीं, और कॉल मत काटिए।',
-    'kn': 'ನಿಮ್ಮ ಹೆಸರಿನಲ್ಲಿ ವಾರಂಟ್ ಹೊರಡಿಸಲಾಗಿದೆ. ನೀವು ಡಿಜಿಟಲ್ ಅರೆಸ್ಟ್‌ನಲ್ಲಿದ್ದೀರಿ. ಯಾರಿಗೂ ಹೇಳಬೇಡಿ, ಮನೆಯವರಿಗೂ ಸಹ, ಕರೆ ಕಟ್ ಮಾಡಬೇಡಿ.',
+    'en':
+        'A warrant is issued in your name. You are under digital arrest. Do not tell anyone, not even your family, and do not disconnect this call.',
+    'hi':
+        'आपके नाम पर वारंट जारी हुआ है। आप डिजिटल अरेस्ट में हैं। किसी को मत बताइए, परिवार को भी नहीं, और कॉल मत काटिए।',
+    'kn':
+        'ನಿಮ್ಮ ಹೆಸರಿನಲ್ಲಿ ವಾರಂಟ್ ಹೊರಡಿಸಲಾಗಿದೆ. ನೀವು ಡಿಜಿಟಲ್ ಅರೆಸ್ಟ್‌ನಲ್ಲಿದ್ದೀರಿ. ಯಾರಿಗೂ ಹೇಳಬೇಡಿ, ಮನೆಯವರಿಗೂ ಸಹ, ಕರೆ ಕಟ್ ಮಾಡಬೇಡಿ.',
   }, _arrest2),
   ScriptLine('victim', {
     'en': 'What? I have not done anything wrong...',
@@ -83,9 +86,12 @@ const simOtpLine = {
   'kn': 'ನಿಮ್ಮ ಖಾತೆ ಇಂದೇ ಬ್ಲಾಕ್ ಆಗುತ್ತದೆ. ನಿಮ್ಮ ಫೋನ್‌ಗೆ ಬಂದ OTP ಈಗಲೇ ಹೇಳಿ.',
 };
 const simArrestLine = {
-  'en': 'This is CBI officer Sharma. A warrant is issued against you. You are under digital arrest, do not tell anyone and do not disconnect the call.',
-  'hi': 'मैं CBI अधिकारी शर्मा बोल रहा हूँ। आपके खिलाफ वारंट जारी है। आप डिजिटल अरेस्ट में हैं, किसी को मत बताइए और कॉल मत काटिए।',
-  'kn': 'ನಾನು CBI ಅಧಿಕಾರಿ ಶರ್ಮಾ. ನಿಮ್ಮ ವಿರುದ್ಧ ವಾರಂಟ್ ಹೊರಡಿಸಲಾಗಿದೆ. ನೀವು ಡಿಜಿಟಲ್ ಅರೆಸ್ಟ್‌ನಲ್ಲಿದ್ದೀರಿ, ಯಾರಿಗೂ ಹೇಳಬೇಡಿ, ಕರೆ ಕಟ್ ಮಾಡಬೇಡಿ.',
+  'en':
+      'This is CBI officer Sharma. A warrant is issued against you. You are under digital arrest, do not tell anyone and do not disconnect the call.',
+  'hi':
+      'मैं CBI अधिकारी शर्मा बोल रहा हूँ। आपके खिलाफ वारंट जारी है। आप डिजिटल अरेस्ट में हैं, किसी को मत बताइए और कॉल मत काटिए।',
+  'kn':
+      'ನಾನು CBI ಅಧಿಕಾರಿ ಶರ್ಮಾ. ನಿಮ್ಮ ವಿರುದ್ಧ ವಾರಂಟ್ ಹೊರಡಿಸಲಾಗಿದೆ. ನೀವು ಡಿಜಿಟಲ್ ಅರೆಸ್ಟ್‌ನಲ್ಲಿದ್ದೀರಿ, ಯಾರಿಗೂ ಹೇಳಬೇಡಿ, ಕರೆ ಕಟ್ ಮಾಡಬೇಡಿ.',
 };
 const simKnownLine = {
   'en': 'Hello, I am calling from your bank, please verify your KYC details.',

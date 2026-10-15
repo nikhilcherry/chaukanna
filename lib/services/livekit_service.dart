@@ -22,12 +22,7 @@ class CallerInfo {
 /// incident message, and it reconnects with backoff if the room drops. Mic and
 /// remote audio are switched per call rather than by leaving the room.
 class LiveKitTransport {
-  LiveKitTransport({
-    required this.onData,
-    required this.onCallerJoined,
-    required this.onCallerLeft,
-    required this.log,
-  });
+  LiveKitTransport({required this.onData, required this.onCallerJoined, required this.onCallerLeft, required this.log});
 
   static const guardianIdentity = 'chaukanna-guardian';
 
@@ -97,8 +92,11 @@ class LiveKitTransport {
       final me = room.localParticipant?.identity ?? '';
       log('LiveKit connected to room "${room.name}" as "$me"');
       if (me != AppConfig.victimIdentity) {
-        log('Token identity is "$me", but the bridge only sends to "${AppConfig.victimIdentity}". '
-            'No verdicts will arrive.', important: true);
+        log(
+          'Token identity is "$me", but the bridge only sends to "${AppConfig.victimIdentity}". '
+          'No verdicts will arrive.',
+          important: true,
+        );
       }
       // Publish the mic once now (so the permission prompt happens before any
       // call), then keep it muted until a call is active.
@@ -133,8 +131,11 @@ class LiveKitTransport {
   void _onDisconnected(Room room, DisconnectReason? reason) {
     if (!identical(room, _room) || _disposed) return;
     if (reason == DisconnectReason.duplicateIdentity) {
-      log('Another phone joined as "${AppConfig.victimIdentity}" and took over. Not reconnecting; '
-          'restart the app on the phone that should be the victim.', important: true);
+      log(
+        'Another phone joined as "${AppConfig.victimIdentity}" and took over. Not reconnecting; '
+        'restart the app on the phone that should be the victim.',
+        important: true,
+      );
       state.value = LinkState.failed;
       unawaited(_teardown());
       return;
@@ -172,9 +173,15 @@ class LiveKitTransport {
       final exp = j['exp'] is num ? DateTime.fromMillisecondsSinceEpoch((j['exp'] as num).toInt() * 1000) : null;
       final room = (j['video'] is Map) ? (j['video'] as Map)['room'] : null;
       final left = exp?.difference(DateTime.now());
-      log('LiveKit token: identity "${j['sub']}", room "$room", '
-          '${exp == null ? 'no expiry' : left!.isNegative ? 'EXPIRED at $exp' : 'expires $exp'}',
-          important: left != null && left.isNegative);
+      log(
+        'LiveKit token: identity "${j['sub']}", room "$room", '
+        '${exp == null
+            ? 'no expiry'
+            : left!.isNegative
+            ? 'EXPIRED at $exp'
+            : 'expires $exp'}',
+        important: left != null && left.isNegative,
+      );
     } catch (_) {}
   }
 

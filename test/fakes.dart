@@ -72,7 +72,7 @@ class SentRequest {
 /// recording HTTP client.
 class Harness {
   Harness({DateTime? start, int Function(Uri url)? status, DateTime Function()? clock})
-      : now = start ?? DateTime(2026, 10, 17, 11, 0, 0) {
+    : now = start ?? DateTime(2026, 10, 17, 11, 0, 0) {
     final client = MockClient((req) async {
       sent.add(SentRequest(req.url, jsonDecode(req.body) as Map<String, dynamic>));
       return http.Response('{"ok":true}', status?.call(req.url) ?? 200);
@@ -115,29 +115,28 @@ class Harness {
     String clip = 'none',
     bool? whisper,
     String lang = 'hi',
-  }) =>
-      send({
-        'type': 'verdict',
-        'call_id': id,
-        'speaker': speaker,
-        'chunk_text': text,
-        'language': lang,
-        'verdict': {
-          'call_id': id,
-          'scam_type': scam,
-          'pressure': pressure,
-          'asks_otp_or_pin': otp,
-          'demands_secrecy': secrecy,
-          'confidence': 0.9,
-          'language': lang,
-          'recommended_whisper_clip': clip,
-          'summary_for_family': '',
-        },
-        'pressure': pressure,
-        'whisper': whisper ?? clip != 'none',
-        'whisper_clip': clip,
-        'ts': 2,
-      });
+  }) => send({
+    'type': 'verdict',
+    'call_id': id,
+    'speaker': speaker,
+    'chunk_text': text,
+    'language': lang,
+    'verdict': {
+      'call_id': id,
+      'scam_type': scam,
+      'pressure': pressure,
+      'asks_otp_or_pin': otp,
+      'demands_secrecy': secrecy,
+      'confidence': 0.9,
+      'language': lang,
+      'recommended_whisper_clip': clip,
+      'summary_for_family': '',
+    },
+    'pressure': pressure,
+    'whisper': whisper ?? clip != 'none',
+    'whisper_clip': clip,
+    'ts': 2,
+  });
 
   void incident(String id, {String approveUrl = 'https://n8n.example.org/webhook-waiting/123', String lang = 'hi'}) =>
       send({

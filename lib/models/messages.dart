@@ -20,8 +20,17 @@ sealed class GuardianMessage {
 }
 
 class CallStartedMessage extends GuardianMessage {
-  const CallStartedMessage({required super.callId, super.ts, this.callerNumber = '', this.knownScammer = false});
+  const CallStartedMessage({
+    required super.callId,
+    super.ts,
+    this.callerNumber = '',
+    this.callerLabel = '',
+    this.knownScammer = false,
+  });
   final String callerNumber;
+
+  /// What the caller claims to be, e.g. "CBI Officer" (bridge: participant label or name).
+  final String callerLabel;
   final bool knownScammer;
 }
 
@@ -175,6 +184,7 @@ GuardianMessage? parseGuardianJson(Object? decoded) {
         callId: callId,
         ts: ts,
         callerNumber: jStr(j['caller_number']),
+        callerLabel: jStr(j['caller_label']),
         knownScammer: jBool(j['known_scammer']),
       );
     case 'verdict':

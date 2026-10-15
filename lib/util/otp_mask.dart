@@ -30,11 +30,15 @@ final _sep = RegExp('[ \\-/.:]');
 final _dateSep = RegExp('[\\-/.:]');
 final _letter = RegExp('[A-Za-z]');
 final _currencyBefore = RegExp(r'(₹|rs\.?|inr|rupees?)\s*$', caseSensitive: false);
-final _currencyAfter =
-    RegExp(r'^\s*(₹|rs\b|inr\b|rupees?\b|lakh|crore|रुपये|रुपए|रुपया|लाख|ರೂಪಾಯಿ|ಲಕ್ಷ)', caseSensitive: false);
+final _currencyAfter = RegExp(
+  r'^\s*(₹|rs\b|inr\b|rupees?\b|lakh|crore|रुपये|रुपए|रुपया|लाख|ರೂಪಾಯಿ|ಲಕ್ಷ)',
+  caseSensitive: false,
+);
 
-String _asciiDigits(String s) => String.fromCharCodes(s.runes.map((r) {
-      if (r >= 0x0966 && r <= 0x096F) return r - 0x0966 + 0x30;
-      if (r >= 0x0CE6 && r <= 0x0CEF) return r - 0x0CE6 + 0x30;
-      return r;
-    }));
+String _asciiDigits(String s) => String.fromCharCodes(
+  s.runes.map((r) {
+    if (r >= 0x0966 && r <= 0x096F) return r - 0x0966 + 0x30;
+    if (r >= 0x0CE6 && r <= 0x0CEF) return r - 0x0CE6 + 0x30;
+    return r;
+  }),
+);

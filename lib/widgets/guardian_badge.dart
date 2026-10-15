@@ -30,15 +30,20 @@ class GuardianBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: filled ? color : Pal.grey, width: 2),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 22, color: fg),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(text,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 22, color: fg),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                text,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: fg)),
-          ),
-        ]),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: fg),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

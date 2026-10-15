@@ -38,21 +38,21 @@ class Verdict {
   bool get isScam => scamType != 'none' && scamType.isNotEmpty;
 
   factory Verdict.fromJson(Map<String, dynamic> j) => Verdict(
-        callId: jStr(j['call_id']),
-        transcript: jStr(j['transcript'] ?? j['chunk_text']),
-        scamType: jStr(j['scam_type'], 'none'),
-        pressure: jInt(j['pressure']).clamp(0, 3),
-        asksOtpOrPin: jBool(j['asks_otp_or_pin']),
-        demandsSecrecy: jBool(j['demands_secrecy']),
-        confidence: jDouble(j['confidence']).clamp(0.0, 1.0),
-        language: normLang(jStr(j['language'], 'en')),
-        recommendedWhisperClip: jStr(j['recommended_whisper_clip'], 'none'),
-        callerNumber: jStr(j['caller_number']),
-        summaryForFamily: jStr(j['summary_for_family']),
-        knownScammer: jBool(j['known_scammer']),
-        whisperReason: jStr(j['whisper_reason']),
-        degraded: jBool(j['degraded']),
-      );
+    callId: jStr(j['call_id']),
+    transcript: jStr(j['transcript'] ?? j['chunk_text']),
+    scamType: jStr(j['scam_type'], 'none'),
+    pressure: jInt(j['pressure']).clamp(0, 3),
+    asksOtpOrPin: jBool(j['asks_otp_or_pin']),
+    demandsSecrecy: jBool(j['demands_secrecy']),
+    confidence: jDouble(j['confidence']).clamp(0.0, 1.0),
+    language: normLang(jStr(j['language'], 'en')),
+    recommendedWhisperClip: jStr(j['recommended_whisper_clip'], 'none'),
+    callerNumber: jStr(j['caller_number']),
+    summaryForFamily: jStr(j['summary_for_family']),
+    knownScammer: jBool(j['known_scammer']),
+    whisperReason: jStr(j['whisper_reason']),
+    degraded: jBool(j['degraded']),
+  );
 
   static Verdict? tryParse(List<int> bytes) {
     try {
@@ -64,19 +64,19 @@ class Verdict {
   }
 
   Map<String, dynamic> toJson() => {
-        if (callId.isNotEmpty) 'call_id': callId,
-        'transcript': transcript,
-        'scam_type': scamType,
-        'pressure': pressure,
-        'asks_otp_or_pin': asksOtpOrPin,
-        'demands_secrecy': demandsSecrecy,
-        'confidence': confidence,
-        'language': language,
-        'recommended_whisper_clip': recommendedWhisperClip,
-        if (callerNumber.isNotEmpty) 'caller_number': callerNumber,
-        if (summaryForFamily.isNotEmpty) 'summary_for_family': summaryForFamily,
-        if (knownScammer) 'known_scammer': true,
-      };
+    if (callId.isNotEmpty) 'call_id': callId,
+    'transcript': transcript,
+    'scam_type': scamType,
+    'pressure': pressure,
+    'asks_otp_or_pin': asksOtpOrPin,
+    'demands_secrecy': demandsSecrecy,
+    'confidence': confidence,
+    'language': language,
+    'recommended_whisper_clip': recommendedWhisperClip,
+    if (callerNumber.isNotEmpty) 'caller_number': callerNumber,
+    if (summaryForFamily.isNotEmpty) 'summary_for_family': summaryForFamily,
+    if (knownScammer) 'known_scammer': true,
+  };
 
   String get scamLabel => scamLabelFor(scamType);
 }

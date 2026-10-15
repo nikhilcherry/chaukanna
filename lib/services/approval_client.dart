@@ -19,7 +19,7 @@ class ApprovalOutcome {
 /// approve-by-call_id webhook if that URL is unusable or fails.
 class ApprovalClient {
   ApprovalClient({http.Client? client, required this.webhook, this.timeout = const Duration(seconds: 15)})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
   final String webhook;
@@ -36,9 +36,9 @@ class ApprovalClient {
 
   /// The endpoints that will be tried, in order.
   List<(String, Uri)> routes(String? approveUrl) => [
-        if (isReachableUrl(approveUrl)) ('approve_url', Uri.parse(approveUrl!.trim())),
-        if (isReachableUrl(webhook) && webhook.trim() != approveUrl?.trim()) ('webhook', Uri.parse(webhook.trim())),
-      ];
+    if (isReachableUrl(approveUrl)) ('approve_url', Uri.parse(approveUrl!.trim())),
+    if (isReachableUrl(webhook) && webhook.trim() != approveUrl?.trim()) ('webhook', Uri.parse(webhook.trim())),
+  ];
 
   Future<ApprovalOutcome> submit(Map<String, dynamic> payload, {String? approveUrl, void Function(String)? log}) async {
     final rs = routes(approveUrl);

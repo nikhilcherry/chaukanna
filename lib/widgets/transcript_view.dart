@@ -32,8 +32,11 @@ class _TranscriptViewState extends State<TranscriptView> {
     _seen = widget.lines.length;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
-        _scroll.animateTo(_scroll.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -49,7 +52,8 @@ class _TranscriptViewState extends State<TranscriptView> {
     var i = 0;
     for (final m in _suspicious.allMatches(text)) {
       if (m.start > i) out.add(TextSpan(text: text.substring(i, m.start)));
-      out.add(TextSpan(
+      out.add(
+        TextSpan(
           text: m.group(0),
           style: const TextStyle(
             backgroundColor: Pal.critical,
@@ -57,7 +61,9 @@ class _TranscriptViewState extends State<TranscriptView> {
             color: Colors.white,
             decoration: TextDecoration.underline,
             decorationColor: Colors.white,
-          )));
+          ),
+        ),
+      );
       i = m.end;
     }
     if (i < text.length) out.add(TextSpan(text: text.substring(i)));
@@ -68,10 +74,11 @@ class _TranscriptViewState extends State<TranscriptView> {
   Widget build(BuildContext context) {
     if (widget.lines.isEmpty) {
       return const Center(
-          child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('Listening to the caller…', style: TextStyle(fontSize: 20, color: Pal.dim)),
-      ));
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Listening to the caller…', style: TextStyle(fontSize: 20, color: Pal.dim)),
+        ),
+      );
     }
     return ListView.separated(
       controller: _scroll,
@@ -82,19 +89,25 @@ class _TranscriptViewState extends State<TranscriptView> {
         final l = widget.lines[i];
         final last = i == widget.lines.length - 1;
         final you = l.fromVictim;
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(you ? 'YOU' : 'CALLER',
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              you ? 'YOU' : 'CALLER',
               style: TextStyle(
-                  fontSize: 14,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w900,
-                  color: you ? Pal.safe : Pal.forPressure(l.pressure))),
-          const SizedBox(height: 2),
-          Text.rich(
-            TextSpan(children: you ? [TextSpan(text: l.text)] : _spans(l.text)),
-            style: TextStyle(fontSize: 21, height: 1.4, color: last ? Pal.text : Pal.dim),
-          ),
-        ]);
+                fontSize: 14,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w900,
+                color: you ? Pal.safe : Pal.forPressure(l.pressure),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text.rich(
+              TextSpan(children: you ? [TextSpan(text: l.text)] : _spans(l.text)),
+              style: TextStyle(fontSize: 21, height: 1.4, color: last ? Pal.text : Pal.dim),
+            ),
+          ],
+        );
       },
     );
   }

@@ -22,7 +22,14 @@ void main() {
 
       h.verdict('room-1', text: 'Hello sir', pressure: 0);
       expect(h.c.alarmActive, isFalse);
-      h.verdict('room-1', text: 'You are under digital arrest, tell no one', scam: 'digital_arrest', pressure: 2, secrecy: true, clip: 'warn_digital_arrest');
+      h.verdict(
+        'room-1',
+        text: 'You are under digital arrest, tell no one',
+        scam: 'digital_arrest',
+        pressure: 2,
+        secrecy: true,
+        clip: 'warn_digital_arrest',
+      );
       expect(h.c.alarmActive, isTrue);
       expect(h.c.alarm!.clip, 'warn_digital_arrest');
       expect(h.engine.played, ['warn_digital_arrest']);
@@ -101,6 +108,38 @@ void main() {
       expect(h.c.transcript.single.text, 'new caller');
     });
 
+    test('a re-sent call_started for a call the user hung up on is ignored', () async {
+      h.callStarted('room-1');
+      h.verdict('room-1', pressure: 3, scam: 'digital_arrest', clip: 'warn_digital_arrest');
+      await h.c.endCall();
+      expect(h.c.phase, CallPhase.ended);
+      h.callStarted('room-1'); // bridge snapshot after a reconnect
+      expect(h.c.phase, CallPhase.ended);
+      h.callStarted('room-2');
+      expect(h.c.phase, CallPhase.active);
+    });
+
+    test('caller label from the bridge, number grouped for reading', () {
+      h.send({
+        'type': 'call_started',
+        'call_id': 'r',
+        'caller_number': '+919876543210',
+        'caller_label': '+91 9876543210 - CBI Officer',
+      });
+      expect(h.c.callerNumber, '+919876543210');
+      expect(h.c.callerDisplay, '+91 98765 43210');
+      expect(h.c.callerLabel, 'CBI Officer');
+      h.c.resetToIdle();
+      h.send({
+        'type': 'call_started',
+        'call_id': 's',
+        'caller_number': '+919876543210',
+        'caller_label': '+919876543210',
+      });
+      expect(h.c.callerLabel, '', reason: 'a label that is just the number again is dropped');
+      expect(formatIndianNumber('080 4012 3456'), '080 4012 3456');
+    });
+
     test('a verdict while idle starts a call (bridge without call_started)', () {
       h.verdict('room-3', text: 'hi', pressure: 1);
       expect(h.c.phase, CallPhase.active);
@@ -147,8 +186,10 @@ void main() {
     test('plays the short clip then the full clip in the call language', () {
       h.callStarted('room-1');
       h.verdict('room-1', pressure: 2, otp: true, clip: 'warn_otp', lang: 'kn');
-      expect(h.engine.sequences.single.map((r) => r.asset),
-          ['assets/audio/warn_otp_short_kn.wav', 'assets/audio/warn_otp_kn.wav']);
+      expect(h.engine.sequences.single.map((r) => r.asset), [
+        'assets/audio/warn_otp_short_kn.wav',
+        'assets/audio/warn_otp_kn.wav',
+      ]);
       expect(h.c.callLanguage, 'kn');
       expect(h.engine.preloads.last.keys, containsAll(['warn_otp', 'warn_digital_arrest']));
     });
@@ -236,7 +277,15 @@ void main() {
       expect(r.body['complaint_text'], 'EN draft from n8n');
       expect(r.body['complaint_text_local'], 'हिंदी ड्राफ्ट');
       expect(r.body['complaint_language'], 'hi');
-      for (final k in ['caller_number', 'scam_type', 'asks_otp_or_pin', 'demands_secrecy', 'duration_seconds', 'evidence', 'submitted_at']) {
+      for (final k in [
+        'caller_number',
+        'scam_type',
+        'asks_otp_or_pin',
+        'demands_secrecy',
+        'duration_seconds',
+        'evidence',
+        'submitted_at',
+      ]) {
         expect(r.body.containsKey(k), isTrue, reason: k);
       }
     });

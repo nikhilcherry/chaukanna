@@ -9,41 +9,79 @@ GuardianMessage? parse(Object json) => parseGuardianMessage(utf8.encode(jsonEnco
 void main() {
   group('parseGuardianMessage', () {
     test('call_started', () {
-      final m = parse({'type': 'call_started', 'call_id': 'room-ab12cd34', 'caller_number': '+92 300 1234567', 'known_scammer': true, 'ts': 1760000000.5});
+      final m = parse({
+        'type': 'call_started',
+        'call_id': 'room-ab12cd34',
+        'caller_number': '+92 300 1234567',
+        'known_scammer': true,
+        'ts': 1760000000.5,
+      });
       expect(m, isA<CallStartedMessage>());
       final s = m as CallStartedMessage;
       expect(s.callId, 'room-ab12cd34');
       expect(s.callerNumber, '+92 300 1234567');
       expect(s.knownScammer, isTrue);
       expect(s.ts, 1760000000.5);
+      final labelled =
+          parse({
+                'type': 'call_started',
+                'call_id': 'r',
+                'caller_number': '+919876543210',
+                'caller_label': 'CBI Officer',
+              })
+              as CallStartedMessage;
+      expect(labelled.callerLabel, 'CBI Officer');
+    });
+
+    test('extra fields the bridge adds (in_call, high_risk, flat verdict copies) are tolerated', () {
+      expect(parse({'type': 'heartbeat', 'call_id': '', 'in_call': false, 'ts': 1}), isA<HeartbeatMessage>());
+      expect(
+        parse({'type': 'call_ended', 'call_id': 'r', 'peak_pressure': 3, 'high_risk': true, 'duration_seconds': 41.2}),
+        isA<CallEndedMessage>(),
+      );
+      final v =
+          parse({
+                'type': 'verdict',
+                'call_id': 'r',
+                'verdict': {'scam_type': 'kyc_update', 'pressure': 2, 'recommended_whisper_clip': 'warn_otp'},
+                'scam_type': 'kyc_update',
+                'recommended_whisper_clip': 'warn_otp',
+                'whisper': true,
+                'whisper_clip': 'warn_otp',
+              })
+              as VerdictMessage;
+      expect(v.verdict.scamType, 'kyc_update');
+      expect(v.clipToPlay, 'warn_otp');
     });
 
     test('verdict (current bridge format with nested Verdict)', () {
-      final m = parse({
-        'type': 'verdict',
-        'call_id': 'room-1',
-        'speaker': 'caller',
-        'chunk_text': 'tell me the OTP',
-        'language': 'hi-IN',
-        'verdict': {
-          'call_id': 'room-1',
-          'scam_type': 'bank_impersonation',
-          'pressure': 2,
-          'asks_otp_or_pin': true,
-          'demands_secrecy': false,
-          'confidence': 0.8,
-          'language': 'hi',
-          'recommended_whisper_clip': 'warn_otp',
-          'summary_for_family': 'x',
-          'known_scammer': false,
-          'whisper_reason': 'first OTP ask',
-        },
-        'pressure': 2,
-        'whisper': true,
-        'whisper_clip': 'warn_otp',
-        'ts': 1,
-        'latency_ms': 1840,
-      }) as VerdictMessage;
+      final m =
+          parse({
+                'type': 'verdict',
+                'call_id': 'room-1',
+                'speaker': 'caller',
+                'chunk_text': 'tell me the OTP',
+                'language': 'hi-IN',
+                'verdict': {
+                  'call_id': 'room-1',
+                  'scam_type': 'bank_impersonation',
+                  'pressure': 2,
+                  'asks_otp_or_pin': true,
+                  'demands_secrecy': false,
+                  'confidence': 0.8,
+                  'language': 'hi',
+                  'recommended_whisper_clip': 'warn_otp',
+                  'summary_for_family': 'x',
+                  'known_scammer': false,
+                  'whisper_reason': 'first OTP ask',
+                },
+                'pressure': 2,
+                'whisper': true,
+                'whisper_clip': 'warn_otp',
+                'ts': 1,
+                'latency_ms': 1840,
+              })
+              as VerdictMessage;
       expect(m.callId, 'room-1');
       expect(m.language, 'hi');
       expect(m.pressure, 2);
@@ -55,37 +93,47 @@ void main() {
     });
 
     test('verdict with whisper=false does not play even if the classifier recommends a clip', () {
-      final m = parse({
-        'type': 'verdict',
-        'call_id': 'c',
-        'verdict': {'scam_type': 'digital_arrest', 'pressure': 3, 'recommended_whisper_clip': 'warn_digital_arrest'},
-        'whisper': false,
-      }) as VerdictMessage;
+      final m =
+          parse({
+                'type': 'verdict',
+                'call_id': 'c',
+                'verdict': {
+                  'scam_type': 'digital_arrest',
+                  'pressure': 3,
+                  'recommended_whisper_clip': 'warn_digital_arrest',
+                },
+                'whisper': false,
+              })
+              as VerdictMessage;
       expect(m.clipToPlay, 'none');
       expect(m.pressure, 3);
     });
 
     test('verdict from the older bridge (no whisper_clip field) uses the verdict clip', () {
-      final m = parse({
-        'type': 'verdict',
-        'call_id': 'chaukanna',
-        'chunk_text': 'x',
-        'verdict': {'scam_type': 'other', 'pressure': 2, 'recommended_whisper_clip': 'warn_secrecy'},
-        'whisper': true,
-      }) as VerdictMessage;
+      final m =
+          parse({
+                'type': 'verdict',
+                'call_id': 'chaukanna',
+                'chunk_text': 'x',
+                'verdict': {'scam_type': 'other', 'pressure': 2, 'recommended_whisper_clip': 'warn_secrecy'},
+                'whisper': true,
+              })
+              as VerdictMessage;
       expect(m.clipToPlay, 'warn_secrecy');
     });
 
     test('bare Verdict with no type is accepted (old format / simulator)', () {
-      final m = parse({
-        'transcript': 'You are under digital arrest',
-        'scam_type': 'digital_arrest',
-        'pressure': 9,
-        'asks_otp_or_pin': false,
-        'demands_secrecy': true,
-        'language': 'kn',
-        'recommended_whisper_clip': 'warn_digital_arrest',
-      }) as VerdictMessage;
+      final m =
+          parse({
+                'transcript': 'You are under digital arrest',
+                'scam_type': 'digital_arrest',
+                'pressure': 9,
+                'asks_otp_or_pin': false,
+                'demands_secrecy': true,
+                'language': 'kn',
+                'recommended_whisper_clip': 'warn_digital_arrest',
+              })
+              as VerdictMessage;
       expect(m.legacy, isTrue);
       expect(m.pressure, 3, reason: 'clamped');
       expect(m.chunkText, 'You are under digital arrest');
@@ -94,19 +142,21 @@ void main() {
     });
 
     test('incident carries the n8n reply, nested or flat', () {
-      final flat = parse({
-        'type': 'incident',
-        'call_id': 'room-1',
-        'ok': true,
-        'incident_id': 'u-1',
-        'known_scammer': false,
-        'family_alerted': true,
-        'evidence_saved': true,
-        'blocklisted': false,
-        'complaint_draft': {'en': 'EN', 'local': 'ಕನ್ನಡ', 'language': 'kn'},
-        'family_alert': '• a\n• b',
-        'approve_url': 'https://n8n.premortem.tech/webhook-waiting/77',
-      }) as IncidentMessage;
+      final flat =
+          parse({
+                'type': 'incident',
+                'call_id': 'room-1',
+                'ok': true,
+                'incident_id': 'u-1',
+                'known_scammer': false,
+                'family_alerted': true,
+                'evidence_saved': true,
+                'blocklisted': false,
+                'complaint_draft': {'en': 'EN', 'local': 'ಕನ್ನಡ', 'language': 'kn'},
+                'family_alert': '• a\n• b',
+                'approve_url': 'https://n8n.premortem.tech/webhook-waiting/77',
+              })
+              as IncidentMessage;
       final i = flat.incident;
       expect(flat.callId, 'room-1');
       expect(i.incidentId, 'u-1');
@@ -117,10 +167,16 @@ void main() {
       expect(i.hasLocalDraft, isTrue);
       expect(i.approveUrl, endsWith('/77'));
 
-      final nested = parse({
-        'type': 'incident',
-        'incident': {'call_id': 'room-2', 'complaint_draft': 'plain text draft', 'family_alert': ['• x', '• y']},
-      }) as IncidentMessage;
+      final nested =
+          parse({
+                'type': 'incident',
+                'incident': {
+                  'call_id': 'room-2',
+                  'complaint_draft': 'plain text draft',
+                  'family_alert': ['• x', '• y'],
+                },
+              })
+              as IncidentMessage;
       expect(nested.callId, 'room-2');
       expect(nested.incident.complaintEn, 'plain text draft');
       expect(nested.incident.familyAlert, '• x\n• y');
@@ -145,11 +201,13 @@ void main() {
     });
 
     test('wrongly typed fields fall back instead of throwing', () {
-      final m = parse({
-        'type': 'verdict',
-        'verdict': {'pressure': '2', 'asks_otp_or_pin': 'true', 'scam_type': null, 'confidence': 'high'},
-        'speaker': null,
-      }) as VerdictMessage;
+      final m =
+          parse({
+                'type': 'verdict',
+                'verdict': {'pressure': '2', 'asks_otp_or_pin': 'true', 'scam_type': null, 'confidence': 'high'},
+                'speaker': null,
+              })
+              as VerdictMessage;
       expect(m.pressure, 2);
       expect(m.verdict.asksOtpOrPin, isTrue);
       expect(m.verdict.scamType, 'none');

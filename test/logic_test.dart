@@ -96,8 +96,9 @@ void main() {
       expect(ApprovalClient(webhook: hook).routes('').map((e) => e.$1), ['webhook']);
     });
     test('a localhost resume URL is unreachable from a phone and skipped', () {
-      expect(ApprovalClient(webhook: hook).routes('http://localhost:5678/webhook-waiting/9').map((e) => e.$1),
-          ['webhook']);
+      expect(ApprovalClient(webhook: hook).routes('http://localhost:5678/webhook-waiting/9').map((e) => e.$1), [
+        'webhook',
+      ]);
       expect(ApprovalClient.isReachableUrl('http://127.0.0.1:5678/x'), isFalse);
       expect(ApprovalClient.isReachableUrl('ftp://n8n.premortem.tech/x'), isFalse);
     });

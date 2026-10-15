@@ -46,6 +46,5 @@ class AppConfig {
   /// Hang up automatically a few seconds after a known-scammer warning.
   static const autoBlockKnownScammers = bool.fromEnvironment('AUTO_BLOCK_KNOWN', defaultValue: true);
 
-  static bool get liveKitConfigured =>
-      livekitTokenUrl.isNotEmpty || (livekitUrl.isNotEmpty && livekitToken.isNotEmpty);
+  static bool get liveKitConfigured => livekitTokenUrl.isNotEmpty || (livekitUrl.isNotEmpty && livekitToken.isNotEmpty);
 }

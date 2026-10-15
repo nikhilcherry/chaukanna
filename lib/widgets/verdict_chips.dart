@@ -22,18 +22,19 @@ class VerdictChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scam = scamType != 'none' && scamType.isNotEmpty;
-    return Wrap(spacing: 10, runSpacing: 10, alignment: WrapAlignment.center, children: [
-      if (knownScammer) const _Chip(on: true, text: '⛔ Known scammer number', color: Pal.crimson),
-      _Chip(
-        on: scam,
-        text: scam ? '🚨 ${scamLabelFor(scamType)}' : '✓ No scam detected',
-        color: Pal.critical,
-      ),
-      // Warning chips appear only when they light up: less to read for an elder,
-      // and the appearance itself is the signal (with words, not just colour).
-      if (asksOtp) const _Chip(on: true, text: '⚠️ Asking for OTP/PIN', color: Pal.high),
-      if (secrecy) const _Chip(on: true, text: '🔒 Isolation attempt', color: Pal.critical),
-    ]);
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      alignment: WrapAlignment.center,
+      children: [
+        if (knownScammer) const _Chip(on: true, text: '⛔ Known scammer number', color: Pal.crimson),
+        _Chip(on: scam, text: scam ? '🚨 ${scamLabelFor(scamType)}' : '✓ No scam detected', color: Pal.critical),
+        // Warning chips appear only when they light up: less to read for an elder,
+        // and the appearance itself is the signal (with words, not just colour).
+        if (asksOtp) const _Chip(on: true, text: '⚠️ Asking for OTP/PIN', color: Pal.high),
+        if (secrecy) const _Chip(on: true, text: '🔒 Isolation attempt', color: Pal.critical),
+      ],
+    );
   }
 }
 
@@ -55,12 +56,14 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         boxShadow: on ? [BoxShadow(color: color.withValues(alpha: 0.55), blurRadius: 16)] : null,
       ),
-      child: Text(text,
-          style: TextStyle(
-            fontSize: on ? 19 : 17,
-            fontWeight: on ? FontWeight.w900 : FontWeight.w600,
-            color: on ? Pal.onColor(color) : Pal.dim,
-          )),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: on ? 19 : 17,
+          fontWeight: on ? FontWeight.w900 : FontWeight.w600,
+          color: on ? Pal.onColor(color) : Pal.dim,
+        ),
+      ),
     );
   }
 }

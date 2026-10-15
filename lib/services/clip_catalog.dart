@@ -43,7 +43,9 @@ class WarningText {
 /// missing file shows up at call start instead of silently at the moment a
 /// warning should play.
 class ClipCatalog {
-  ClipCatalog({ClipLookup? lookup, Set<String>? bundledAssets}) : _lookup = lookup ?? generatedClip, _assets = bundledAssets;
+  ClipCatalog({ClipLookup? lookup, Set<String>? bundledAssets})
+    : _lookup = lookup ?? generatedClip,
+      _assets = bundledAssets;
 
   static List<String> get clipIds => gen.kWhisperClipIds;
   static List<String> get languages => gen.kWhisperLangs;
@@ -105,10 +107,12 @@ class ClipCatalog {
 
   /// Human-readable list of warnings that have no audio at all in [lang].
   List<String> missingAudio(String lang) => [
-        for (final c in clipIds)
-          if (sequence(c, lang).isEmpty) '$c/$lang'
-          else if (playableLang(c, lang) != normLang(lang)) '$c/$lang (English fallback)',
-      ];
+    for (final c in clipIds)
+      if (sequence(c, lang).isEmpty)
+        '$c/$lang'
+      else if (playableLang(c, lang) != normLang(lang))
+        '$c/$lang (English fallback)',
+  ];
 }
 
 /// Adapter over the generated metadata. Returns the exact language only;
@@ -117,7 +121,14 @@ class ClipCatalog {
 ClipRef? generatedClip(String clip, String lang, String variant) {
   final g = gen.whisperClip(clip, lang, variant: variant);
   if (g == null || g.lang != lang) return null;
-  return ClipRef(clip: g.clip, lang: g.lang, variant: g.variant, asset: g.asset, text: g.text, durationMs: g.durationMs);
+  return ClipRef(
+    clip: g.clip,
+    lang: g.lang,
+    variant: g.variant,
+    asset: g.asset,
+    text: g.text,
+    durationMs: g.durationMs,
+  );
 }
 
 /// Shown when a high-pressure alarm has no specific warning.

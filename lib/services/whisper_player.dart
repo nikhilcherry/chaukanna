@@ -54,24 +54,28 @@ class JustAudioWhisperEngine implements WhisperEngine {
   Completer<WhisperOutcome>? _active;
 
   AudioPlayer _player(String clip) => _players.putIfAbsent(clip, () {
-        // No audio-session activation or interruption handling: during a
-        // LiveKit call WebRTC owns audio focus, and just_audio silently skips
-        // play() if activation fails. We must always play.
-        final p = AudioPlayer(
-          handleInterruptions: false,
-          handleAudioSessionActivation: false,
-          androidApplyAudioAttributes: false,
-        );
-        unawaited(_applyRoute(p));
-        return p;
-      });
+    // No audio-session activation or interruption handling: during a
+    // LiveKit call WebRTC owns audio focus, and just_audio silently skips
+    // play() if activation fails. We must always play.
+    final p = AudioPlayer(
+      handleInterruptions: false,
+      handleAudioSessionActivation: false,
+      androidApplyAudioAttributes: false,
+    );
+    unawaited(_applyRoute(p));
+    return p;
+  });
 
   Future<void> _applyRoute(AudioPlayer p) async {
     try {
-      await p.setAndroidAudioAttributes(_route == WhisperRoute.call
-          ? const AndroidAudioAttributes(
-              contentType: AndroidAudioContentType.speech, usage: AndroidAudioUsage.voiceCommunication)
-          : const AndroidAudioAttributes(contentType: AndroidAudioContentType.speech, usage: AndroidAudioUsage.media));
+      await p.setAndroidAudioAttributes(
+        _route == WhisperRoute.call
+            ? const AndroidAudioAttributes(
+                contentType: AndroidAudioContentType.speech,
+                usage: AndroidAudioUsage.voiceCommunication,
+              )
+            : const AndroidAudioAttributes(contentType: AndroidAudioContentType.speech, usage: AndroidAudioUsage.media),
+      );
     } catch (_) {}
   }
 
@@ -121,15 +125,20 @@ class JustAudioWhisperEngine implements WhisperEngine {
       p.processingStateStream.listen((s) {
         if (s == ProcessingState.completed && !done.isCompleted) done.complete(WhisperOutcome.completed);
       }),
-      p.playbackEventStream.listen((_) {}, onError: (Object e, StackTrace _) {
-        if (!done.isCompleted) done.completeError(WhisperFailure('Playback error: $e'));
-      }),
+      p.playbackEventStream.listen(
+        (_) {},
+        onError: (Object e, StackTrace _) {
+          if (!done.isCompleted) done.completeError(WhisperFailure('Playback error: $e'));
+        },
+      ),
     ];
     try {
       await p.seek(Duration.zero, index: 0);
-      unawaited(p.play().catchError((Object e) {
-        if (!done.isCompleted) done.completeError(WhisperFailure('Playback error: $e'));
-      }));
+      unawaited(
+        p.play().catchError((Object e) {
+          if (!done.isCompleted) done.completeError(WhisperFailure('Playback error: $e'));
+        }),
+      );
       return await done.future;
     } finally {
       for (final s in subs) {

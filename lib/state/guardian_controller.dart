@@ -82,8 +82,16 @@ class Notice {
 
 typedef Haptics = Future<void> Function();
 
-String mmss(Duration d) =>
-    '${d.inMinutes.toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+/// '+919876543210' / '9876543210' -> '+91 98765 43210'; anything else unchanged.
+String formatIndianNumber(String n) {
+  final digits = n.replaceAll(RegExp(r'[\s-]'), '');
+  final m = RegExp(r'^(?:\+?91)?([6-9]\d{9})$').firstMatch(digits);
+  if (m == null) return n;
+  final d = m.group(1)!;
+  return '+91 ${d.substring(0, 5)} ${d.substring(5)}';
+}
+
+String mmss(Duration d) => '${d.inMinutes.toString().padLeft(2, '0')}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
 /// Single source of truth. LiveKit packets and the Demo Simulator both go
 /// through [handleData] -> [parseGuardianMessage] -> [handleMessage].
@@ -95,12 +103,12 @@ class GuardianController extends ChangeNotifier {
     DateTime Function()? clock,
     Haptics? haptics,
     bool useLiveKit = true,
-  })  : _engine = whisper ?? JustAudioWhisperEngine(),
-        _approval = approval ?? ApprovalClient(webhook: AppConfig.n8nApprovalWebhook),
-        catalog = catalog ?? ClipCatalog(),
-        _catalogInjected = catalog != null,
-        _now = clock ?? DateTime.now,
-        _haptics = haptics ?? _defaultHaptics {
+  }) : _engine = whisper ?? JustAudioWhisperEngine(),
+       _approval = approval ?? ApprovalClient(webhook: AppConfig.n8nApprovalWebhook),
+       catalog = catalog ?? ClipCatalog(),
+       _catalogInjected = catalog != null,
+       _now = clock ?? DateTime.now,
+       _haptics = haptics ?? _defaultHaptics {
     if (useLiveKit && AppConfig.liveKitConfigured) {
       final t = LiveKitTransport(
         onData: (d, topic) => handleData(d, topic: topic),
@@ -284,17 +292,23 @@ class GuardianController extends ChangeNotifier {
   static bool _isSim(String id) => id.startsWith('sim-');
 
   void _onCallStarted(CallStartedMessage m) {
+    if (phase != CallPhase.active && m.callId.isNotEmpty && m.callId == lastEndedCallId) {
+      // The bridge re-sends call_started when this phone rejoins mid-call; the
+      // user already hung up on this one.
+      _log('Ignored call_started for ended call ${m.callId}');
+      return;
+    }
     if (phase == CallPhase.active) {
       final sameCall = callId == null || m.callId.isEmpty || m.callId == callId;
       final simToReal = simulated && !_isSim(m.callId);
       if (sameCall && !simToReal) {
         if (m.callId.isNotEmpty) callId = m.callId;
-        if (m.callerNumber.isNotEmpty) _setCaller(m.callerNumber);
+        if (m.callerNumber.isNotEmpty) _setCaller(m.callerNumber, label: m.callerLabel);
         if (m.knownScammer) _onKnownScammer();
         return;
       }
     }
-    _beginCall(id: m.callId, number: m.callerNumber);
+    _beginCall(id: m.callId, number: m.callerNumber, label: m.callerLabel);
     if (m.knownScammer) _onKnownScammer();
   }
 
@@ -368,9 +382,11 @@ class GuardianController extends ChangeNotifier {
       }
     }
     String yn(bool? b) => b == null ? '?' : (b ? 'yes' : 'no');
-    _log('n8n incident ${i.incidentId.isEmpty ? '(no id)' : i.incidentId}: family ${yn(i.familyAlerted)}, '
-        'evidence ${yn(i.evidenceSaved)}, blocklist ${yn(i.blocklisted)}, '
-        'approve_url ${i.approveUrl.isEmpty ? 'none' : (ApprovalClient.isReachableUrl(i.approveUrl) ? 'ok' : 'UNREACHABLE (${i.approveUrl})')}');
+    _log(
+      'n8n incident ${i.incidentId.isEmpty ? '(no id)' : i.incidentId}: family ${yn(i.familyAlerted)}, '
+      'evidence ${yn(i.evidenceSaved)}, blocklist ${yn(i.blocklisted)}, '
+      'approve_url ${i.approveUrl.isEmpty ? 'none' : (ApprovalClient.isReachableUrl(i.approveUrl) ? 'ok' : 'UNREACHABLE (${i.approveUrl})')}',
+    );
   }
 
   void _onCallEnded(CallEndedMessage m) {
@@ -399,19 +415,21 @@ class GuardianController extends ChangeNotifier {
 
   static const _unknown = 'Unknown number';
 
-  void _beginCall({String? id, String number = '', String? identity}) {
+  void _beginCall({String? id, String number = '', String label = '', String? identity}) {
     final sim = _isSim(id ?? '');
     if (!sim) _cancelSim();
     _resetCall();
     callId = (id == null || id.isEmpty) ? null : id;
     simulated = sim;
     _callerIdentity = identity;
-    _setCaller(number);
+    _setCaller(number, label: label);
     phase = CallPhase.active;
     callStartedAt = _now();
     lastCall = null;
     callLanguage = sim ? simLanguage : normLang(AppConfig.preferredLanguage);
-    final route = (sim || _transport == null || AppConfig.whisperRoute == 'media') ? WhisperRoute.media : WhisperRoute.call;
+    final route = (sim || _transport == null || AppConfig.whisperRoute == 'media')
+        ? WhisperRoute.media
+        : WhisperRoute.call;
     unawaited(_engine.setRoute(route));
     _preload(callLanguage);
     unawaited(_transport?.setRemoteAudio(true));
@@ -425,17 +443,25 @@ class GuardianController extends ChangeNotifier {
     _log('Call started${callId == null ? '' : ' ($callId)'} from $callerNumber');
   }
 
-  void _setCaller(String raw) {
+  /// [raw] may be "+91 98765 43210 - CBI Officer" (dialer text) or a bare
+  /// number; [label] is the bridge's caller_label, which may repeat the number.
+  void _setCaller(String raw, {String label = ''}) {
     final s = raw.trim();
-    if (s.isEmpty) {
-      callerNumber = _unknown;
-      callerLabel = '';
-      return;
-    }
     final i = s.indexOf(' - ');
-    callerNumber = i > 0 ? s.substring(0, i).trim() : s;
-    callerLabel = i > 0 ? s.substring(i + 3).trim() : '';
+    callerNumber = s.isEmpty ? _unknown : (i > 0 ? s.substring(0, i).trim() : s);
+    var l = i > 0 ? s.substring(i + 3).trim() : '';
+    final given = label.trim();
+    if (given.isNotEmpty) {
+      final j = given.indexOf(' - ');
+      final candidate = j >= 0 ? given.substring(j + 3).trim() : given;
+      final digits = RegExp(r'\d').allMatches(candidate).length;
+      if (candidate.isNotEmpty && digits < 6) l = candidate; // not just the number again
+    }
+    callerLabel = l;
   }
+
+  /// The caller's number grouped for reading aloud: +91 98765 43210.
+  String get callerDisplay => formatIndianNumber(callerNumber);
 
   void _resetCall() {
     _whisperToken++;
@@ -498,7 +524,7 @@ class GuardianController extends ChangeNotifier {
     unawaited(_engine.stop());
     _log('Call ended: $reason (${high ? 'high risk' : 'no scam found'})');
     if (!high) {
-      final note = LastCall(callerNumber, elapsed, reason);
+      final note = LastCall(callerDisplay, elapsed, reason);
       _resetCall();
       lastCall = note;
     }
@@ -583,8 +609,10 @@ class GuardianController extends ChangeNotifier {
           .sequence('warn_known_scammer', callLanguage)
           .fold<int>(0, (sum, r) => sum + (r.durationMs ?? 3000));
       _autoHangup?.cancel();
-      _autoHangup = Timer(Duration(milliseconds: math.max(ms, 3000) + 1500),
-          () => unawaited(endCall(reason: 'Blocked: known scammer number')));
+      _autoHangup = Timer(
+        Duration(milliseconds: math.max(ms, 3000) + 1500),
+        () => unawaited(endCall(reason: 'Blocked: known scammer number')),
+      );
     }
   }
 
@@ -606,15 +634,22 @@ class GuardianController extends ChangeNotifier {
     _log('Whisper $clip: ${seq.map((r) => r.asset.split('/').last).join(' then ')}');
     _notify();
     try {
-      final out = await _engine.play(clip, seq, onClip: (ref) {
-        if (token != _whisperToken || _disposed) return;
-        whisper = WhisperState(WhisperStatus.playing, clip: clip, current: ref);
-        if (ref.variant == 'full') _duckCaller(false);
-        _notify();
-      });
+      final out = await _engine.play(
+        clip,
+        seq,
+        onClip: (ref) {
+          if (token != _whisperToken || _disposed) return;
+          whisper = WhisperState(WhisperStatus.playing, clip: clip, current: ref);
+          if (ref.variant == 'full') _duckCaller(false);
+          _notify();
+        },
+      );
       if (token != _whisperToken) return;
-      whisper = WhisperState(out == WhisperOutcome.completed ? WhisperStatus.done : WhisperStatus.stopped,
-          clip: clip, current: whisper.current);
+      whisper = WhisperState(
+        out == WhisperOutcome.completed ? WhisperStatus.done : WhisperStatus.stopped,
+        clip: clip,
+        current: whisper.current,
+      );
     } catch (e) {
       if (token != _whisperToken) return;
       _whisperFailed(clip, '$e');
@@ -637,14 +672,17 @@ class GuardianController extends ChangeNotifier {
 
   void _preload(String lang) {
     final seqs = {for (final c in ClipCatalog.clipIds) c: catalog.sequence(c, lang)};
-    _engine.preload(seqs).then((failed) {
-      for (final f in failed) {
-        _log('Preload failed: $f', important: true);
-      }
-      if (failed.isNotEmpty) _emit('Some voice warnings could not load. Open the simulator log.', error: true);
-    }).catchError((Object e) {
-      _log('Preload error: $e', important: true);
-    });
+    _engine
+        .preload(seqs)
+        .then((failed) {
+          for (final f in failed) {
+            _log('Preload failed: $f', important: true);
+          }
+          if (failed.isNotEmpty) _emit('Some voice warnings could not load. Open the simulator log.', error: true);
+        })
+        .catchError((Object e) {
+          _log('Preload error: $e', important: true);
+        });
   }
 
   /// "I understand" on the alarm: hide it and stop the voice.
@@ -678,11 +716,11 @@ class GuardianController extends ChangeNotifier {
   }
 
   String _flagSummary(int pressure, Verdict v) => [
-        'pressure $pressure',
-        if (v.isScam) _scamName(v.scamType),
-        if (v.asksOtpOrPin) 'OTP/PIN ask',
-        if (v.demandsSecrecy) 'secrecy demand',
-      ].join(', ');
+    'pressure $pressure',
+    if (v.isScam) _scamName(v.scamType),
+    if (v.asksOtpOrPin) 'OTP/PIN ask',
+    if (v.demandsSecrecy) 'secrecy demand',
+  ].join(', ');
 
   static String _snippet(String s) => s.length <= 90 ? s : '${s.substring(0, 87)}...';
 
@@ -693,8 +731,10 @@ class GuardianController extends ChangeNotifier {
       ..writeln()
       ..writeln('Subject: Report of attempted ${_scamName(scamType)} via phone call')
       ..writeln()
-      ..writeln('I wish to report a fraudulent phone call received on ${_date(when)} '
-          'from the number $callerNumber, lasting ${mmss(elapsed)}.')
+      ..writeln(
+        'I wish to report a fraudulent phone call received on ${_date(when)} '
+        'from the number $callerNumber, lasting ${mmss(elapsed)}.',
+      )
       ..writeln()
       ..writeln('The caller attempted a ${_scamName(scamType)}, with a peak pressure level of $peakPressure/3.');
     if (knownScammer) b.writeln('This number is already on the shared scam-number list.');
@@ -703,8 +743,10 @@ class GuardianController extends ChangeNotifier {
     b
       ..writeln('No money was transferred and no OTP/PIN was shared.')
       ..writeln()
-      ..writeln('Call evidence with timestamps is saved and available on request. '
-          'I request that the number $callerNumber be investigated and blocked.');
+      ..writeln(
+        'Call evidence with timestamps is saved and available on request. '
+        'I request that the number $callerNumber be investigated and blocked.',
+      );
     return b.toString().trim();
   }
 
@@ -729,24 +771,24 @@ class GuardianController extends ChangeNotifier {
 
   /// CONTRACTS §3 body (plus additive complaint_text_local / complaint_language / known_scammer).
   Map<String, dynamic> approvalPayload() => {
-        'action': 'confirm_1930_report',
-        'confirmed_by_human': true,
-        'call_id': callId ?? lastEndedCallId ?? '',
-        'victim_id': AppConfig.victimId,
-        if (incident?.incidentId.isNotEmpty == true) 'incident_id': incident!.incidentId,
-        'caller_number': callerNumber,
-        'scam_type': scamType,
-        'peak_pressure': peakPressure,
-        'asks_otp_or_pin': sawOtpAsk,
-        'demands_secrecy': sawSecrecy,
-        'known_scammer': knownScammer,
-        'duration_seconds': elapsed.inSeconds,
-        'evidence': [for (final e in evidence) e.format()],
-        'complaint_text': complaintEnglish,
-        'complaint_text_local': ?complaintLocal,
-        'complaint_language': complaintLocal != null ? complaintLocalLang : 'en',
-        'submitted_at': _now().toUtc().toIso8601String(),
-      };
+    'action': 'confirm_1930_report',
+    'confirmed_by_human': true,
+    'call_id': callId ?? lastEndedCallId ?? '',
+    'victim_id': AppConfig.victimId,
+    if (incident?.incidentId.isNotEmpty == true) 'incident_id': incident!.incidentId,
+    'caller_number': callerNumber,
+    'scam_type': scamType,
+    'peak_pressure': peakPressure,
+    'asks_otp_or_pin': sawOtpAsk,
+    'demands_secrecy': sawSecrecy,
+    'known_scammer': knownScammer,
+    'duration_seconds': elapsed.inSeconds,
+    'evidence': [for (final e in evidence) e.format()],
+    'complaint_text': complaintEnglish,
+    'complaint_text_local': ?complaintLocal,
+    'complaint_language': complaintLocal != null ? complaintLocalLang : 'en',
+    'submitted_at': _now().toUtc().toIso8601String(),
+  };
 
   /// The one irreversible action; the screen asks for explicit confirmation first.
   Future<void> submit1930() async {
@@ -833,8 +875,15 @@ class GuardianController extends ChangeNotifier {
     final lang = callLanguage;
     final when = callStartedAt ?? _now();
     final type = scamType == 'none' ? 'other' : scamType;
-    String draft(String l) => simComplaint(l,
-        scamType: type, number: callerNumber, when: when, otp: sawOtpAsk, secrecy: sawSecrecy, known: knownScammer);
+    String draft(String l) => simComplaint(
+      l,
+      scamType: type,
+      number: callerNumber,
+      when: when,
+      otp: sawOtpAsk,
+      secrecy: sawSecrecy,
+      known: knownScammer,
+    );
     return {
       'type': 'incident',
       'call_id': callId,
@@ -846,12 +895,13 @@ class GuardianController extends ChangeNotifier {
       'blocklisted': true,
       'complaint_draft': {'en': draft('en'), 'local': lang == 'en' ? '' : draft(lang), 'language': lang},
       'family_alert': simFamilyAlert(
-          victimName: AppConfig.victimName,
-          scamType: type,
-          number: callerNumber,
-          otp: sawOtpAsk,
-          secrecy: sawSecrecy,
-          known: knownScammer),
+        victimName: AppConfig.victimName,
+        scamType: type,
+        number: callerNumber,
+        otp: sawOtpAsk,
+        secrecy: sawSecrecy,
+        known: knownScammer,
+      ),
       'approve_url': '',
       'ts': _ts,
     };
@@ -903,41 +953,49 @@ class GuardianController extends ChangeNotifier {
 
   void simulatePressure0() {
     final id = _ensureSimCall('+91 80 4012 3456');
-    _inject(_verdictJson(id, 'caller', pickLine(simSafeLine, simLanguage),
-        const {'scam_type': 'none', 'pressure': 0}, simLanguage));
+    _inject(
+      _verdictJson(id, 'caller', pickLine(simSafeLine, simLanguage), const {
+        'scam_type': 'none',
+        'pressure': 0,
+      }, simLanguage),
+    );
   }
 
   void simulatePressure2Otp() {
     final id = _ensureSimCall('+91 98765 41207');
-    _inject(_verdictJson(
-        id,
-        'caller',
-        pickLine(simOtpLine, simLanguage),
-        const {'scam_type': 'bank_impersonation', 'pressure': 2, 'asks_otp_or_pin': true, 'whisper_clip': 'warn_otp'},
-        simLanguage));
+    _inject(
+      _verdictJson(id, 'caller', pickLine(simOtpLine, simLanguage), const {
+        'scam_type': 'bank_impersonation',
+        'pressure': 2,
+        'asks_otp_or_pin': true,
+        'whisper_clip': 'warn_otp',
+      }, simLanguage),
+    );
     _scheduleSimIncident();
   }
 
   void simulatePressure3DigitalArrest() {
     final id = _ensureSimCall('+91 70012 99881');
-    _inject(_verdictJson(
-        id,
-        'caller',
-        pickLine(simArrestLine, simLanguage),
-        const {
-          'scam_type': 'digital_arrest',
-          'pressure': 3,
-          'demands_secrecy': true,
-          'whisper_clip': 'warn_digital_arrest',
-        },
-        simLanguage));
+    _inject(
+      _verdictJson(id, 'caller', pickLine(simArrestLine, simLanguage), const {
+        'scam_type': 'digital_arrest',
+        'pressure': 3,
+        'demands_secrecy': true,
+        'whisper_clip': 'warn_digital_arrest',
+      }, simLanguage),
+    );
     _scheduleSimIncident();
   }
 
   void simulateKnownScammer() {
     final id = _ensureSimCall('+91 99887 76655', known: true);
-    _inject(_verdictJson(id, 'caller', pickLine(simKnownLine, simLanguage),
-        const {'scam_type': 'kyc_update', 'pressure': 3, 'known_scammer': true}, simLanguage));
+    _inject(
+      _verdictJson(id, 'caller', pickLine(simKnownLine, simLanguage), const {
+        'scam_type': 'kyc_update',
+        'pressure': 3,
+        'known_scammer': true,
+      }, simLanguage),
+    );
     _scheduleSimIncident(after: const Duration(seconds: 2));
   }
 
@@ -957,16 +1015,24 @@ class GuardianController extends ChangeNotifier {
       for (var i = 0; i < fullScamScript.length; i++)
         (
           lineAt[i],
-          () => _verdictJson(id, fullScamScript[i].speaker, fullScamScript[i].textFor(lang), fullScamScript[i].verdict, lang)
+          () => _verdictJson(
+            id,
+            fullScamScript[i].speaker,
+            fullScamScript[i].textFor(lang),
+            fullScamScript[i].verdict,
+            lang,
+          ),
         ),
       (34000, _simIncidentJson),
       (40000, () => {'type': 'call_ended', 'call_id': id, 'ts': _ts}),
     ];
     for (final (ms, build) in steps) {
-      _scriptTimers.add(Timer(Duration(milliseconds: ms), () {
-        if (ms > 0 && callId != id) return; // the user reset or another call took over
-        _inject(build());
-      }));
+      _scriptTimers.add(
+        Timer(Duration(milliseconds: ms), () {
+          if (ms > 0 && callId != id) return; // the user reset or another call took over
+          _inject(build());
+        }),
+      );
     }
     _log('Scripted scam call started ($lang)');
     _notify();
