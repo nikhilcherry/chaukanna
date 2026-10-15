@@ -25,11 +25,7 @@ class Pal {
 const kIndicFallback = ['NotoSansDevanagari', 'NotoSansKannada'];
 
 ThemeData buildTheme() {
-  final base = ThemeData.dark().textTheme.apply(
-        bodyColor: Pal.text,
-        displayColor: Pal.text,
-        fontSizeFactor: 1.15,
-      );
+  final base = ThemeData.dark().textTheme.apply(bodyColor: Pal.text, displayColor: Pal.text);
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,

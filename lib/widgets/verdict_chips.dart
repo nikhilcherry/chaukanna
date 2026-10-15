@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/verdict.dart';
 import '../theme.dart';
 
-/// Live verdict chips. Each chip changes its words and icon when it lights up,
-/// so the meaning never depends on colour alone.
+/// Live verdict chips. The scam chip changes its words and icon when it lights
+/// up, so the meaning never depends on colour alone.
 class VerdictChips extends StatelessWidget {
   const VerdictChips({
     super.key,
@@ -29,8 +29,10 @@ class VerdictChips extends StatelessWidget {
         text: scam ? '🚨 ${scamLabelFor(scamType)}' : '✓ No scam detected',
         color: Pal.critical,
       ),
-      _Chip(on: asksOtp, text: asksOtp ? '⚠️ Asking for OTP/PIN' : '✓ No OTP request', color: Pal.high),
-      _Chip(on: secrecy, text: secrecy ? '🔒 Isolation attempt' : '✓ No secrecy demand', color: Pal.critical),
+      // Warning chips appear only when they light up: less to read for an elder,
+      // and the appearance itself is the signal (with words, not just colour).
+      if (asksOtp) const _Chip(on: true, text: '⚠️ Asking for OTP/PIN', color: Pal.high),
+      if (secrecy) const _Chip(on: true, text: '🔒 Isolation attempt', color: Pal.critical),
     ]);
   }
 }

@@ -59,70 +59,85 @@ class _AlarmOverlayState extends State<AlarmOverlay> with SingleTickerProviderSt
         );
       },
       child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, box) => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight - 40),
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Icon(Icons.warning_amber_rounded, size: 84, color: Colors.white),
-                const SizedBox(height: 6),
-                Text(title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 2, color: Color(0xFFFFB3C0))),
-                const SizedBox(height: 14),
-                Semantics(
-                  liveRegion: true,
-                  child: Text(w.en,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w900, height: 1.15)),
-                ),
-                if (w.local != null) ...[
-                  const SizedBox(height: 18),
-                  Text(w.local!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 36, fontWeight: FontWeight.w900, height: 1.3, color: Color(0xFFFFE0E6))),
-                ],
-                const SizedBox(height: 22),
-                _VoiceStatus(whisper: widget.whisper),
-                if (widget.micPaused) ...[
-                  const SizedBox(height: 10),
-                  const Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.mic_off, size: 24, color: Pal.caution),
-                    SizedBox(width: 8),
-                    Flexible(
-                      child: Text('Your microphone is paused. The caller cannot hear this.',
-                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        child: Column(children: [
+          // Warning text scrolls if it must; the two actions are always on screen.
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, box) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: box.maxHeight - 24),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.warning_amber_rounded, size: 76, color: Colors.white),
+                    const SizedBox(height: 4),
+                    Text(title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 2, color: Color(0xFFFFB3C0))),
+                    const SizedBox(height: 12),
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(w.en,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, height: 1.15)),
                     ),
+                    if (w.local != null) ...[
+                      const SizedBox(height: 16),
+                      Text(w.local!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 34, fontWeight: FontWeight.w900, height: 1.3, color: Color(0xFFFFE0E6))),
+                    ],
+                    const SizedBox(height: 18),
+                    _VoiceStatus(whisper: widget.whisper),
+                    if (widget.micPaused) ...[
+                      const SizedBox(height: 10),
+                      const Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.mic_off, size: 24, color: Pal.caution),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: Text('Your microphone is paused. The caller cannot hear this.',
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                        ),
+                      ]),
+                    ],
                   ]),
-                ],
-                const SizedBox(height: 26),
-                SizedBox(
-                  width: double.infinity,
-                  height: 76,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: Pal.critical, foregroundColor: Colors.white),
-                    onPressed: widget.onHangUp,
-                    icon: const Icon(Icons.call_end, size: 34),
-                    label: const Text('Hang up now', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-                  ),
                 ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  height: 68,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black),
-                    onPressed: widget.onDismiss,
-                    child: const Text('I understand', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-                  ),
-                ),
-              ]),
+              ),
             ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            child: Column(children: [
+              SizedBox(
+                width: double.infinity,
+                height: 72,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(backgroundColor: Pal.critical, foregroundColor: Colors.white),
+                  onPressed: widget.onHangUp,
+                  icon: const Icon(Icons.call_end, size: 34),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Hang up now', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 64,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black),
+                  onPressed: widget.onDismiss,
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('I understand', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ]),
       ),
     );
   }

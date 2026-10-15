@@ -19,7 +19,7 @@ class CallScreen extends StatelessWidget {
     if (c.phase == CallPhase.idle) return const _IdleView();
     return SafeArea(
       child: LayoutBuilder(builder: (context, box) {
-        final compact = box.maxHeight < 720;
+        final compact = box.maxHeight < 720 || MediaQuery.textScalerOf(context).scale(10) > 11.5;
         return Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -51,35 +51,58 @@ class CallScreen extends StatelessWidget {
               if (c.simulated) const _Tag('SIMULATED CALL'),
             ]),
           ),
-          PressureGauge(pressure: c.peakPressure, height: compact ? 128 : 170),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: VerdictChips(
-                scamType: c.scamType, asksOtp: c.sawOtpAsk, secrecy: c.sawSecrecy, knownScammer: c.knownScammer),
-          ),
-          if (c.micPausedForWhisper) const _Banner(Icons.mic_off, 'Your microphone is paused while Chaukanna warns you.'),
-          if (c.incident != null) _ResponseBanner(c: c),
           Expanded(
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              decoration: BoxDecoration(color: Pal.card, borderRadius: BorderRadius.circular(20)),
-              child: ClipRRect(borderRadius: BorderRadius.circular(20), child: TranscriptView(lines: c.transcript)),
-            ),
+            child: LayoutBuilder(builder: (context, mid) {
+              final gauge = PressureGauge(pressure: c.peakPressure, height: compact ? 112 : 170);
+              final chips = Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: VerdictChips(
+                    scamType: c.scamType, asksOtp: c.sawOtpAsk, secrecy: c.sawSecrecy, knownScammer: c.knownScammer),
+              );
+              final banners = [
+                if (c.micPausedForWhisper)
+                  const _Banner(Icons.mic_off, 'Your microphone is paused while Chaukanna warns you.'),
+                if (c.incident != null) _ResponseBanner(c: c),
+              ];
+              Widget transcriptBox() => Container(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    decoration: BoxDecoration(color: Pal.card, borderRadius: BorderRadius.circular(20)),
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20), child: TranscriptView(lines: c.transcript)),
+                  );
+              // The risk block never takes more than ~58% of the middle (it scrolls
+              // inside itself on small phones / large text), so the live
+              // transcript always stays on screen.
+              return Column(children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: mid.maxHeight * 0.58),
+                  child: SingleChildScrollView(child: Column(children: [gauge, chips, ...banners])),
+                ),
+                Expanded(child: transcriptBox()),
+              ]);
+            }),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              _RoundBtn(
-                  icon: c.userMuted ? Icons.mic_off : Icons.mic,
-                  label: c.userMuted ? 'Unmute' : 'Mute',
-                  active: c.userMuted,
-                  onTap: c.toggleMute),
-              _RoundBtn(
-                  icon: c.speaker ? Icons.volume_up : Icons.phone_in_talk,
-                  label: c.speaker ? 'Speaker on' : 'Speaker off',
-                  active: c.speaker,
-                  onTap: c.toggleSpeaker),
-              _RoundBtn(icon: Icons.call_end, label: 'Hang up', color: Pal.critical, big: true, onTap: c.endCall),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Expanded(
+                child: _RoundBtn(
+                    icon: c.userMuted ? Icons.mic_off : Icons.mic,
+                    label: c.userMuted ? 'Unmute' : 'Mute',
+                    active: c.userMuted,
+                    onTap: c.toggleMute),
+              ),
+              Expanded(
+                child: _RoundBtn(
+                    icon: c.speaker ? Icons.volume_up : Icons.phone_in_talk,
+                    label: c.speaker ? 'Speaker on' : 'Speaker off',
+                    active: c.speaker,
+                    onTap: c.toggleSpeaker),
+              ),
+              Expanded(
+                child: _RoundBtn(
+                    icon: Icons.call_end, label: 'Hang up', color: Pal.critical, big: true, onTap: c.endCall),
+              ),
             ]),
           ),
         ]);
@@ -172,7 +195,10 @@ class _RoundBtn extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(label, maxLines: 1, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        ),
       ]),
     );
   }
