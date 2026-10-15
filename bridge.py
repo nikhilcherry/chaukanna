@@ -1,292 +1,39 @@
 """Chaukanna audio bridge.
 
-Joins a LiveKit room as a hidden observer, slices every participant's audio into
-4 s / 16 kHz / mono WAV chunks in memory, transcribes them with Sarvam STT, asks the
-classifier for a verdict, then:
+Joins a LiveKit room as a hidden observer, cuts every participant's audio into 16 kHz mono
+WAV chunks in memory, transcribes them with Sarvam STT, asks the classifier for a verdict, then:
 
-  fast path: LiveKit data message to the victim only (transcript + verdict + whisper trigger)
-  slow path: async POST to the n8n webhook when pressure >= 2 (once per 30 s per call)
+  fast path: LiveKit data message to the victim only (transcript + verdict + whisper decision)
+  slow path: n8n events (telemetry / incident / escalation / call_ended), see CONTRACTS §2
 
-`--replay-file call.wav` feeds a recording through the same pipeline in real time.
+A "call" starts when a caller is in the room and ends when the caller (or the victim) leaves;
+each call gets its own call_id. `--replay-file call.wav` feeds a recording through the same pipeline.
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
-import io
 import json
 import logging
 import os
 import sys
 import time
-import wave
-from dataclasses import dataclass, field
 
 import httpx
-import numpy as np
 from dotenv import load_dotenv
 
-SAMPLE_RATE = 16000
-CHUNK_SECONDS = 4
-CHUNK_BYTES = SAMPLE_RATE * CHUNK_SECONDS * 2          # int16 mono -> 128,000
-MIN_FLUSH_BYTES = SAMPLE_RATE * 2                      # flush a track tail only if >= 1 s
-DATA_TOPIC = "chaukanna.verdict"
-GUARDIAN_IDENTITY = "chaukanna-guardian"
-SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text"
+from audio import Chunker, load_wav_16k_mono
+from config import CHUNK_BYTES, CHUNK_SECONDS, DATA_TOPIC, GUARDIAN_IDENTITY, SAMPLE_RATE, Config, new_call_id
+from pipeline import CallState, Pipeline
 
 log = logging.getLogger("chaukanna.bridge")
 
 
-# --------------------------------------------------------------------------- config
-@dataclass
-class Config:
-    livekit_url: str = ""
-    api_key: str = ""
-    api_secret: str = ""
-    room: str = "chaukanna"
-    victim_identity: str = "victim"
-    sarvam_key: str = ""
-    stt_model: str = "saaras:v3"
-    stt_mode: str = "transcribe"
-    classifier_url: str = "http://localhost:8000/classify"
-    n8n_url: str = ""
-    n8n_cooldown: float = 30.0
-    n8n_pressure: int = 2
-    silence_rms: float = 120.0
-    mock_stt: bool = False
-
-    @classmethod
-    def from_env(cls) -> "Config":
-        e = os.getenv
-        return cls(
-            livekit_url=e("LIVEKIT_URL", ""),
-            api_key=e("LIVEKIT_API_KEY", ""),
-            api_secret=e("LIVEKIT_API_SECRET", ""),
-            room=e("LIVEKIT_ROOM", "chaukanna"),
-            victim_identity=e("VICTIM_IDENTITY", "victim"),
-            sarvam_key=e("SARVAM_API_KEY", ""),
-            stt_model=e("SARVAM_STT_MODEL", "saaras:v3"),
-            stt_mode=e("SARVAM_STT_MODE", "transcribe"),
-            classifier_url=e("CLASSIFIER_URL", "http://localhost:8000/classify"),
-            n8n_url=e("N8N_WEBHOOK_URL", ""),
-            n8n_cooldown=float(e("N8N_COOLDOWN_SECONDS", "30")),
-            n8n_pressure=int(e("N8N_PRESSURE_THRESHOLD", "2")),
-            silence_rms=float(e("SILENCE_RMS", "120")),
-        )
-
-
-# --------------------------------------------------------------------------- audio helpers
-def pcm_to_wav(pcm: bytes) -> bytes:
-    """Raw 16 kHz mono int16 PCM -> WAV file bytes, entirely in memory."""
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(SAMPLE_RATE)
-        w.writeframes(pcm)
-    return buf.getvalue()
-
-
-def rms(pcm: bytes) -> float:
-    if not pcm:
-        return 0.0
-    a = np.frombuffer(pcm, dtype=np.int16).astype(np.float64)
-    return float(np.sqrt(np.mean(a * a)))
-
-
-def load_wav_16k_mono(path: str) -> bytes:
-    """Read any PCM WAV and return 16 kHz mono int16 bytes (linear resample)."""
-    with wave.open(path, "rb") as w:
-        ch, width, rate, n = w.getnchannels(), w.getsampwidth(), w.getframerate(), w.getnframes()
-        raw = w.readframes(n)
-    dtype = {1: np.uint8, 2: np.int16, 4: np.int32}.get(width)
-    if dtype is None:
-        raise ValueError(f"unsupported WAV sample width: {width} bytes")
-    a = np.frombuffer(raw, dtype=dtype).astype(np.float64)
-    if width == 1:
-        a = (a - 128) * 256
-    elif width == 4:
-        a /= 65536
-    if ch > 1:
-        a = a[: len(a) // ch * ch].reshape(-1, ch).mean(axis=1)
-    if rate != SAMPLE_RATE and len(a):
-        t_new = np.arange(int(len(a) * SAMPLE_RATE / rate)) * rate / SAMPLE_RATE
-        a = np.interp(t_new, np.arange(len(a)), a)
-    return np.clip(a, -32768, 32767).astype(np.int16).tobytes()
-
-
-class Chunker:
-    """Accumulates PCM and yields exact 4-second chunks."""
-
-    def __init__(self) -> None:
-        self.buf = bytearray()
-
-    def push(self, pcm: bytes) -> list[bytes]:
-        self.buf += pcm
-        out = []
-        while len(self.buf) >= CHUNK_BYTES:
-            out.append(bytes(self.buf[:CHUNK_BYTES]))
-            del self.buf[:CHUNK_BYTES]
-        return out
-
-    def tail(self) -> bytes | None:
-        t = bytes(self.buf) if len(self.buf) >= MIN_FLUSH_BYTES else None
-        self.buf.clear()
-        return t
-
-
-# --------------------------------------------------------------------------- mock fallbacks
-_SCAM_WORDS = {
-    "digital_arrest": ["cbi", "digital arrest", "arrest", "police", "narcotics", "money laundering", "warrant", "पुलिस", "गिरफ्तार"],
-    "kyc_update": ["kyc", "aadhaar", "aadhar", "pan card", "blocked", "anydesk", "आधार"],
-    "bank_impersonation": ["bank", "card", "cvv", "upi", "transaction"],
-    "prize_lottery": ["lottery", "prize", "winner", "lucky"],
-}
-
-
-def mock_verdict(call_id: str, text: str, language: str) -> dict:
-    """Offline keyword heuristic, used only when the classifier server is unreachable."""
-    t = text.lower()
-    scam, hits = "none", 0
-    for kind, words in _SCAM_WORDS.items():
-        h = sum(w in t for w in words)
-        if h > hits:
-            scam, hits = kind, h
-    otp = any(w in t for w in ("otp", "pin", "cvv", "password", "ओटीपी"))
-    secrecy = any(w in t for w in ("don't tell", "do not tell", "tell no one", "secret", "confidential", "किसी को न बताएं"))
-    pressure = min(3, hits + int(otp) + int(secrecy))
-    clip = "warn_otp" if otp else "warn_secrecy" if secrecy else "warn_digital_arrest" if scam == "digital_arrest" else "none"
-    return {
-        "call_id": call_id, "scam_type": scam, "pressure": pressure, "asks_otp_or_pin": otp,
-        "demands_secrecy": secrecy, "confidence": 0.4, "language": language if language in ("hi", "kn") else "en",
-        "recommended_whisper_clip": clip, "summary_for_family": "(mock verdict: classifier unreachable)",
-    }
-
-
-MOCK_SCRIPT = [
-    "Hello, this is Inspector Sharma from CBI Mumbai.",
-    "A parcel in your name contains illegal narcotics and fake passports.",
-    "You are under digital arrest. Do not tell anyone and do not disconnect the call.",
-    "To verify your account, tell me the OTP that you just received.",
-]
-
-
-# --------------------------------------------------------------------------- pipeline
-@dataclass
-class CallState:
-    call_id: str
-    caller_number: str = ""
-    victim_id: str = ""
-    transcript: list[dict] = field(default_factory=list)
-    last_n8n: float = 0.0
-
-
-class Pipeline:
-    """chunk -> STT -> classifier -> (victim data message, n8n). Same code for live and replay."""
-
-    def __init__(self, cfg: Config, http: httpx.AsyncClient, publish) -> None:
-        self.cfg, self.http, self.publish = cfg, http, publish   # publish(payload: bytes) coroutine
-        self.calls: dict[str, CallState] = {}
-        self._bg: set[asyncio.Task] = set()
-        self._mock_i = 0
-
-    def call(self, call_id: str) -> CallState:
-        return self.calls.setdefault(call_id, CallState(call_id=call_id))
-
-    async def process_chunk(self, call_id: str, speaker: str, pcm: bytes) -> dict | None:
-        if rms(pcm) < self.cfg.silence_rms:
-            log.debug("%s/%s: silent chunk skipped", call_id, speaker)
-            return None
-        st = self.call(call_id)
-        wav = await asyncio.to_thread(pcm_to_wav, pcm)
-        text, lang = await self.transcribe(wav)
-        if not text:
-            return None
-        st.transcript.append({"speaker": speaker, "text": text, "ts": time.time()})
-        del st.transcript[:-200]
-        verdict = await self.classify(st, speaker, text, lang)
-        payload = {
-            "type": "verdict", "call_id": call_id, "speaker": speaker, "chunk_text": text,
-            "language": lang, "verdict": verdict, "pressure": verdict["pressure"],
-            "whisper": verdict["recommended_whisper_clip"] != "none", "ts": time.time(),
-        }
-        await self.publish(json.dumps(payload, ensure_ascii=False).encode())
-        log.info("[%s] %s: %r -> %s p=%d", call_id, speaker, text[:60], verdict["scam_type"], verdict["pressure"])
-        self.maybe_fire_n8n(st, verdict)
-        return payload
-
-    async def transcribe(self, wav: bytes) -> tuple[str, str]:
-        if self.cfg.mock_stt:
-            text = MOCK_SCRIPT[self._mock_i % len(MOCK_SCRIPT)]
-            self._mock_i += 1
-            return text, "en"
-        if not self.cfg.sarvam_key:
-            raise RuntimeError("SARVAM_API_KEY is not set (use --mock-stt for offline wiring tests)")
-        data = {"model": self.cfg.stt_model}
-        if self.cfg.stt_model.startswith("saaras"):
-            data["mode"] = self.cfg.stt_mode
-        try:
-            r = await self.http.post(
-                SARVAM_STT_URL, headers={"api-subscription-key": self.cfg.sarvam_key},
-                files={"file": ("chunk.wav", wav, "audio/wav")}, data=data, timeout=15)
-            r.raise_for_status()
-        except httpx.HTTPError as e:
-            log.warning("Sarvam STT failed: %s", e)
-            return "", "en"
-        j = r.json()
-        code = (j.get("language_code") or "en").split("-")[0]
-        return (j.get("transcript") or "").strip(), code if code in ("hi", "kn") else "en"
-
-    async def classify(self, st: CallState, speaker: str, text: str, lang: str) -> dict:
-        body = {"call_id": st.call_id, "caller_number": st.caller_number, "speaker": speaker,
-                "chunk_text": text, "language": lang}
-        try:
-            r = await self.http.post(self.cfg.classifier_url, json=body, timeout=6)
-            r.raise_for_status()
-            return r.json()
-        except (httpx.HTTPError, ValueError) as e:
-            log.warning("classifier unavailable (%s), using mock fallback", e.__class__.__name__)
-            return mock_verdict(st.call_id, " ".join(t["text"] for t in st.transcript[-6:]), lang)
-
-    def maybe_fire_n8n(self, st: CallState, verdict: dict) -> None:
-        now = time.monotonic()
-        if verdict["pressure"] < self.cfg.n8n_pressure or not self.cfg.n8n_url:
-            return
-        if st.last_n8n and now - st.last_n8n < self.cfg.n8n_cooldown:
-            return
-        st.last_n8n = now
-        body = {
-            "call_id": st.call_id, "caller_number": st.caller_number, "victim_id": st.victim_id,
-            "verdict": verdict, "ts": time.time(),
-            "transcript": [{"speaker": t["speaker"], "text": t["text"]} for t in st.transcript],
-            "transcript_text": "\n".join(f'{t["speaker"]}: {t["text"]}' for t in st.transcript),
-        }
-        task = asyncio.create_task(self._post_n8n(body))
-        self._bg.add(task)
-        task.add_done_callback(self._bg.discard)
-
-    async def _post_n8n(self, body: dict) -> None:
-        for attempt in (1, 2, 3):
-            try:
-                r = await self.http.post(self.cfg.n8n_url, json=body, timeout=10)
-                r.raise_for_status()
-                log.info("n8n incident fired for %s (pressure %d)", body["call_id"], body["verdict"]["pressure"])
-                return
-            except httpx.HTTPError as e:
-                log.warning("n8n POST attempt %d failed: %s", attempt, e)
-                await asyncio.sleep(2 * attempt)
-
-    async def drain(self) -> None:
-        if self._bg:
-            await asyncio.gather(*self._bg, return_exceptions=True)
-
-
-# --------------------------------------------------------------------------- live mode
-def guardian_token(cfg: Config) -> str:
+def guardian_token(cfg: Config, identity: str = GUARDIAN_IDENTITY) -> str:
     from livekit import api
     grants = api.VideoGrants(room_join=True, room=cfg.room, hidden=True, can_publish=False,
                              can_subscribe=True, can_publish_data=True)
-    return (api.AccessToken(cfg.api_key, cfg.api_secret).with_identity(GUARDIAN_IDENTITY)
+    return (api.AccessToken(cfg.api_key, cfg.api_secret).with_identity(identity)
             .with_name("Chaukanna Guardian").with_grants(grants).to_jwt())
 
 
@@ -298,146 +45,442 @@ def participant_info(p) -> dict:
     return meta if isinstance(meta, dict) else {}
 
 
-async def run_live(cfg: Config, http: httpx.AsyncClient) -> None:
-    from livekit import rtc
+# --------------------------------------------------------------------------- per-track consumer
+class TrackConsumer:
+    """One subscribed audio track: AudioStream -> chunker -> queue -> worker -> pipeline.
+    Chunks are bound to the call that is active when they are cut, so a track that outlives a
+    call (the victim's) feeds whichever call is current."""
 
-    room = rtc.Room()
-    disconnected = asyncio.Event()
-    tracks: dict[str, asyncio.Task] = {}
+    def __init__(self, session: "LiveSession", track, participant, speaker: str, sid: str) -> None:
+        self.session, self.track, self.participant, self.speaker, self.sid = session, track, participant, speaker, sid
+        self.queue: asyncio.Queue = asyncio.Queue(maxsize=3)
+        self.chunker = Chunker()
+        self.task: asyncio.Task | None = None
 
-    async def publish(payload: bytes) -> None:
+    def enqueue(self, pcm: bytes) -> None:
+        st = self.session.call
+        if st is None or st.ended:
+            return                                            # no call in progress: nothing to judge
+        now = time.monotonic()
+        t_start = max(0.0, st.rel(now) - len(pcm) / 2 / SAMPLE_RATE)
+        if self.queue.full():                                 # STT is behind: drop oldest, stay live
+            self.queue.get_nowait()
+            self.queue.task_done()
+            log.warning("%s: STT behind, dropped a queued chunk", self.speaker)
+        self.queue.put_nowait((st, pcm, t_start, now))
+
+    async def flush(self, timeout: float = 15.0) -> None:
+        """Send the buffered tail and wait until every queued chunk has been processed."""
+        tail = self.chunker.tail()
+        if tail:
+            self.enqueue(tail)
         try:
-            await room.local_participant.publish_data(
-                payload, reliable=True, destination_identities=[cfg.victim_identity], topic=DATA_TOPIC)
-        except Exception as e:                                    # never let a send kill the pipeline
-            log.warning("publish_data failed: %s", e)
+            await asyncio.wait_for(self.queue.join(), timeout)
+        except asyncio.TimeoutError:
+            log.warning("%s: chunks still processing after %.0fs", self.speaker, timeout)
 
-    pipe = Pipeline(cfg, http, publish)
+    async def _worker(self) -> None:
+        pipe = self.session.pipe
+        while True:
+            st, pcm, t_start, audio_end = await self.queue.get()
+            try:
+                await pipe.process_chunk(st, self.speaker, pcm, t_start, audio_end)
+            except Exception:
+                log.exception("chunk processing failed")
+            finally:
+                self.queue.task_done()
 
-    async def consume(track, participant) -> None:
-        is_victim = participant.identity == cfg.victim_identity
-        speaker = "victim" if is_victim else "caller"
-        st = pipe.call(room.name)
-        info = participant_info(participant)
-        if is_victim:
-            st.victim_id = info.get("victim_id") or participant.identity
-        else:
-            st.caller_number = info.get("phone") or participant.name or participant.identity
-        queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=3)
-
-        async def worker() -> None:
-            while True:
-                pcm = await queue.get()
-                try:
-                    await pipe.process_chunk(room.name, speaker, pcm)
-                except Exception:
-                    log.exception("chunk processing failed")
-
-        w = asyncio.create_task(worker())
-        stream = rtc.AudioStream(track, sample_rate=SAMPLE_RATE, num_channels=1)
-        chunker = Chunker()
-        log.info("subscribed to %s (%s)", participant.identity, speaker)
+    async def run(self) -> None:
+        from livekit import rtc
+        worker = asyncio.create_task(self._worker())
+        stream = rtc.AudioStream(self.track, sample_rate=SAMPLE_RATE, num_channels=1)
+        log.info("subscribed to %s (%s)", self.participant.identity, self.speaker)
         try:
             async for ev in stream:
-                for chunk in chunker.push(ev.frame.data.tobytes()):
-                    if queue.full():                              # STT is behind: drop oldest, stay live
-                        queue.get_nowait()
-                    queue.put_nowait(chunk)
+                for chunk in self.chunker.push(ev.frame.data.tobytes()):
+                    self.enqueue(chunk)
         finally:
-            tail = chunker.tail()
-            if tail:
-                queue.put_nowait(tail)
-            while not queue.empty():                              # let the worker finish what is queued
-                await asyncio.sleep(0.2)
-            w.cancel()
-            await stream.aclose()
+            try:
+                await self.flush()                            # never lose the last words of a track
+            finally:
+                worker.cancel()
+                try:
+                    await asyncio.wait_for(stream.aclose(), 2)
+                except Exception:
+                    pass
+                self.session.consumers.pop(self.sid, None)
+                log.info("track from %s ended", self.participant.identity)
 
-    @room.on("track_subscribed")
-    def _on_sub(track, publication, participant):
-        if track.kind != rtc.TrackKind.KIND_AUDIO or participant.identity == GUARDIAN_IDENTITY:
+
+# --------------------------------------------------------------------------- room session
+class LiveSession:
+    """Room connection + call lifecycle. Survives reconnects: the active call, its call_id and its
+    state carry over if the participants are still there when the guardian comes back."""
+
+    def __init__(self, cfg: Config, http: httpx.AsyncClient, identity: str = GUARDIAN_IDENTITY,
+                 manage_calls: bool = True, **pipe_kw) -> None:
+        self.cfg, self.http, self.identity, self.manage_calls = cfg, http, identity, manage_calls
+        self.room = None
+        self.victim: str | None = None                        # identity of the victim in the room
+        self.callers: dict[str, dict] = {}                    # identity -> {"phone", "label"}
+        self.call: CallState | None = None
+        self.consumers: dict[str, TrackConsumer] = {}
+        self.pipe = Pipeline(cfg, http, self.publish, **pipe_kw)
+        self.stop = asyncio.Event()
+        self.stdout = False                                   # replay --no-livekit: print messages
+        self._tasks: set[asyncio.Task] = set()
+        self._end_task: asyncio.Task | None = None
+        self._start_after_end = False
+
+    def spawn(self, coro) -> asyncio.Task:
+        t = asyncio.create_task(coro)
+        self._tasks.add(t)
+        t.add_done_callback(self._tasks.discard)
+        return t
+
+    # ---- fast path ------------------------------------------------------------------------
+    async def publish(self, msg: dict) -> bool:
+        """Send one message to the victim only. Returns True if it went out."""
+        if self.stdout:
+            print(json.dumps(msg, ensure_ascii=False), flush=True)
+            return True
+        room, victim = self.room, self.victim
+        if room is None or victim is None or not room.isconnected():
+            log.debug("no victim in room, %s not delivered", msg.get("type"))
+            return False
+        try:
+            await room.local_participant.publish_data(
+                json.dumps(msg, ensure_ascii=False).encode(), reliable=True,
+                destination_identities=[victim], topic=DATA_TOPIC)
+            return True
+        except Exception as e:                                # never let a send kill the pipeline
+            log.warning("publish_data failed: %s", e)
+            return False
+
+    async def heartbeat(self) -> None:
+        while True:
+            st = self.call
+            await self.publish({"type": "heartbeat", "call_id": st.call_id if st else "",
+                                "in_call": st is not None, "ts": time.time()})
+            await asyncio.sleep(self.cfg.heartbeat_seconds)
+
+    async def send_snapshot(self, st: CallState) -> None:
+        """A victim who joins (or rejoins) mid-call gets the call so far: call_started, the latest
+        verdict (with the most serious warning they have not heard yet), and the incident reply."""
+        await self.publish(self.pipe.call_started_msg(st))
+        if st.last_message:
+            clip = self.pipe.strongest_whisper(st, exclude=st.delivered_whispers)
+            msg = {**st.last_message, "whisper": clip != "none", "whisper_clip": clip,
+                   "recommended_whisper_clip": clip, "snapshot": True, "ts": time.time()}
+            if await self.publish(msg) and clip != "none":
+                st.delivered_whispers.add(clip)
+        if st.incident_reply:
+            await self.publish(st.incident_reply)
+
+    # ---- roles ----------------------------------------------------------------------------
+    def role_of(self, p) -> str:
+        ident = p.identity or ""
+        if ident.startswith(GUARDIAN_IDENTITY):
+            return "guardian"
+        v = self.cfg.victim_identity
+        if ident == v or ident.startswith(v + "-") or participant_info(p).get("role") == "victim":
+            return "victim"
+        return "caller"
+
+    def _grace(self, p) -> float:
+        from livekit import rtc
+        return 0.0 if getattr(p, "disconnect_reason", None) == rtc.DisconnectReason.CLIENT_INITIATED \
+            else self.cfg.call_end_grace
+
+    # ---- call lifecycle -------------------------------------------------------------------
+    def start_call(self) -> None:
+        if self.call is not None:
             return
-        tracks[publication.sid] = asyncio.create_task(consume(track, participant))
+        caller = next(iter(self.callers.values()), {})
+        self.call = st = self.pipe.new_call(new_call_id(self.cfg.room), caller.get("phone", ""),
+                                            caller_label=caller.get("label", ""))
+        st.victim_seen = self.victim is not None
+        self.spawn(self.publish(self.pipe.call_started_msg(st)))
 
-    @room.on("track_unsubscribed")
-    def _on_unsub(track, publication, participant):
-        log.info("track from %s ended", participant.identity)
+    def should_end(self, st: CallState) -> bool:
+        return not self.callers or (st.victim_seen and self.victim is None)
 
-    @room.on("disconnected")
-    def _on_disc(*_):
-        disconnected.set()
+    def schedule_end(self, reason: str, grace: float) -> None:
+        st = self.call
+        if st is None or st.ending:
+            return
+        if self._end_task and not self._end_task.done():
+            if grace > 0:
+                return                                        # an end is already pending
+            self._end_task.cancel()
+        if grace:
+            log.info("[%s] %s; ending in %.0fs unless they come back", st.call_id, reason, grace)
+        self._end_task = self.spawn(self._end_after(st, reason, grace))
 
-    token = os.getenv("LIVEKIT_TOKEN") or guardian_token(cfg)
-    await room.connect(cfg.livekit_url, token, options=rtc.RoomOptions(auto_subscribe=True))
-    log.info("joined room %s as %s (hidden)", room.name, GUARDIAN_IDENTITY)
-    try:
-        await disconnected.wait()
-    finally:
-        for t in tracks.values():
-            t.cancel()
-        await pipe.drain()
-        await room.disconnect()
+    async def _end_after(self, st: CallState, reason: str, grace: float) -> None:
+        if grace:
+            await asyncio.sleep(grace)
+        if self.call is st and self.should_end(st):
+            await self.end_call(st, reason)
+
+    def _cancel_pending_end(self) -> None:
+        st = self.call
+        if self._end_task and not self._end_task.done() and st and not st.ending and not self.should_end(st):
+            self._end_task.cancel()
+            log.info("[%s] participant back within grace, call continues", st.call_id)
+
+    async def end_call(self, st: CallState, reason: str = "") -> None:
+        if st.ending:
+            return
+        st.ending = True
+        log.info("[%s] ending call: %s", st.call_id, reason or "done")
+        await asyncio.gather(*(c.flush() for c in list(self.consumers.values())), return_exceptions=True)
+        if self.call is st:
+            self.call = None
+        await self.pipe.end_call(st)
+        if self._start_after_end and self.callers and self.manage_calls:
+            self._start_after_end = False
+            self.start_call()
+
+    # ---- room events ----------------------------------------------------------------------
+    def on_join(self, p) -> None:
+        role = self.role_of(p)
+        if role == "guardian":
+            return
+        st = self.call
+        if role == "victim":
+            if self.victim == p.identity:
+                return
+            self.victim = p.identity
+            log.info("victim %s joined", p.identity)
+            if st and not st.ending:
+                st.victim_seen = True
+                self._cancel_pending_end()
+                self.spawn(self.send_snapshot(st))
+            elif st and st.ending:
+                self._start_after_end = True
+            elif self.manage_calls and self.callers:
+                self.start_call()
+            return
+        if p.identity in self.callers:
+            return
+        info = participant_info(p)
+        self.callers[p.identity] = {"phone": info.get("phone") or p.name or p.identity,
+                                    "label": info.get("label") or p.name or ""}
+        log.info("caller %s joined (%s)", p.identity, self.callers[p.identity]["phone"])
+        if not self.manage_calls:
+            return
+        if st is None:
+            self.start_call()
+        elif st.ending:
+            self._start_after_end = True
+        else:
+            self._cancel_pending_end()
+
+    def on_leave(self, p) -> None:
+        role = self.role_of(p)
+        if role == "victim" and p.identity == self.victim:
+            self.victim = None
+            log.info("victim %s left", p.identity)
+            if self.call and self.manage_calls:
+                self.schedule_end("victim left", self._grace(p))
+        elif role == "caller" and self.callers.pop(p.identity, None) is not None:
+            log.info("caller %s left", p.identity)
+            if self.call and not self.callers and self.manage_calls:
+                self.schedule_end("caller hung up", self._grace(p))
+
+    def on_track(self, track, publication, participant) -> None:
+        from livekit import rtc
+        if track.kind != rtc.TrackKind.KIND_AUDIO:
+            return
+        role = self.role_of(participant)
+        if role == "guardian":
+            return
+        self.on_join(participant)
+        c = TrackConsumer(self, track, participant, role, publication.sid)
+        old = self.consumers.pop(publication.sid, None)
+        if old and old.task:
+            old.task.cancel()
+        self.consumers[publication.sid] = c
+        c.task = self.spawn(c.run())
+
+    def sync_presence(self, room) -> None:
+        """After (re)connecting: adopt who is in the room now, forget who left while we were away."""
+        present = {p.identity: p for p in room.remote_participants.values()}
+        for ident in [i for i in self.callers if i not in present]:
+            self.callers.pop(ident)
+        if self.victim and self.victim not in present:
+            self.victim = None
+        for p in present.values():
+            self.on_join(p)
+        if self.call and self.manage_calls and self.should_end(self.call):
+            self.schedule_end("participants left while the guardian was offline", 0)
+
+    # ---- connection -----------------------------------------------------------------------
+    async def connect(self, subscribe: bool = True):
+        from livekit import rtc
+        room = rtc.Room()
+        self._disconnected = asyncio.Event()
+        self._disc_reason = None
+
+        def _disc(reason=None):
+            self._disc_reason = reason
+            self._disconnected.set()
+
+        room.on("participant_connected", self.on_join)
+        room.on("participant_disconnected", self.on_leave)
+        room.on("disconnected", _disc)
+        room.on("reconnecting", lambda: log.warning("LiveKit connection lost, reconnecting..."))
+        room.on("reconnected", lambda: log.info("LiveKit reconnected"))
+        if subscribe:
+            room.on("track_subscribed", self.on_track)
+        token = os.getenv("LIVEKIT_TOKEN") or guardian_token(self.cfg, self.identity)
+        await asyncio.wait_for(room.connect(self.cfg.livekit_url, token,
+                                            options=rtc.RoomOptions(auto_subscribe=subscribe)), 20)
+        self.room = room
+        log.info("joined room %s as %s (hidden)", room.name, self.identity)
+        self.sync_presence(room)
+        return room
+
+    async def close_room(self) -> None:
+        room, self.room = self.room, None
+        if room is not None:
+            try:
+                await asyncio.wait_for(room.disconnect(), 5)
+            except Exception:
+                pass
+
+    async def run_once(self) -> None:
+        from livekit import rtc
+        await self.connect(subscribe=True)
+        hb = self.spawn(self.heartbeat())
+        try:
+            await self._disconnected.wait()
+        finally:
+            hb.cancel()
+            for c in list(self.consumers.values()):
+                if c.task:
+                    c.task.cancel()
+            await self.close_room()
+        if self._disc_reason == rtc.DisconnectReason.DUPLICATE_IDENTITY:
+            log.error("another bridge joined room %s as %s and replaced this one; exiting "
+                      "(run only one live bridge per room)", self.cfg.room, self.identity)
+            self.stop.set()
+        else:
+            log.warning("disconnected from LiveKit (reason %s)", self._disc_reason)
+
+    async def run_forever(self) -> None:
+        delay = 1.0
+        while not self.stop.is_set():
+            try:
+                await self.run_once()
+                delay = 1.0
+            except Exception as e:
+                log.error("room session failed: %s: %s", type(e).__name__, e)
+            if self.stop.is_set():
+                break
+            log.info("reconnecting in %.0fs", delay)
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 15)
+
+    async def shutdown(self) -> None:
+        if self.call and not self.call.ending:
+            await self.end_call(self.call, "bridge shutting down")
+        await self.pipe.drain(timeout=10)
+        await self.close_room()
 
 
 # --------------------------------------------------------------------------- replay mode
-async def run_replay(cfg: Config, http: httpx.AsyncClient, args) -> None:
+def replay_chunks(args) -> list[tuple[float, str, float, bytes]]:
+    """(end_s, speaker, start_s, pcm) for each chunk of the replay file, in time order."""
     pcm = load_wav_16k_mono(args.replay_file)
-    chunks = Chunker().push(pcm + b"\x00" * ((-len(pcm)) % CHUNK_BYTES))   # pad the tail to a full chunk
-    call_id = args.call_id or f"replay-{os.path.splitext(os.path.basename(args.replay_file))[0]}"
-    log.info("replay: %d chunks of %ds from %s", len(chunks), CHUNK_SECONDS, args.replay_file)
+    pcm += b"\x00" * ((-len(pcm)) % CHUNK_BYTES)               # pad the tail to a full chunk
+    out = []
+    for i, chunk in enumerate(Chunker().push(pcm)):
+        start = i * CHUNK_SECONDS
+        out.append((start + CHUNK_SECONDS, args.replay_speaker, float(start), chunk))
+    return out
 
-    room = None
-    publish = None
-    if not args.no_livekit:
+
+async def run_replay(cfg: Config, http: httpx.AsyncClient, args) -> CallState:
+    session = LiveSession(cfg, http, identity=GUARDIAN_IDENTITY + "-replay", manage_calls=False)
+    items = replay_chunks(args)
+    log.info("replay: %d chunks from %s at %.1fx", len(items), args.replay_file, args.speed)
+    hb = None
+    if args.no_livekit:
+        session.stdout = True
+    else:
         try:
-            from livekit import rtc
-            room = rtc.Room()
-            await asyncio.wait_for(room.connect(cfg.livekit_url, os.getenv("LIVEKIT_TOKEN") or guardian_token(cfg)), 15)
-
-            async def publish(payload: bytes) -> None:
-                await room.local_participant.publish_data(
-                    payload, reliable=True, destination_identities=[cfg.victim_identity], topic=DATA_TOPIC)
-            log.info("replay: publishing to room %s", room.name)
+            await session.connect(subscribe=False)
+            hb = session.spawn(session.heartbeat())
         except Exception as e:
-            log.warning("replay: LiveKit unavailable (%s) - verdicts print to stdout only", e)
-            room = None
-    if publish is None:
-        async def publish(payload: bytes) -> None:
-            print(payload.decode(), flush=True)
+            log.warning("replay: LiveKit unavailable (%s: %s) - messages print to stdout only", type(e).__name__, e)
+            await session.close_room()
+            session.stdout = True
 
-    pipe = Pipeline(cfg, http, publish)
-    st = pipe.call(call_id)
-    st.caller_number, st.victim_id = args.caller_number, args.victim_id
-    tick = CHUNK_SECONDS / args.speed
+    st = session.pipe.new_call(args.call_id or new_call_id(cfg.room), args.caller_number,
+                               victim_id=args.victim_id, caller_label=args.caller_label)
+    session.call = st
+    st.victim_seen = True
+    await session.publish(session.pipe.call_started_msg(st))
+
+    queues: dict[str, asyncio.Queue] = {}
+
+    async def worker(q: asyncio.Queue, speaker: str) -> None:
+        while True:
+            pcm, t_start, audio_end = await q.get()
+            try:
+                await session.pipe.process_chunk(st, speaker, pcm, t_start, audio_end)
+            except Exception:
+                log.exception("chunk processing failed")
+            finally:
+                q.task_done()
+
+    workers = []
+    t0 = time.monotonic()
     try:
-        for i, chunk in enumerate(chunks):
-            started = time.monotonic()
-            task = asyncio.create_task(pipe.process_chunk(call_id, args.replay_speaker, chunk))
-            await asyncio.sleep(max(0.0, tick - (time.monotonic() - started)))   # real-time pacing
-            await task
-            log.debug("replay chunk %d/%d done", i + 1, len(chunks))
-        await pipe.drain()
+        for end_s, speaker, start_s, pcm in items:
+            await asyncio.sleep(max(0.0, t0 + end_s / args.speed - time.monotonic()))   # real-time pacing
+            if speaker not in queues:
+                queues[speaker] = asyncio.Queue()
+                workers.append(asyncio.create_task(worker(queues[speaker], speaker)))
+            queues[speaker].put_nowait((pcm, start_s, time.monotonic()))
+        for q in queues.values():
+            await q.join()
+        await session.end_call(st, "replay finished")
+        await session.pipe.drain()
     finally:
-        if room is not None:
-            await room.disconnect()
+        for w in workers:
+            w.cancel()
+        if hb:
+            hb.cancel()
+        await session.close_room()
+    return st
 
 
 # --------------------------------------------------------------------------- main
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description="Chaukanna LiveKit audio bridge")
     ap.add_argument("--replay-file", help="WAV to feed through the pipeline instead of live room audio")
-    ap.add_argument("--replay-speaker", choices=["caller", "victim"], default="caller")
+    ap.add_argument("--replay-speaker", choices=["caller", "victim"], default="caller",
+                    help="speaker for a mono replay file")
     ap.add_argument("--caller-number", default="+919876543210")
-    ap.add_argument("--victim-id", default="victim")
-    ap.add_argument("--call-id", help="override call id (default: room name / replay-<file>)")
+    ap.add_argument("--caller-label", default="CBI Officer (replay)")
+    ap.add_argument("--victim-id", default="")
+    ap.add_argument("--call-id", help="override the replay call id (default: <room>-<uuid8>)")
     ap.add_argument("--speed", type=float, default=1.0, help="replay speed factor (1.0 = real time)")
-    ap.add_argument("--no-livekit", action="store_true", help="replay without joining a room; print verdicts")
+    ap.add_argument("--no-livekit", action="store_true", help="replay without joining a room; print messages")
     ap.add_argument("--mock-stt", action="store_true", help="skip Sarvam; canned transcript (wiring tests)")
     ap.add_argument("--verbose", "-v", action="store_true")
-    args = ap.parse_args()
+    return ap
 
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     load_dotenv()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     cfg = Config.from_env()
     cfg.mock_stt = args.mock_stt
 
@@ -448,25 +491,22 @@ def main() -> int:
         missing.append("LIVEKIT_URL")
     if not args.replay_file and not os.getenv("LIVEKIT_TOKEN") and not (cfg.api_key and cfg.api_secret):
         missing.append("LIVEKIT_API_KEY/LIVEKIT_API_SECRET")
-    if missing:                                                    # replay degrades to stdout without LiveKit
+    if missing:                                                # replay degrades to stdout without LiveKit
         print("missing config: " + ", ".join(missing), file=sys.stderr)
         return 2
+    if not cfg.n8n_url:
+        log.warning("N8N_WEBHOOK_URL is not set: no n8n events will be sent")
 
     async def go() -> None:
         async with httpx.AsyncClient() as http:
             if args.replay_file:
                 await run_replay(cfg, http, args)
                 return
-            delay = 1.0
-            while True:                                           # reconnect forever with backoff
-                try:
-                    await run_live(cfg, http)
-                    delay = 1.0
-                except Exception as e:
-                    log.error("room session failed: %s", e)
-                log.info("reconnecting in %.0fs", delay)
-                await asyncio.sleep(delay)
-                delay = min(delay * 2, 30)
+            session = LiveSession(cfg, http)
+            try:
+                await session.run_forever()
+            finally:
+                await session.shutdown()
 
     try:
         asyncio.run(go())

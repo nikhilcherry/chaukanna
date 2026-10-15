@@ -5,7 +5,7 @@ Lean daemon on the raw `livekit` rtc SDK (no livekit-agents). Joins a LiveKit ro
 
 ```
 audio -> Sarvam STT -> POST /classify (mock fallback) -+-> victim-only data message (transcript, verdict, whisper flag)
-                                                       +-> n8n webhook when pressure >= 2 (30 s cooldown per call)
+                                                       +-> n8n events: telemetry / incident / escalation / call_ended
 ```
 
 ## Run
@@ -17,7 +17,8 @@ cp .env.example .env            # LiveKit URL/key/secret, SARVAM_API_KEY, N8N_WE
 ```
 
 - Identity convention: participant `victim` (override with `VICTIM_IDENTITY`) is the victim; every other non-guardian participant is the caller.
-- Data message: topic `chaukanna.verdict`, JSON `{type, call_id, speaker, chunk_text, language, verdict{...}, pressure, whisper, ts}`, sent with `destination_identities=[victim]` so only the victim's app receives it.
+- Each call gets its own `call_id` (`<room>-<uuid8>`): it starts when a caller joins and ends when the caller or the victim leaves (a dropped connection gets `CALL_END_GRACE_SECONDS` to come back). The classifier is reset at call end.
+- Data messages (topic `chaukanna.verdict`, victim only): `call_started`, `verdict` (with the bridge's whisper decision), `incident` (n8n's reply), `heartbeat` every 5 s, `call_ended`. A victim who joins mid-call gets a snapshot.
 - Caller number comes from participant metadata `{"phone": "..."}` (the dialer sets it), falling back to the display name.
 - Silent chunks (RMS < `SILENCE_RMS`) are not sent to STT. If STT falls behind, the oldest queued chunk is dropped so the bridge stays live.
 
