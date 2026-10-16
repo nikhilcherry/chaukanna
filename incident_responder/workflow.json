@@ -1,0 +1,3382 @@
+{
+  "name": "Chaukanna · Scam-Call Incident Responder",
+  "nodes": [
+    {
+      "id": "ea52b491-b75c-4f77-8406-2935907fd646",
+      "name": "Webhook: chaukanna-verdict",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chaukanna-verdict",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "32228073-67d4-4bec-a74a-4f6ea0c43fc7"
+    },
+    {
+      "id": "9e089151-d6e9-4909-9ab9-4ce415f56ab6",
+      "name": "Normalize Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// ① Normalize whatever the audio bridge (or test_webhooks.sh) sent into one clean event.\n// Never throws: a bad field gets a safe default, so a live call is never dropped here.\nconst raw = $input.first().json;\nconst b = raw.body && typeof raw.body === 'object' ? raw.body : raw;\n\nconst toBool = v => v === true || v === 'true' || v === 1;\nconst clampP = v => Math.max(0, Math.min(3, Math.round(Number(v) || 0)));\nconst SCAM_TYPES = ['digital_arrest', 'kyc_update', 'bank_impersonation', 'prize_lottery', 'other', 'none'];\nconst EVENTS = ['telemetry', 'incident', 'escalation', 'call_ended'];\n\n// \"+91 98765 43210 - CBI Officer\" -> \"+919876543210\"; bare 10-digit numbers are Indian.\nfunction normalizePhone(p) {\n  const m = String(p || '').match(/\\+?\\d[\\d\\s\\-().]{6,}/);\n  if (!m) return '';\n  const plus = m[0].trim().startsWith('+');\n  let d = m[0].replace(/\\D/g, '');\n  if (!plus) {\n    if (d.startsWith('00')) d = d.slice(2);\n    else if (d.length === 11 && d.startsWith('0')) d = '91' + d.slice(1);\n    else if (d.length === 10) d = '91' + d;\n  }\n  return d.length >= 8 && d.length <= 15 ? '+' + d : '';\n}\n\nconst v = b.verdict && typeof b.verdict === 'object' ? b.verdict : {};\nconst verdict = {\n  scam_type: SCAM_TYPES.includes(v.scam_type) ? v.scam_type : v.scam_type ? 'other' : 'none',\n  pressure: clampP(v.pressure ?? b.pressure),\n  asks_otp_or_pin: toBool(v.asks_otp_or_pin),\n  demands_secrecy: toBool(v.demands_secrecy),\n  confidence: Math.max(0, Math.min(1, Number(v.confidence) || 0)),\n  language: String(v.language || b.language || '').toLowerCase().slice(0, 5) || 'hi',\n  known_scammer: toBool(v.known_scammer ?? b.known_scammer),\n  recommended_whisper_clip: String(v.recommended_whisper_clip || 'none'),\n  summary_for_family: String(v.summary_for_family || '').slice(0, 600),\n  degraded: toBool(v.degraded),\n};\n\n// Transcript: [mm:ss] comes from t (seconds since call start), else from unix ts\n// relative to the first line. Victim-side 4-8 digit runs are masked again here\n// (the bridge already masks OTPs; this is a second lock so no OTP is ever stored).\nconst mmss = s => {\n  const n = Math.max(0, Math.floor(Number(s) || 0));\n  return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');\n};\nconst lines = Array.isArray(b.transcript) ? b.transcript : [];\nconst firstTs = lines.map(x => Number(x && x.ts)).find(n => n > 0);\nconst hasT = x => x && x.t !== null && x.t !== undefined && x.t !== '' && Number.isFinite(Number(x.t));\nconst timed = lines.some(x => hasT(x) || Number(x && x.ts) > 0);\nconst transcript = lines\n  .filter(x => x && String(x.text || '').trim())\n  .slice(-200)\n  .map(x => {\n    const t = hasT(x) ? Number(x.t) : firstTs && Number(x.ts) ? Number(x.ts) - firstTs : 0;\n    const speaker = x.speaker === 'victim' ? 'victim' : 'caller';\n    let text = String(x.text).trim().slice(0, 1000);\n    if (speaker === 'victim') text = text.replace(/\\b\\d{4,8}\\b/g, '******');\n    return { t: Math.round(t * 10) / 10, ts: Number(x.ts) || null, speaker, text };\n  });\nconst transcript_text = transcript.length && timed\n  ? transcript.map(x => `[${mmss(x.t)}] ${x.speaker}: ${x.text}`).join('\\n')\n  : String(b.transcript_text || transcript.map(x => `${x.speaker}: ${x.text}`).join('\\n')).slice(0, 20000);\n\nconst pressure = verdict.pressure;\nconst event = EVENTS.includes(b.event) ? b.event : pressure >= 2 ? 'incident' : 'telemetry';\n\nconst hex = n => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');\nconst new_incident_id = `${hex(8)}-${hex(4)}-4${hex(3)}-${'89ab'[Math.floor(Math.random() * 4)]}${hex(3)}-${hex(12)}`;\n\nreturn [{\n  json: {\n    event,\n    event_raw: b.event ?? null,\n    call_id: String(b.call_id || '').trim().slice(0, 120) || 'adhoc-' + Date.now(),\n    victim_id: String(b.victim_id || '').trim().slice(0, 120) || 'demo-victim-1',\n    caller_number: normalizePhone(b.caller_number),\n    caller_number_raw: String(b.caller_number || '').slice(0, 80),\n    ts: Number(b.ts) || Math.floor(Date.now() / 1000),\n    verdict,\n    transcript,\n    transcript_text,\n    call_seconds: transcript.length ? Math.round(transcript[transcript.length - 1].t) : 0,\n    new_incident_id,\n    received_at: new Date().toISOString(),\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "43628085-a748-41d0-86f1-78d15485b892",
+      "name": "Lookup: caller in scam_numbers",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "scam_numbers",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Normalize Event').first().json.caller_number || '+0000000000' }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "3cd81b9b-fee7-45cd-a6fe-b4669b029ef7",
+      "name": "Lookup: trusted_contacts of victim",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "trusted_contacts",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "victim_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Normalize Event').first().json.victim_id }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 10
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "bdacc81d-f983-4809-9cc2-df5976cdf8f3",
+      "name": "Lookup: open incident for call_id",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "incident_evidence",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "call_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Normalize Event').first().json.call_id }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "834d895b-0313-4818-89f6-1aa509ad0e12",
+      "name": "Build Incident Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// ② -> ③ Merge the three Supabase lookups into ONE context item and decide the route.\n// Lookups that failed (Supabase down) arrive as {error}: we note them and carry on,\n// so the family alert and the complaint draft still happen.\nconst ev = $('Normalize Event').first().json;\nconst errors = [];\n// NOTE: every $('...') here takes a literal node name. On n8n 2.22 a Code node that calls\n// $(variable) makes the task runner request ALL node types, which fails on the Supabase\n// Tool nodes and hangs the execution. Keep node names literal in every Code node.\nconst grab = (fn, label) => { try { return fn(); } catch (e) { errors.push(label + ': not run'); return []; } };\nconst clean = (items, label, key) => items.map(i => i.json).filter(r => {\n  if (r && r.error) { errors.push(label + ': ' + (r.error.message || r.error)); return false; }\n  return r && r[key] !== undefined && r[key] !== null;\n});\nconst scam = clean(grab(() => $('Lookup: caller in scam_numbers').all(), 'scam_numbers'), 'scam_numbers', 'phone_number')[0] || null;\nconst contacts = clean(grab(() => $('Lookup: trusted_contacts of victim').all(), 'trusted_contacts'), 'trusted_contacts', 'contact_name');\nconst existing = clean(grab(() => $('Lookup: open incident for call_id').all(), 'incident_evidence'), 'incident_evidence', 'call_id')[0] || null;\n\nconst p = ev.verdict.pressure;\nconst known_scammer = !!scam || ev.verdict.known_scammer === true;\n\n// Route (exactly one Switch output fires, so exactly one webhook reply is sent):\n//   existing incident for this call_id  -> escalation (dedupe: a 2nd \"incident\" is an escalation)\n//   incident event or pressure >= 2      -> incident   (also escalation/call_ended that has no row yet)\n//   number on the blocklist              -> known_scammer\n//   pressure 1                           -> telemetry\n//   otherwise                            -> ignore\nlet route = 'ignore';\nif (existing) route = 'escalation';\nelse if (ev.event === 'incident' || p >= 2) route = 'incident';\nelse if (known_scammer) route = 'known_scammer';\nelse if (p >= 1) route = 'telemetry';\n\n// Shared blocklist maths: report_count goes up at most once per call (last_call_id).\nconst RANK = { low: 0, medium: 1, high: 2, critical: 3 };\nconst already_counted = !!scam && scam.last_call_id === ev.call_id;\nconst report_count_before = scam ? Number(scam.report_count) || 0 : 0;\nconst new_report_count = scam ? (already_counted ? report_count_before : report_count_before + 1) : 1;\nlet risk_level = new_report_count >= 10 || p >= 3 ? 'critical' : new_report_count >= 3 || p >= 2 ? 'high' : 'medium';\nif (scam && RANK[scam.risk_level] > RANK[risk_level]) risk_level = scam.risk_level;\n\nconst scam_type = ev.verdict.scam_type !== 'none' ? ev.verdict.scam_type : (scam && scam.scam_type) || 'other';\nconst family = contacts.filter(c => /^-?\\d{5,20}$/.test(String(c.telegram_chat_id || '').trim()));\nconst victim_name = (contacts[0] && contacts[0].victim_name) || 'your family member';\nconst victim_language = (contacts[0] && contacts[0].preferred_language) || 'hi';\nconst callLang = ev.verdict.language;\nconst local_language = ['hi', 'kn'].includes(callLang) ? callLang : ['hi', 'kn', 'en'].includes(victim_language) ? victim_language : 'hi';\n\n// Escalation: what is new compared with the stored incident?\nconst prev = existing || {};\nconst new_flags = [];\nif (existing) {\n  if (ev.verdict.asks_otp_or_pin && !prev.asks_otp_or_pin) new_flags.push('otp');\n  if (ev.verdict.demands_secrecy && !prev.demands_secrecy) new_flags.push('secrecy');\n  if (p > (Number(prev.max_pressure) || 0)) new_flags.push('pressure');\n  if (known_scammer && !prev.known_scammer) new_flags.push('known_scammer');\n}\nconst prevLines = Array.isArray(prev.transcript_json) ? prev.transcript_json.length : 0;\n\nreturn [{\n  json: {\n    ...ev,\n    route,\n    known_scammer,\n    scam_type,\n    scam_record: scam,\n    already_counted,\n    report_count_before,\n    new_report_count,\n    risk_level,\n    contacts,\n    family,\n    victim_name,\n    victim_language,\n    local_language,\n    incident_id: existing ? existing.id : ev.new_incident_id,\n    existing_incident: existing\n      ? { id: existing.id, max_pressure: existing.max_pressure, complaint_status: existing.complaint_status,\n          asks_otp_or_pin: existing.asks_otp_or_pin, demands_secrecy: existing.demands_secrecy, transcript_lines: prevLines }\n      : null,\n    new_flags,\n    escalation_notify: route === 'escalation' && (new_flags.length > 0 || ev.event === 'call_ended') && prev.complaint_status !== 'submitted',\n    lookup_errors: errors,\n    lookups_ok: errors.length === 0,\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "1c46ce55-73a3-4440-b8de-9605bb47c48f",
+      "name": "Severity Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1560,
+        0
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f993e6f7-f7f6-50a1-ac00-e520d133d71d",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "known_scammer",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Known scammer"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "61e5435b-cfb7-5915-9749-9e4f249f775f",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "incident",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Critical (pressure ≥ 2)"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9d456936-e959-52ac-ae05-8d6e63663b77",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "escalation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Escalation / call ended"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6b0ad2a5-4737-56ed-bdde-b07d774da44b",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "telemetry",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Medium (pressure = 1)"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Low (pressure 0)"
+        }
+      }
+    },
+    {
+      "id": "0e7c9763-e249-42ed-96db-46104d6ae88d",
+      "name": "Block Signal",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1820,
+        -1040
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "50d3d70c-2bbe-4829-a658-c9f61a8c2f58",
+              "name": "action",
+              "value": "block",
+              "type": "string"
+            },
+            {
+              "id": "0e4ff11e-f9fb-4f95-9412-acd0d0602dfa",
+              "name": "whisper_clip",
+              "value": "warn_known_scammer",
+              "type": "string"
+            },
+            {
+              "id": "6442e8a9-a5ef-483d-8a40-976a3e2c3bab",
+              "name": "block_reason",
+              "value": "={{ $json.scam_record ? 'On the Chaukanna blocklist: reported ' + $json.report_count_before + 'x as ' + $json.scam_record.scam_type : 'Flagged by the classifier (scam-compound number)' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "7d1e3bdd-4238-4883-8743-e7c13d7fbea6",
+      "name": "Already on blocklist?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2080,
+        -1040
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fb25f602-fff2-5e4e-ace7-81586efa21e3",
+              "leftValue": "={{ !!$json.scam_record }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "95cf66a6-5773-4c66-98ed-ec06f8c36f0d",
+      "name": "Increment report_count",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2340,
+        -1130
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "scam_numbers",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $json.caller_number }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "report_count",
+              "fieldValue": "={{ $json.new_report_count }}"
+            },
+            {
+              "fieldId": "last_seen",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "last_call_id",
+              "fieldValue": "={{ $json.call_id }}"
+            },
+            {
+              "fieldId": "risk_level",
+              "fieldValue": "={{ $json.risk_level }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "a95ecdb7-7c2d-4823-96e4-f2e8a3f663f4",
+      "name": "Add to shared blocklist",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2340,
+        -950
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "scam_numbers",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $json.caller_number }}"
+            },
+            {
+              "fieldId": "scam_type",
+              "fieldValue": "={{ $json.scam_type }}"
+            },
+            {
+              "fieldId": "report_count",
+              "fieldValue": "1"
+            },
+            {
+              "fieldId": "first_seen",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "last_seen",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "risk_level",
+              "fieldValue": "={{ $json.risk_level }}"
+            },
+            {
+              "fieldId": "last_call_id",
+              "fieldValue": "={{ $json.call_id }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "0463435f-7bed-40ff-85e3-dd92d4fd4e28",
+      "name": "Reply: block caller",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2600,
+        -1040
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, call_id: $('Build Incident Context').first().json.call_id, event: $('Build Incident Context').first().json.event, known_scammer: true, action: 'block', whisper_clip: 'warn_known_scammer', report_count: $('Build Incident Context').first().json.new_report_count, risk_level: $('Build Incident Context').first().json.risk_level, reason: $('Block Signal').first().json.block_reason, blocklisted: !!($json.phone_number) }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "89b8774e-3d53-42c4-b073-183aa35773bb",
+      "name": "Compose instant family alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        -680
+      ],
+      "parameters": {
+        "jsCode": "// Lane A: the family hears about it NOW, before any AI runs. One item per trusted\n// contact that has a Telegram chat id. No contacts -> no items -> the lane just ends\n// (the incident reply then says family_alerted: false and the app tells the victim).\nconst c = $('Build Incident Context').first().json;\nconst esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst LABEL = {\n  digital_arrest: 'Digital-arrest scam (fake police / CBI)',\n  kyc_update: 'Fake KYC-update call',\n  bank_impersonation: 'Fake bank call',\n  prize_lottery: 'Lottery / prize scam',\n  other: 'Scam call',\n  none: 'Suspicious call',\n};\nconst flags = [\n  c.verdict.asks_otp_or_pin && 'asking for an OTP / PIN',\n  c.verdict.demands_secrecy && 'telling them to keep it secret',\n  c.known_scammer && (c.report_count_before ? `number already reported ${c.report_count_before}x` : 'number flagged as a known scammer'),\n].filter(Boolean);\nconst who = esc(c.victim_name);\n\nreturn c.family.map(f => ({\n  json: {\n    chat_id: String(f.telegram_chat_id).trim(),\n    contact_name: f.contact_name,\n    incident_id: c.incident_id,\n    text: [\n      `🚨 <b>Chaukanna: ${who} is on a scam call right now</b>`,\n      `• ${esc(LABEL[c.verdict.scam_type] || 'Scam call')} from ${esc(c.caller_number || 'an unknown number')}` +\n        (flags.length ? ` — ${esc(flags.join(', '))}` : ''),\n      `• Pressure ${c.verdict.pressure}/3. Chaukanna has already whispered a warning to ${who}.`,\n      `• Call ${who} now. Police never \"arrest\" anyone on a call, and nobody genuine asks for an OTP.`,\n    ].join('\\n'),\n  },\n}));\n"
+      }
+    },
+    {
+      "id": "d0b94d4a-b6b1-4b6e-baaa-a9016a06ef0a",
+      "name": "Telegram: alert family now",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2080,
+        -680
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        },
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ I'm calling them now",
+                    "additionalFields": {
+                      "callback_data": "={{ 'ack:' + $json.incident_id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ False alarm",
+                    "additionalFields": {
+                      "callback_data": "={{ 'fa:' + $json.incident_id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🌐 Report at cybercrime.gov.in",
+                    "additionalFields": {
+                      "url": "https://cybercrime.gov.in/"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "S5dA6rDrjXhw3eFe",
+          "name": "Chaukanna Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "webhookId": "d1b683de-87a0-4c9a-91ee-72ef4d73c7b5"
+    },
+    {
+      "id": "713aa024-01bd-4a72-b5b1-e4242ed0a50f",
+      "name": "Shape evidence row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1820,
+        -500
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e4a58e31-1e93-4d43-8eed-d59fa473464f",
+              "name": "id",
+              "value": "={{ $json.incident_id }}",
+              "type": "string"
+            },
+            {
+              "id": "cc6c8c68-a696-40dd-9765-7288c6a091b1",
+              "name": "call_id",
+              "value": "={{ $json.call_id }}",
+              "type": "string"
+            },
+            {
+              "id": "7f592c2e-4915-4635-9296-acad2e175565",
+              "name": "victim_id",
+              "value": "={{ $json.victim_id }}",
+              "type": "string"
+            },
+            {
+              "id": "8e622950-1940-40c9-b5dc-8e09ccd94ee7",
+              "name": "caller_number",
+              "value": "={{ $json.caller_number || null }}",
+              "type": "string"
+            },
+            {
+              "id": "6c11c6db-e307-4082-88f0-1de581cace01",
+              "name": "scam_type",
+              "value": "={{ $json.scam_type }}",
+              "type": "string"
+            },
+            {
+              "id": "04c03e8b-c821-4800-b0ea-71a391b39945",
+              "name": "max_pressure",
+              "value": "={{ $json.verdict.pressure }}",
+              "type": "number"
+            },
+            {
+              "id": "addee358-ba8a-4577-a614-10384351f5f3",
+              "name": "transcript_json",
+              "value": "={{ $json.transcript }}",
+              "type": "array"
+            },
+            {
+              "id": "7b6d0b46-4eb6-4a24-abdb-648ed7198c8a",
+              "name": "complaint_status",
+              "value": "draft_pending_human",
+              "type": "string"
+            },
+            {
+              "id": "97dc364b-e569-405f-9718-426ed9a9d5ca",
+              "name": "language",
+              "value": "={{ $json.local_language }}",
+              "type": "string"
+            },
+            {
+              "id": "4c3788b0-de36-463f-a109-36b1f4143052",
+              "name": "asks_otp_or_pin",
+              "value": "={{ $json.verdict.asks_otp_or_pin }}",
+              "type": "boolean"
+            },
+            {
+              "id": "ce0cc914-a9fb-44bf-ad73-5815506eb74a",
+              "name": "demands_secrecy",
+              "value": "={{ $json.verdict.demands_secrecy }}",
+              "type": "boolean"
+            },
+            {
+              "id": "7cd3314e-a100-4544-b363-7296e8d000af",
+              "name": "known_scammer",
+              "value": "={{ $json.known_scammer }}",
+              "type": "boolean"
+            },
+            {
+              "id": "5d8b89d6-2992-4696-8f55-dac196a6c392",
+              "name": "last_event",
+              "value": "incident",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "6bd17c4d-19ad-4259-87ea-6908531f6575",
+      "name": "Log evidence to incident_evidence",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        -500
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "incident_evidence",
+        "dataToSend": "autoMapInputData"
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "1054a673-5c78-4fa9-ad08-ba47a1bafc48",
+      "name": "Caller already on blocklist?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1820,
+        -280
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fb25f602-fff2-5e4e-ace7-81586efa21e3",
+              "leftValue": "={{ !!$json.scam_record }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1e76fe25-7ee1-4d8f-b63f-99daa06c4224",
+      "name": "Upsert: bump report_count",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        -350
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "scam_numbers",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $json.caller_number }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "report_count",
+              "fieldValue": "={{ $json.new_report_count }}"
+            },
+            {
+              "fieldId": "last_seen",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "last_call_id",
+              "fieldValue": "={{ $json.call_id }}"
+            },
+            {
+              "fieldId": "risk_level",
+              "fieldValue": "={{ $json.risk_level }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "772420f8-b045-421d-86af-b19bbe67c178",
+      "name": "Upsert: add caller to blocklist",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        -210
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "scam_numbers",
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $json.caller_number }}"
+            },
+            {
+              "fieldId": "scam_type",
+              "fieldValue": "={{ $json.scam_type }}"
+            },
+            {
+              "fieldId": "report_count",
+              "fieldValue": "1"
+            },
+            {
+              "fieldId": "first_seen",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "last_seen",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "risk_level",
+              "fieldValue": "={{ $json.risk_level }}"
+            },
+            {
+              "fieldId": "last_call_id",
+              "fieldValue": "={{ $json.call_id }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "e12950b7-ab97-4444-bec7-02a5206bde58",
+      "name": "AI Agent: 1930 Complaint Drafter",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1960,
+        80
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Draft the incident response for this scam call.\n\nincident_id: {{ $json.incident_id }}\ncall_id: {{ $json.call_id }}\nvictim_id: {{ $json.victim_id }}\nvictim_name: {{ $json.victim_name }}\ncaller_number: {{ $json.caller_number || 'unknown' }}\ncall_time: {{ DateTime.fromSeconds($json.ts).setZone('Asia/Kolkata').toFormat('dd LLL yyyy, HH:mm') }} IST\nclassifier_verdict: {{ JSON.stringify($json.verdict) }}\non_shared_blocklist: {{ $json.known_scammer }} (reports before this call: {{ $json.report_count_before }})\nvictim_language_for_complaint_local: {{ $json.local_language }}\n\nTimestamped transcript ([mm:ss] since the call started):\n{{ $json.transcript_text }}\n",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "You are Chaukanna's incident-response agent. Chaukanna protects elderly and first-time phone users in India from scam calls (digital arrest, fake KYC, fake bank, lottery). A live call has just been flagged as a scam. You write for two readers: the victim's family, and the National Cyber Crime Helpline 1930 / cybercrime.gov.in.\n\nUse your tools first (they are read-only Supabase lookups; call them in parallel if you can):\n- scam_number_history: the caller number's record on the shared blocklist.\n- prior_incidents: earlier Chaukanna incidents from the same caller number (ignore the row for the current call_id).\n- victim_profile: the victim's name, trusted contacts and preferred language.\nIf a tool fails or returns nothing, continue with the facts in the message. Never invent names, amounts, dates, case numbers or report counts.\n\nProduce:\n1. family_alert_bullets: exactly 3 short bullets in plain English, written TO the family member who receives the alert. Refer to the victim in the third person by name (for example \"Kamala Devi is on a call with a fake CBI officer\"); never address the victim. At most 25 words each, no bullet symbols. Bullet 1: what is happening and who the caller pretended to be. Bullet 2: the most dangerous demand, with its [mm:ss] timestamp. Bullet 3: what the family member should do right now (call the victim at once, make sure no OTP or money is shared).\n2. complaint_subject: one line.\n3. complaint_en: a formal complaint in English, first person as the victim, addressed to \"The Officer-in-charge, National Cyber Crime Reporting Portal (cybercrime.gov.in) / Helpline 1930\". Include the date and time of the call, the caller number, how the caller impersonated an official, then a numbered list of every coercion, threat, secrecy demand and OTP / PIN / money demand, each with its exact [mm:ss] timestamp and a short quote (translated to English if needed). Mention earlier reports of the number only if a tool returned them. Say that no OTP was shared and no money was transferred unless the transcript shows otherwise. End with a request to trace and block the number, then the line: Call recording transcript with timestamps is preserved as evidence (Chaukanna incident <incident_id>). Sign with the victim's name.\n4. complaint_local: the same complaint in the victim's language (hi = Hindi in Devanagari script, kn = Kannada script), written as natural, grammatical, formal prose in the first person by the victim. In Hindi start the body with \"मैं, <victim_name>, ...\"; in Kannada with \"ನಾನು, <victim_name>, ...\". Keep quotes from the transcript in their original words. Keep [mm:ss] timestamps, phone numbers, \"1930\", \"cybercrime.gov.in\" and the incident id unchanged. If the language is en, copy complaint_en.\n5. local_language: the language code of complaint_local (hi, kn or en).\n6. key_evidence: one entry per line you cited: timestamp exactly as written in the transcript (mm:ss), speaker, category (impersonation, arrest_threat, secrecy_demand, otp_demand, money_demand or other_coercion) and a short quote copied from that line.\n\nRules: cite only timestamps that appear in the transcript. Masked digits (******) mean the victim's OTP was hidden by Chaukanna; never treat them as an OTP that was shared. Plain text only: no markdown, no asterisks, no emojis.\n",
+          "maxIterations": 8,
+          "enableStreaming": false
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "05d5e23f-930b-42c4-8d8f-443da8a9a0d4",
+      "name": "Gemini 2.5 Flash",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        380
+      ],
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "temperature": 0.2,
+          "maxOutputTokens": 8192
+        }
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "pCweZd7MDZixV2G7",
+          "name": "Chaukanna Gemini"
+        }
+      }
+    },
+    {
+      "id": "8544de84-b576-4210-9c7e-ff55fc786caf",
+      "name": "Gemini 2.5 Flash-Lite (fallback)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1990,
+        380
+      ],
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {
+          "temperature": 0.2,
+          "maxOutputTokens": 8192
+        }
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "pCweZd7MDZixV2G7",
+          "name": "Chaukanna Gemini"
+        }
+      }
+    },
+    {
+      "id": "5cbe246b-e228-4472-ac64-e51aaccdbaaa",
+      "name": "scam_number_history",
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2140,
+        380
+      ],
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Look up a phone number on Chaukanna's shared scam blocklist: report_count, first_seen, last_seen, scam_type, risk_level. Input: the caller number in E.164 format.",
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "scam_numbers",
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $fromAI('phone_number', 'Caller phone number in E.164 format, e.g. +919876543210', 'string') }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "31624120-4588-43f7-ba81-d6657cafd4b4",
+      "name": "prior_incidents",
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2280,
+        380
+      ],
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "List earlier Chaukanna incidents from the same caller number (any victim), newest first. Ignore the row whose call_id is the current call.",
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "incident_evidence",
+        "returnAll": false,
+        "limit": 3,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "caller_number",
+              "condition": "eq",
+              "keyValue": "={{ $fromAI('caller_number', 'Caller phone number in E.164 format, e.g. +919876543210', 'string') }}"
+            }
+          ]
+        },
+        "orderBy": "created_at.desc"
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "95d83cc6-e474-4dc9-9be9-e61a3a6d4301",
+      "name": "victim_profile",
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2420,
+        380
+      ],
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Get the victim's profile and trusted contacts: victim_name, contact_name, preferred_language. Input: the victim_id.",
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "trusted_contacts",
+        "returnAll": false,
+        "limit": 5,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "victim_id",
+              "condition": "eq",
+              "keyValue": "={{ $fromAI('victim_id', 'The victim_id from the message, e.g. demo-victim-1', 'string') }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "2220db0e-e1b4-4271-a4eb-45ba4e6aa601",
+      "name": "Parser: complaint JSON",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2580,
+        380
+      ],
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"family_alert_bullets\": {\n      \"type\": \"array\",\n      \"description\": \"Exactly 3 short plain-English bullets for the family, no bullet symbols\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"complaint_subject\": { \"type\": \"string\" },\n    \"complaint_en\": { \"type\": \"string\", \"description\": \"Formal 1930 / cybercrime.gov.in complaint in English with [mm:ss] citations\" },\n    \"complaint_local\": { \"type\": \"string\", \"description\": \"The same complaint in the victim's language\" },\n    \"local_language\": { \"type\": \"string\", \"enum\": [\"hi\", \"kn\", \"en\"] },\n    \"key_evidence\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"timestamp\": { \"type\": \"string\", \"description\": \"mm:ss exactly as in the transcript\" },\n          \"speaker\": { \"type\": \"string\" },\n          \"category\": { \"type\": \"string\" },\n          \"quote\": { \"type\": \"string\" }\n        },\n        \"required\": [\"timestamp\", \"category\", \"quote\"]\n      }\n    }\n  },\n  \"required\": [\"family_alert_bullets\", \"complaint_subject\", \"complaint_en\", \"complaint_local\", \"local_language\", \"key_evidence\"]\n}\n"
+      }
+    },
+    {
+      "id": "1880cff7-2caf-48f5-8520-52faf90ba129",
+      "name": "Fallback: template complaint",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2380,
+        230
+      ],
+      "parameters": {
+        "jsCode": "// Runs only if the AI Agent failed (both Gemini models down, quota, bad JSON).\n// Builds the same output shape from the transcript with keyword rules, so the\n// incident reply, the evidence row and the approval step never depend on the LLM.\nconst c = $('Build Incident Context').first().json;\nconst errIn = $input.first().json;\nconst aiError = String((errIn.error && (errIn.error.message || errIn.error)) || errIn.message || 'AI agent failed').slice(0, 300);\n\n// Priority order: the first category that matches a caller line wins for that line.\nconst RULES = [\n  ['otp_demand', /(otp|ओटीपी|ओ\\.?टी\\.?पी|\\bpin\\b|पिन|ಒಟಿಪಿ|cvv|password|पासवर्ड|verification code)/i],\n  ['money_demand', /(transfer|ट्रांसफर|paisa|पैसा|पैसे|rupees|रुपये|₹|upi|safe account|सेफ अकाउंट|ಹಣ|ವರ್ಗಾ)/i],\n  ['secrecy_demand', /(kisi ko|किसी को|mat bata|मत बता|secret|गोपनीय|ಯಾರಿಗೂ|don'?t tell|do not tell|confidential|disconnect|कॉल मत काट|call mat kaat)/i],\n  ['arrest_threat', /(arrest|अरेस्ट|गिरफ्तार|giraftaar|warrant|वारंट|ಅರೆಸ್ಟ್|ಬಂಧ|jail|जेल|laundering|लॉन्ड्रिंग|case|केस|fir\\b)/i],\n  ['impersonation', /(cbi|सीबीआई|police|पुलिस|ಪೊಲೀಸ್|officer|अधिकारी|ಅಧಿಕಾರಿ|inspector|इंस्पेक्टर|customs|कस्टम|rbi|trai|court|अदालत|narcotics|bank|बैंक)/i],\n];\nconst LABEL_EN = {\n  otp_demand: 'demanded an OTP / PIN', money_demand: 'demanded a money transfer', secrecy_demand: 'demanded secrecy',\n  arrest_threat: 'threatened arrest / a criminal case', impersonation: 'impersonated an official',\n};\nconst mmss = s => { const n = Math.max(0, Math.floor(Number(s) || 0)); return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0'); };\nconst lines = (c.transcript || []).filter(x => x.speaker === 'caller');\nconst evidence = [];\nfor (const x of lines) {\n  const hit = RULES.find(([, rx]) => rx.test(x.text));\n  if (hit) evidence.push({ timestamp: mmss(x.t), speaker: 'caller', category: hit[0], quote: x.text.slice(0, 160) });\n}\nconst ev = evidence.slice(0, 8);\nconst has = k => ev.some(e => e.category === k);\n\nconst SCAM_EN = { digital_arrest: 'digital-arrest scam', kyc_update: 'KYC-update fraud', bank_impersonation: 'bank-impersonation fraud', prize_lottery: 'lottery / prize fraud', other: 'phone fraud', none: 'phone fraud' };\nconst SCAM_HI = { digital_arrest: 'डिजिटल अरेस्ट धोखाधड़ी', kyc_update: 'KYC अपडेट धोखाधड़ी', bank_impersonation: 'फ़र्ज़ी बैंक कॉल धोखाधड़ी', prize_lottery: 'लॉटरी / इनाम धोखाधड़ी', other: 'फ़ोन धोखाधड़ी', none: 'फ़ोन धोखाधड़ी' };\nconst SCAM_KN = { digital_arrest: 'ಡಿಜಿಟಲ್ ಅರೆಸ್ಟ್ ವಂಚನೆ', kyc_update: 'KYC ಅಪ್‌ಡೇಟ್ ವಂಚನೆ', bank_impersonation: 'ನಕಲಿ ಬ್ಯಾಂಕ್ ಕರೆ ವಂಚನೆ', prize_lottery: 'ಲಾಟರಿ / ಬಹುಮಾನ ವಂಚನೆ', other: 'ಫೋನ್ ವಂಚನೆ', none: 'ಫೋನ್ ವಂಚನೆ' };\n\nconst when = $now.setZone('Asia/Kolkata').toFormat('dd LLL yyyy, HH:mm') + ' IST';\nconst num = c.caller_number || 'an unknown number';\nconst name = c.victim_name;\nconst st = c.scam_type || 'other';\nconst evLines = ev.length\n  ? ev.map((e, i) => `${i + 1}. [${e.timestamp}] The caller ${LABEL_EN[e.category]}: \"${e.quote}\"`).join('\\n')\n  : '1. The caller pressured me throughout the call (see the attached transcript).';\nconst evQuotes = ev.length ? ev.map((e, i) => `${i + 1}. [${e.timestamp}] “${e.quote}”`).join('\\n') : '1. —';\nconst ref = `Chaukanna incident ${c.incident_id}`;\n\nconst complaint_en = [\n  'To,',\n  'The Officer-in-charge, National Cyber Crime Reporting Portal (cybercrime.gov.in) / Helpline 1930',\n  '',\n  `Subject: Complaint about an attempted ${SCAM_EN[st]} over a phone call from ${num}`,\n  '',\n  'Sir / Madam,',\n  `I, ${name}, received a phone call on ${when} from ${num}. The caller pretended to be an official and tried to frighten me into following instructions. The key moments of the call, with timestamps from the start of the call, are:`,\n  evLines,\n  '',\n  `${has('otp_demand') ? 'I did not share any OTP or PIN. ' : ''}No money was transferred. I request you to trace and block this number and take action against the people behind it.`,\n  `Call recording transcript with timestamps is preserved as evidence (${ref}).`,\n  '',\n  'Yours faithfully,',\n  name,\n].join('\\n');\n\nconst complaint_hi = [\n  'सेवा में,',\n  'प्रभारी अधिकारी, राष्ट्रीय साइबर अपराध रिपोर्टिंग पोर्टल (cybercrime.gov.in) / हेल्पलाइन 1930',\n  '',\n  `विषय: ${num} से आई फ़ोन कॉल द्वारा ${SCAM_HI[st]} के प्रयास की शिकायत`,\n  '',\n  'महोदय / महोदया,',\n  `मैं, ${name}, यह शिकायत दर्ज कर रही/रहा हूँ। ${when} को मुझे ${num} से एक कॉल आई। कॉल करने वाले ने खुद को सरकारी अधिकारी बताया और मुझे डराकर अपनी बात मनवाने की कोशिश की। कॉल के मुख्य अंश (कॉल शुरू होने से समय सहित):`,\n  evQuotes,\n  '',\n  `${has('otp_demand') ? 'मैंने कोई OTP या PIN साझा नहीं किया। ' : ''}कोई पैसा ट्रांसफर नहीं किया गया। कृपया इस नंबर का पता लगाकर इसे ब्लॉक करें और इसके पीछे के लोगों पर कार्रवाई करें।`,\n  `समय सहित कॉल का ट्रांसक्रिप्ट साक्ष्य के रूप में सुरक्षित है (${ref})।`,\n  '',\n  'भवदीय / भवदीया,',\n  name,\n].join('\\n');\n\nconst complaint_kn = [\n  'ಗೆ,',\n  'ಪ್ರಭಾರಿ ಅಧಿಕಾರಿ, ರಾಷ್ಟ್ರೀಯ ಸೈಬರ್ ಅಪರಾಧ ವರದಿ ಪೋರ್ಟಲ್ (cybercrime.gov.in) / ಸಹಾಯವಾಣಿ 1930',\n  '',\n  `ವಿಷಯ: ${num} ಸಂಖ್ಯೆಯಿಂದ ಬಂದ ಫೋನ್ ಕರೆಯ ಮೂಲಕ ${SCAM_KN[st]} ಪ್ರಯತ್ನದ ಬಗ್ಗೆ ದೂರು`,\n  '',\n  'ಮಾನ್ಯರೇ,',\n  `ನಾನು, ${name}, ಈ ದೂರನ್ನು ಸಲ್ಲಿಸುತ್ತಿದ್ದೇನೆ. ${when} ರಂದು ${num} ಸಂಖ್ಯೆಯಿಂದ ನನಗೆ ಕರೆ ಬಂದಿತು. ಕರೆ ಮಾಡಿದವರು ತಮ್ಮನ್ನು ಸರ್ಕಾರಿ ಅಧಿಕಾರಿ ಎಂದು ಹೇಳಿಕೊಂಡು ನನ್ನನ್ನು ಹೆದರಿಸಿದರು. ಕರೆಯ ಮುಖ್ಯ ಭಾಗಗಳು (ಕರೆ ಆರಂಭದಿಂದ ಸಮಯದೊಂದಿಗೆ):`,\n  evQuotes,\n  '',\n  `${has('otp_demand') ? 'ನಾನು ಯಾವುದೇ OTP ಅಥವಾ PIN ಹಂಚಿಕೊಂಡಿಲ್ಲ. ' : ''}ಯಾವುದೇ ಹಣ ವರ್ಗಾಯಿಸಲಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಈ ಸಂಖ್ಯೆಯನ್ನು ಪತ್ತೆಹಚ್ಚಿ ನಿರ್ಬಂಧಿಸಿ ಮತ್ತು ಸೂಕ್ತ ಕ್ರಮ ಕೈಗೊಳ್ಳಿ.`,\n  `ಸಮಯದೊಂದಿಗೆ ಕರೆಯ ಪ್ರತಿಲಿಪಿಯನ್ನು ಸಾಕ್ಷ್ಯವಾಗಿ ಸಂರಕ್ಷಿಸಲಾಗಿದೆ (${ref}).`,\n  '',\n  'ಇಂತಿ,',\n  name,\n].join('\\n');\n\nconst lang = c.local_language;\nconst worst = ev.find(e => e.category === 'otp_demand') || ev.find(e => e.category === 'money_demand') || ev.find(e => e.category === 'arrest_threat') || ev[0];\nreturn [{\n  json: {\n    draft_source: 'template',\n    ai_error: aiError,\n    output: {\n      family_alert_bullets: [\n        `${name} got a ${SCAM_EN[st]} call from ${num}; the caller posed as an official.`,\n        worst ? `At [${worst.timestamp}] the caller ${LABEL_EN[worst.category]}.` : 'The caller kept up heavy pressure on the call.',\n        `Call ${name} now and make sure no OTP or money was shared. Complaint draft is ready for approval.`,\n      ],\n      complaint_subject: `Attempted ${SCAM_EN[st]} from ${num}`,\n      complaint_en,\n      complaint_local: lang === 'kn' ? complaint_kn : lang === 'en' ? complaint_en : complaint_hi,\n      local_language: ['hi', 'kn', 'en'].includes(lang) ? lang : 'hi',\n      key_evidence: ev,\n    },\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "d7dc329e-5269-4616-a51e-2f7fcfe1a309",
+      "name": "Verify citations & assemble draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// Takes the AI Agent's structured output (or the template fallback) and checks every\n// [mm:ss] it cites against the real transcript. Unverified timestamps are reported,\n// not hidden: the human sees them before approving the complaint.\nconst c = $('Build Incident Context').first().json;\nconst j = $input.first().json;\nlet out = j.output;\nif (typeof out === 'string') { try { out = JSON.parse(out); } catch (e) { out = {}; } }\nout = out && typeof out === 'object' ? out : {};\nconst source = j.draft_source || 'ai';\n\nconst norm = s => String(s || '').replace(/[\\[\\]\\s]/g, '');\nconst stamps = new Set((String(c.transcript_text).match(/\\[\\d{2}:\\d{2}\\]/g) || []).map(norm));\n// Only bracketed [mm:ss] tokens count as citations (a clock time like 20:01 IST is not one).\nconst citedIn = txt => [...new Set((String(txt || '').match(/\\[\\d{2}:\\d{2}\\]/g) || []).map(norm))];\nconst cited = citedIn(out.complaint_en);\nconst verified = cited.filter(t => stamps.has(t));\nconst unverified = cited.filter(t => !stamps.has(t));\n\nconst strip = s => String(s || '').replace(/^[\\s•\\-*·]+/, '').replace(/\\*\\*/g, '').trim();\nconst bullets = (Array.isArray(out.family_alert_bullets) ? out.family_alert_bullets : String(out.family_alert_bullets || '').split('\\n'))\n  .map(strip).filter(Boolean).slice(0, 3);\nconst pad = [\n  `${c.victim_name} received a scam call from ${c.caller_number || 'an unknown number'}.`,\n  'The caller pressured them on the call.',\n  `Call ${c.victim_name} now and make sure no OTP or money was shared.`,\n];\nwhile (bullets.length < 3) bullets.push(pad[bullets.length]);\n\nconst lang = ['hi', 'kn', 'en'].includes(out.local_language) ? out.local_language : c.local_language;\nconst complaint_en = strip(out.complaint_en) ? String(out.complaint_en).replace(/\\*\\*/g, '').trim() : '';\nconst complaint_local = String(out.complaint_local || '').replace(/\\*\\*/g, '').trim() || complaint_en;\nconst key_evidence = (Array.isArray(out.key_evidence) ? out.key_evidence : [])\n  .map(e => ({ timestamp: norm(e.timestamp), speaker: e.speaker || 'caller', category: e.category || 'other_coercion', quote: String(e.quote || '').slice(0, 200) }))\n  .filter(e => stamps.has(e.timestamp));\n\nreturn [{\n  json: {\n    incident_id: c.incident_id,\n    call_id: c.call_id,\n    draft_source: source,\n    ai_error: j.ai_error || null,\n    complaint_subject: String(out.complaint_subject || '').trim(),\n    complaint_en,\n    complaint_local,\n    language: lang,\n    family_alert_bullets: bullets,\n    family_alert: bullets.map(b => '• ' + b).join('\\n'),\n    key_evidence,\n    citations: { cited: cited.length, verified: verified.length, unverified },\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "7e3483c6-919a-4e46-9553-87c339456072",
+      "name": "Save draft as draft_pending_human",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2900,
+        80
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "incident_evidence",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.incident_id }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "complaint_draft_text",
+              "fieldValue": "={{ $json.complaint_en }}"
+            },
+            {
+              "fieldId": "complaint_draft_local",
+              "fieldValue": "={{ $json.complaint_local }}"
+            },
+            {
+              "fieldId": "language",
+              "fieldValue": "={{ $json.language }}"
+            },
+            {
+              "fieldId": "family_alert_text",
+              "fieldValue": "={{ $json.family_alert }}"
+            },
+            {
+              "fieldId": "approve_url",
+              "fieldValue": "={{ $execution.resumeUrl }}"
+            },
+            {
+              "fieldId": "complaint_status",
+              "fieldValue": "draft_pending_human"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "61b7d8f7-5b86-446c-824f-af95229b5822",
+      "name": "Build incident reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3160,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// The synchronous reply the audio bridge waits for (CONTRACTS.md §2). Lanes A-C ran\n// before this lane (n8n v1 execution order runs parallel branches top to bottom), so\n// their results are read here to report what actually happened, not what was hoped.\nconst c = $('Build Incident Context').first().json;\nconst d = $('Verify citations & assemble draft').first().json;\n// Literal node names only (see the note in Build Incident Context).\nconst safe = fn => { try { return fn(); } catch (e) { return []; } };\nconst okRows = items => items.map(i => i.json).filter(r => r && !r.error && Object.keys(r).length > 0);\nconst tg = okRows(safe(() => $('Telegram: alert family now').isExecuted ? $('Telegram: alert family now').all() : []));\nconst evidence = okRows(safe(() => $('Log evidence to incident_evidence').isExecuted ? $('Log evidence to incident_evidence').all() : []));\nconst bump = okRows(safe(() => $('Upsert: bump report_count').isExecuted ? $('Upsert: bump report_count').all() : []));\nconst add = okRows(safe(() => $('Upsert: add caller to blocklist').isExecuted ? $('Upsert: add caller to blocklist').all() : []));\nconst draft = okRows(safe(() => $('Save draft as draft_pending_human').isExecuted ? $('Save draft as draft_pending_human').all() : []));\nconst family_alerted = tg.some(r => r.ok === true || r.result || r.message_id);\nconst evidence_saved = evidence.some(r => r.id);\nconst blocklisted = [...bump, ...add].some(r => r.phone_number);\nconst draft_saved = draft.some(r => r.id);\n\nconst resumeUrl = $execution.resumeUrl;\nconst base = String(resumeUrl || '').split('/webhook-waiting/')[0];\n\nreturn [{\n  json: {\n    ok: true,\n    incident_id: c.incident_id,\n    call_id: c.call_id,\n    known_scammer: c.known_scammer,\n    family_alerted,\n    evidence_saved,\n    blocklisted,\n    complaint_draft: { en: d.complaint_en, local: d.complaint_local, language: d.language },\n    family_alert: d.family_alert,\n    approve_url: resumeUrl,\n    // additive fields (optional for clients)\n    approve_fallback_url: base ? base + '/webhook/chaukanna-approve' : null,\n    draft_saved,\n    draft_source: d.draft_source,\n    citations: d.citations,\n    key_evidence: d.key_evidence,\n    scam_type: c.scam_type,\n    max_pressure: c.verdict.pressure,\n    report_count: c.new_report_count,\n    risk_level: c.risk_level,\n    lookups_ok: c.lookups_ok,\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "d5b6c809-4ec3-4e0a-b8bf-4c1abc4d46ae",
+      "name": "Respond: incident reply",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3420,
+        80
+      ],
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      }
+    },
+    {
+      "id": "3aef3ded-05d7-4dcb-ac75-9c555f782c4e",
+      "name": "Compose AI brief for family",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// After the reply is sent: the AI's 3-bullet brief goes to every trusted contact.\nconst c = $('Build Incident Context').first().json;\nconst d = $('Verify citations & assemble draft').first().json;\nconst esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst LANG = { hi: 'Hindi', kn: 'Kannada', en: 'English' };\nconst text = [\n  `📝 <b>Chaukanna incident brief — ${esc(c.victim_name)}</b>`,\n  esc(d.family_alert),\n  '',\n  `A 1930 / cybercrime.gov.in complaint is drafted in English${d.language !== 'en' ? ' and ' + (LANG[d.language] || d.language) : ''}` +\n    ` with ${d.citations.verified} timestamped quotes. It is filed only after ${esc(c.victim_name)} taps Approve in the app.`,\n  `<i>Incident ${esc(c.incident_id)}</i>`,\n].join('\\n');\nreturn c.family.map(f => ({ json: { chat_id: String(f.telegram_chat_id).trim(), incident_id: c.incident_id, text } }));\n"
+      }
+    },
+    {
+      "id": "1b37e296-1753-4d29-9b12-46b21b905308",
+      "name": "Telegram: AI brief to family",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3940,
+        -100
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        },
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ I'm calling them now",
+                    "additionalFields": {
+                      "callback_data": "={{ 'ack:' + $json.incident_id }}"
+                    }
+                  },
+                  {
+                    "text": "❌ False alarm",
+                    "additionalFields": {
+                      "callback_data": "={{ 'fa:' + $json.incident_id }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🌐 Report at cybercrime.gov.in",
+                    "additionalFields": {
+                      "url": "https://cybercrime.gov.in/"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "S5dA6rDrjXhw3eFe",
+          "name": "Chaukanna Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "webhookId": "38a957a4-12d7-4887-8a3b-c7bb630f44ac"
+    },
+    {
+      "id": "390accd3-0953-4f69-9c66-93190f262277",
+      "name": "Wait for human approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3680,
+        80
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "limitWaitTime": true,
+        "limitType": "afterTimeInterval",
+        "resumeAmount": 24,
+        "resumeUnit": "hours",
+        "options": {}
+      },
+      "webhookId": "35042ee7-a783-4c0d-a4ec-2905e3de8783"
+    },
+    {
+      "id": "05797d49-6fcd-4e8b-b3de-8ecbbf6905cc",
+      "name": "Approval outcome",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3940,
+        80
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "85ee0721-2478-5179-8da2-bead4135796e",
+                    "leftValue": "={{ $json.body?.confirmed_by_human === true || $json.body?.confirmed_by_human === 'true' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Approved by human"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8b3fdfdb-dba1-5f1d-9fe9-d3fc7c467565",
+                    "leftValue": "={{ !!$json.body }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Not confirmed"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Timed out (24 h)"
+        }
+      }
+    },
+    {
+      "id": "e08cd92f-3e73-4864-a88d-5dc7b2fa1544",
+      "name": "Prepare approval (in-app resume)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4200,
+        80
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a55ccea7-a9d7-423c-88d7-6ac613feddfb",
+              "name": "incident_id",
+              "value": "={{ $('Build incident reply').first().json.incident_id }}",
+              "type": "string"
+            },
+            {
+              "id": "5c4c5f39-58f3-4179-b3ef-734c4ebb16bb",
+              "name": "call_id",
+              "value": "={{ $('Build incident reply').first().json.call_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f9b4e096-e71a-4af9-b860-59278d1299cc",
+              "name": "victim_id",
+              "value": "={{ $('Build Incident Context').first().json.victim_id }}",
+              "type": "string"
+            },
+            {
+              "id": "25e1ae73-1225-4f67-8821-d82170e03f26",
+              "name": "caller_number",
+              "value": "={{ $('Build Incident Context').first().json.caller_number }}",
+              "type": "string"
+            },
+            {
+              "id": "b8a49b31-dabe-4341-9127-f6c60949f4ff",
+              "name": "approved_via",
+              "value": "={{ $json.body.approved_via || 'resume_url' }}",
+              "type": "string"
+            },
+            {
+              "id": "48b7f6d6-1afb-4284-845b-21fe3d8654c4",
+              "name": "submitted_by",
+              "value": "={{ 'app:' + ($json.body.victim_id || $('Build Incident Context').first().json.victim_id) }}",
+              "type": "string"
+            },
+            {
+              "id": "b173f692-27b3-423d-a983-fb471010207f",
+              "name": "submitted_at",
+              "value": "={{ $json.body.submitted_at || $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "967f3d14-7da6-4c53-b62b-2d43468af7d6",
+      "name": "Reply to app: not confirmed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4200,
+        240
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, reason: 'confirmed_by_human must be true', incident_id: $('Build incident reply').first().json.incident_id }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "426dfec2-3983-48d6-957b-378a11e56b09",
+      "name": "Draft stays pending",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        4200,
+        400
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "c69ca720-199a-49eb-8dba-bbaea278681f",
+      "name": "Mark complaint submitted",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4460,
+        80
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "incident_evidence",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.incident_id }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "complaint_status",
+              "fieldValue": "submitted"
+            },
+            {
+              "fieldId": "submitted_at",
+              "fieldValue": "={{ $json.submitted_at }}"
+            },
+            {
+              "fieldId": "submitted_by",
+              "fieldValue": "={{ $json.submitted_by }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "01734ac9-3ed1-4cf1-94da-5b29eb4abe37",
+      "name": "Approval result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4720,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// Shared by both approval paths (in-app resume URL and approve-by-call_id).\n// Reads whichever \"Prepare approval\" node ran, plus the Supabase update result.\n// Literal node names only (see the note in Build Incident Context).\nconst ran = fn => { try { return fn(); } catch (e) { return false; } };\nconst prep = ran(() => $('Prepare approval (in-app resume)').isExecuted) ? $('Prepare approval (in-app resume)').first().json\n  : ran(() => $('Prepare approval (by call_id)').isExecuted) ? $('Prepare approval (by call_id)').first().json : {};\nconst row = $input.first().json || {};\nconst recorded = !!row.id && row.complaint_status === 'submitted';\nreturn [{\n  json: {\n    ok: true,\n    incident_id: prep.incident_id,\n    call_id: prep.call_id,\n    victim_id: row.victim_id || prep.victim_id,\n    caller_number: row.caller_number || prep.caller_number || '',\n    complaint_status: 'submitted',\n    recorded,\n    db_error: row.error ? String(row.error.message || row.error).slice(0, 200) : null,\n    approved_via: prep.approved_via,\n    submitted_at: prep.submitted_at,\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "13b76467-7ab1-49af-9ad3-70f57a3b50d0",
+      "name": "Reply to app: complaint filed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4980,
+        80
+      ],
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      }
+    },
+    {
+      "id": "5cab08d0-f4d0-4b60-b1d9-304ae9414f47",
+      "name": "Fetch family for receipt",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        5240,
+        80
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "trusted_contacts",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "victim_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.victim_id }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 10
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "1ee901e1-5e74-421b-ba8d-5d06cfebc222",
+      "name": "Compose 1930 receipt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5500,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// The final receipt to the family chat. Honest wording: cybercrime.gov.in has no\n// public filing API, so \"submitted\" means the victim approved it and it is recorded\n// with the evidence; the family gets the incident id to quote on 1930.\nconst r = $('Approval result').first().json;\nconst esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst contacts = $input.all().map(i => i.json).filter(x => x && /^-?\\d{5,20}$/.test(String(x.telegram_chat_id || '').trim()));\nconst name = (contacts[0] && contacts[0].victim_name) || 'Your family member';\nconst when = $now.setZone('Asia/Kolkata').toFormat('dd LLL yyyy, HH:mm') + ' IST';\nconst text = [\n  `✅ <b>1930 complaint approved — ${esc(name)}</b>`,\n  `• ${esc(name)} approved the complaint about the call from ${esc(r.caller_number || 'the scam number')} at ${when}.`,\n  `• Status: submitted${r.recorded ? ' and saved with the call evidence' : ' (evidence store unreachable; keep this message)'}.`,\n  `• Quote incident <code>${esc(r.incident_id)}</code> on 1930 or at cybercrime.gov.in. If any money moved, call the bank first.`,\n].join('\\n');\nreturn contacts.map(x => ({ json: { chat_id: String(x.telegram_chat_id).trim(), text } }));\n"
+      }
+    },
+    {
+      "id": "9434281a-f665-475a-8651-68962d9c4c16",
+      "name": "Telegram: 1930 receipt to family",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5760,
+        80
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "S5dA6rDrjXhw3eFe",
+          "name": "Chaukanna Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "webhookId": "95214309-b6f7-452d-adcf-67c6c28180fc"
+    },
+    {
+      "id": "d8dd2ef9-e776-4d88-8c51-e85fde2b7eef",
+      "name": "Shape escalation update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        640
+      ],
+      "parameters": {
+        "jsCode": "// Escalation / call ended: update the existing evidence row (never a second row).\n// Only fields that are present are sent. The database keeps max_pressure and the\n// OTP/secrecy flags monotonic, so a lower value here can never erase evidence.\nconst c = $input.first().json;\nconst patch = {\n  max_pressure: c.verdict.pressure,\n  asks_otp_or_pin: c.verdict.asks_otp_or_pin,\n  demands_secrecy: c.verdict.demands_secrecy,\n  last_event: c.event,\n};\nif (c.known_scammer) patch.known_scammer = true;\nif (c.verdict.scam_type !== 'none') patch.scam_type = c.verdict.scam_type;\nconst prevLines = (c.existing_incident && c.existing_incident.transcript_lines) || 0;\nif (c.transcript.length && c.transcript.length >= prevLines) patch.transcript_json = c.transcript;\nreturn [{ json: patch }];\n"
+      }
+    },
+    {
+      "id": "86d10eca-56fc-4f0c-ab00-cfbf4e7b0ccb",
+      "name": "Update evidence (escalation)",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        640
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "incident_evidence",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Build Incident Context').first().json.incident_id }}"
+            }
+          ]
+        },
+        "dataToSend": "autoMapInputData"
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b9d5ce5c-1af5-4ecc-9a8f-131f94177b10",
+      "name": "Reply: ok (escalation)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2340,
+        640
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, call_id: $('Build Incident Context').first().json.call_id, incident_id: $('Build Incident Context').first().json.incident_id, event: $('Build Incident Context').first().json.event, deduped: $('Build Incident Context').first().json.event === 'incident', new_flags: $('Build Incident Context').first().json.new_flags, evidence_updated: !!$json.id }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ef5e48cf-9d96-4c52-ab7e-82dfd8433498",
+      "name": "New red flag or call ended?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2600,
+        640
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d6943902-71fe-5dcf-bb21-ee392e6bffb0",
+              "leftValue": "={{ $('Build Incident Context').first().json.escalation_notify }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "cbf58948-44db-4559-ba55-cf8d3a1f3957",
+      "name": "Compose escalation alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        640
+      ],
+      "parameters": {
+        "jsCode": "// Tell the family what changed (new red flag) or that the call has ended.\nconst c = $('Build Incident Context').first().json;\nconst esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst mmss = s => { const n = Math.max(0, Math.floor(Number(s) || 0)); return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0'); };\nconst who = esc(c.victim_name);\nconst lastCaller = [...c.transcript].reverse().find(x => x.speaker === 'caller');\nconst FLAG = {\n  otp: 'is now asking for an OTP / PIN',\n  secrecy: 'is telling them to keep it secret',\n  pressure: `pushed the pressure to ${c.verdict.pressure}/3`,\n  known_scammer: 'is calling from a number already on the scam list',\n};\nlet text;\nif (c.event === 'call_ended') {\n  text = [\n    `📞 <b>${who}'s scam call has ended</b>`,\n    `• Call length about ${mmss(c.call_seconds)}. The full transcript is saved as evidence.`,\n    `• A 1930 complaint draft is waiting for ${who}'s approval in the Chaukanna app.`,\n    `• Please call ${who} and stay with them for a few minutes.`,\n  ].join('\\n');\n} else {\n  text = [\n    `⚠️ <b>Escalation on ${who}'s call</b>`,\n    `• The caller ${esc(c.new_flags.map(f => FLAG[f]).filter(Boolean).join(' and '))}.`,\n    lastCaller ? `• Latest at [${mmss(lastCaller.t)}]: “${esc(lastCaller.text.slice(0, 140))}”` : '• The call is still going.',\n    `• Call ${who} now.`,\n  ].join('\\n');\n}\nreturn c.family.map(f => ({ json: { chat_id: String(f.telegram_chat_id).trim(), incident_id: c.incident_id, text } }));\n"
+      }
+    },
+    {
+      "id": "4e73f63f-23df-46b7-9807-e0a2d20bcf5b",
+      "name": "Telegram: escalation alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3120,
+        640
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        },
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ I'm calling them now",
+                    "additionalFields": {
+                      "callback_data": "={{ 'ack:' + $json.incident_id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "S5dA6rDrjXhw3eFe",
+          "name": "Chaukanna Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "webhookId": "9e6ee164-c2fc-4ed6-82db-f304de5d6c31"
+    },
+    {
+      "id": "62064248-f54d-4ae7-bca7-3c508cf6075e",
+      "name": "Silent telemetry log (n8n Data Table)",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1820,
+        880
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "N3BQr1gqeRDBmG4p",
+          "mode": "list",
+          "cachedResultName": "chaukanna_telemetry"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "call_id": "={{ $json.call_id }}",
+            "victim_id": "={{ $json.victim_id }}",
+            "caller_number": "={{ $json.caller_number }}",
+            "event": "={{ $json.event }}",
+            "scam_type": "={{ $json.verdict.scam_type }}",
+            "pressure": "={{ $json.verdict.pressure }}",
+            "confidence": "={{ $json.verdict.confidence }}",
+            "language": "={{ $json.verdict.language }}",
+            "known_scammer": "={{ $json.known_scammer }}",
+            "summary": "={{ $json.verdict.summary_for_family }}",
+            "received_at": "={{ $json.received_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "call_id",
+              "displayName": "call_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "victim_id",
+              "displayName": "victim_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "caller_number",
+              "displayName": "caller_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "event",
+              "displayName": "event",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "scam_type",
+              "displayName": "scam_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "pressure",
+              "displayName": "pressure",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "language",
+              "displayName": "language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "known_scammer",
+              "displayName": "known_scammer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "446857e3-ddd2-4354-906a-74fe5cf0853b",
+      "name": "Reply: ok (telemetry)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2080,
+        880
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, call_id: $('Build Incident Context').first().json.call_id, route: 'telemetry', logged: !$json.error }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "7fdc028d-046d-4a21-a9a3-3a91bf2896e5",
+      "name": "Reply: ok (no action)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1820,
+        1100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, call_id: $json.call_id, route: $json.route }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "6b91c148-678e-44f0-87df-015b097ef97e",
+      "name": "Webhook: chaukanna-approve",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2900,
+        1040
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chaukanna-approve",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "5bec58a3-235d-44ea-a4ea-65a56b83d542"
+    },
+    {
+      "id": "b55a88cd-c974-4684-9c0e-874b23439de3",
+      "name": "Find incident to approve",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3160,
+        1040
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "incident_evidence",
+        "filterType": "manual",
+        "matchType": "anyFilter",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test($json.body.incident_id || '') ? $json.body.incident_id : '00000000-0000-0000-0000-000000000000' }}"
+            },
+            {
+              "keyName": "call_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.body.call_id || '__no_call_id__' }}"
+            },
+            {
+              "keyName": "caller_number",
+              "condition": "eq",
+              "keyValue": "={{ (d => d.length === 10 ? '+91' + d : d ? '+' + d : '__none__')(String($json.body.caller_number || '').replace(/\\D/g, '')) }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 10,
+        "orderBy": "created_at.desc"
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "28d3ac9b-0093-4316-b142-b02fc69ea762",
+      "name": "Pick incident & route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3420,
+        1040
+      ],
+      "parameters": {
+        "jsCode": "// ⑦ Approve by call_id: pick the incident the app means and decide how to approve it.\n// Match priority: incident_id, then call_id, then (older app builds that send neither)\n// the newest pending incident from the same caller in the last 2 hours.\nconst body = $('Webhook: chaukanna-approve').first().json.body || {};\nconst all = $input.all().map(i => i.json);\nconst dbError = all.find(r => r && r.error);\nconst rows = all.filter(r => r && r.id && !r.error);\n\nconst digits = String(body.caller_number || '').replace(/\\D/g, '');\nconst caller = digits.length === 10 ? '+91' + digits : digits ? '+' + digits : '';\nconst recent = r => Date.now() - new Date(r.created_at).getTime() < 2 * 3600 * 1000;\nconst newest = (a, b) => new Date(b.created_at) - new Date(a.created_at);\n\nconst pick =\n  (body.incident_id && rows.find(r => r.id === body.incident_id)) ||\n  (body.call_id && rows.find(r => r.call_id === body.call_id)) ||\n  (!body.incident_id && !body.call_id && caller &&\n    rows.filter(r => r.caller_number === caller && r.complaint_status === 'draft_pending_human' && recent(r)).sort(newest)[0]) ||\n  null;\n\nconst confirmed = body.confirmed_by_human === true || body.confirmed_by_human === 'true';\nlet route;\nif (!confirmed) route = 'not_confirmed';\nelse if (!pick) route = dbError ? 'db_error' : 'not_found';\nelse if (pick.complaint_status === 'submitted') route = 'already_submitted';\nelse if (pick.approve_url) route = 'resume';\nelse route = 'direct';\n\nreturn [{\n  json: {\n    route,\n    approve_url: pick ? pick.approve_url : null,\n    incident: pick ? { id: pick.id, call_id: pick.call_id, victim_id: pick.victim_id, caller_number: pick.caller_number, submitted_at: pick.submitted_at } : null,\n    body: { ...body, approved_via: 'call_id' },\n    reason: {\n      not_confirmed: 'confirmed_by_human must be true',\n      not_found: 'no incident matches this call_id / incident_id',\n      db_error: 'evidence store unreachable: ' + String(dbError && (dbError.error.message || dbError.error)).slice(0, 160),\n    }[route] || null,\n    status_code: { not_confirmed: 400, not_found: 404, db_error: 503 }[route] || 200,\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "052c2eea-f54b-46c6-9cba-b34f23a95625",
+      "name": "Approval route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3680,
+        1040
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "17adcf4e-339d-542f-ab58-6ccf6726b53f",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "resume",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Resume waiting execution"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ce133e9a-0ced-5948-a6ca-6df40da4da18",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "direct",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Approve directly"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e3365853-4002-5d28-8978-d7a687da3ec1",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "already_submitted",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Already submitted"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Not found / not confirmed"
+        }
+      }
+    },
+    {
+      "id": "7026a7b6-5aa0-418f-bdd4-52afccc0bb50",
+      "name": "Resume the waiting HITL execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3940,
+        920
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.approve_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "3185c067-b13f-4f29-af29-83b3dee7cb76",
+      "name": "Reply: approved via HITL",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4200,
+        860
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify(Object.assign({ ok: true, via: 'resume_url' }, $json)) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "3b14c027-9ab4-4a6b-a3a3-8fc2b54f3cab",
+      "name": "Prepare approval (by call_id)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4200,
+        1020
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7d59c42f-1721-46d2-be49-faa12ffb3444",
+              "name": "incident_id",
+              "value": "={{ $('Pick incident & route').first().json.incident.id }}",
+              "type": "string"
+            },
+            {
+              "id": "468c7a60-6b53-43ff-840d-f718821f06f7",
+              "name": "call_id",
+              "value": "={{ $('Pick incident & route').first().json.incident.call_id }}",
+              "type": "string"
+            },
+            {
+              "id": "862810d8-d4a8-4369-8162-4c8d04d2bb3f",
+              "name": "victim_id",
+              "value": "={{ $('Pick incident & route').first().json.incident.victim_id }}",
+              "type": "string"
+            },
+            {
+              "id": "5c9b9a61-30c2-460f-b0e1-f1e0f953add8",
+              "name": "caller_number",
+              "value": "={{ $('Pick incident & route').first().json.incident.caller_number }}",
+              "type": "string"
+            },
+            {
+              "id": "11f68610-6895-433c-b0ef-a2a14cbedec7",
+              "name": "approved_via",
+              "value": "call_id",
+              "type": "string"
+            },
+            {
+              "id": "7461d82e-2c2b-4322-bee0-6ef6ea02810d",
+              "name": "submitted_by",
+              "value": "={{ 'app:' + ($('Pick incident & route').first().json.body.victim_id || $('Pick incident & route').first().json.incident.victim_id) }}",
+              "type": "string"
+            },
+            {
+              "id": "a555c133-7fe4-48c1-aa26-910257605633",
+              "name": "submitted_at",
+              "value": "={{ $('Pick incident & route').first().json.body.submitted_at || $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "4d8a9e54-405c-4ff9-9976-52821a3fad9e",
+      "name": "Reply: already submitted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3940,
+        1170
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, already_submitted: true, incident_id: $json.incident.id, call_id: $json.incident.call_id }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "45268f8c-a3d7-47d6-abb1-9168370a2d1f",
+      "name": "Reply: nothing to approve",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3940,
+        1320
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, reason: $json.reason, route: $json.route }) }}",
+        "options": {
+          "responseCode": "={{ $json.status_code }}"
+        }
+      }
+    },
+    {
+      "id": "46c8514f-7ce1-4ee0-80ce-ef2b25058a1f",
+      "name": "Telegram Trigger: family taps a button",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        640
+      ],
+      "parameters": {
+        "updates": [
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "S5dA6rDrjXhw3eFe",
+          "name": "Chaukanna Telegram Bot"
+        }
+      },
+      "webhookId": "043a9831-639a-4298-a40f-772034df58f4",
+      "disabled": true
+    },
+    {
+      "id": "a05c8639-e2b8-4d3d-a953-f5760000b304",
+      "name": "Parse button tap",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        640
+      ],
+      "parameters": {
+        "jsCode": "// ⑧ A family member tapped an inline button on an alert. callback_data is\n// \"ack:<incident uuid>\" (I'm calling them now) or \"fa:<incident uuid>\" (false alarm).\nconst q = $input.first().json.callback_query || {};\nconst [kind, id] = String(q.data || '').split(':');\nconst incident_id = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || '') ? id : null;\nconst who = [q.from && q.from.first_name, q.from && q.from.last_name].filter(Boolean).join(' ') || 'Family member';\nconst response = kind === 'ack' ? 'ack' : kind === 'fa' ? 'false_alarm' : 'unknown';\nreturn [{\n  json: {\n    query_id: q.id,\n    incident_id: incident_id || '00000000-0000-0000-0000-000000000000',\n    family_response: `${response} by ${who}`.slice(0, 120),\n    toast: response === 'ack' ? `Thanks ${who}. Logged: you are calling them now.`\n      : response === 'false_alarm' ? 'Logged as a possible false alarm. Nothing is filed without approval.'\n      : 'This button has expired.',\n  },\n}];\n"
+      }
+    },
+    {
+      "id": "1e67f045-a5ef-4984-a522-c0ec18ce6962",
+      "name": "Log family response",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        520,
+        640
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "tableId": "incident_evidence",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.incident_id }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "family_response",
+              "fieldValue": "={{ $json.family_response }}"
+            },
+            {
+              "fieldId": "family_response_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "3BtR46biYk9G9wtW",
+          "name": "Chaukanna Supabase"
+        }
+      },
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "15299b09-5ecd-4dbd-9231-4f27b79653e3",
+      "name": "Telegram: answer the tap",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        780,
+        640
+      ],
+      "parameters": {
+        "resource": "callback",
+        "operation": "answerQuery",
+        "queryId": "={{ $('Parse button tap').first().json.query_id }}",
+        "additionalFields": {
+          "text": "={{ $('Parse button tap').first().json.toast }}"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "S5dA6rDrjXhw3eFe",
+          "name": "Chaukanna Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "webhookId": "7ebdecf8-3bab-4b89-a3b0-7cee4718dbcd"
+    },
+    {
+      "id": "729c2b4d-9828-4dec-8aaa-8ccacd7ec1d1",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        960
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "a897c8b9-d7ce-4336-ba17-7b14cf268110",
+      "name": "Describe failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        960
+      ],
+      "parameters": {
+        "jsCode": "// ⑨ Catch-all: this workflow is its own error workflow (Settings -> Error workflow).\n// Put the Telegram chat id of whoever runs the demo here to get failure alerts.\nconst OPS_TELEGRAM_CHAT_ID = '';\n\nconst e = $input.first().json;\nconst x = e.execution || {};\nconst text = [\n  '⚠️ <b>Chaukanna automation failed</b>',\n  `Node: ${x.lastNodeExecuted || 'unknown'}`,\n  `Error: ${String((x.error && x.error.message) || 'unknown').slice(0, 300)}`,\n  `Execution: ${x.url || x.id || 'n/a'}`,\n  'If a scam call is in progress, phone the family directly.',\n].join('\\n');\nreturn [{ json: { ops_chat_id: OPS_TELEGRAM_CHAT_ID, text, execution_id: x.id || null, failed_node: x.lastNodeExecuted || null } }];\n"
+      }
+    },
+    {
+      "id": "50d7db75-9639-4ff9-a774-8fd3099d9f9e",
+      "name": "Operator chat set?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        520,
+        960
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "28a6d71c-9a22-559e-b9a7-39b2b82b8e60",
+              "leftValue": "={{ !!$json.ops_chat_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8b74e715-f3c4-4a3c-ab49-77e899edd3b7",
+      "name": "Telegram: alert operator",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        780,
+        890
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.ops_chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "S5dA6rDrjXhw3eFe",
+          "name": "Chaukanna Telegram Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "webhookId": "170a2935-4d95-453d-b322-e59436075a42"
+    },
+    {
+      "id": "6c9b6dc3-cd1e-47ad-be74-02c46a18608f",
+      "name": "Logged in n8n executions",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        780,
+        1050
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "ee308f3e-3e9a-4011-aec4-cf05b84e8555",
+      "name": "Title",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -1180
+      ],
+      "parameters": {
+        "content": "# 🛡️ Chaukanna · Scam-Call Incident Responder\n\n**The call guardian that acts for you.** The audio bridge hears both sides of a call, the classifier scores it, and the moment a scam is detected this workflow runs the whole response checklist on its own.\n\n### How to read this canvas (left → right)\n**① Intake** webhook from the audio bridge → **② Supabase lookup** (is the number a known scammer? who is the family? is there already an incident for this call?) → **③ Severity Router** → one branch:\n\n| Branch | When | What happens |\n|---|---|---|\n| 🚫 **Known scammer** | number on the shared list | block signal + `report_count` +1 |\n| 🔴 **Critical** | pressure ≥ 2, first time this call | 4 lanes at once: family alert · evidence log · blocklist upsert · **AI Agent** drafts the 1930 complaint |\n| 🟠 **Escalation** | same call again / call ended | update the evidence row, tell the family what changed |\n| 🟡 **Medium** | pressure = 1 | silent telemetry row only |\n\n**⑥ Human-in-the-loop:** the complaint is the one irreversible step, so it waits for the victim to tap *Approve & File* in the app, then flips to `submitted` and sends the family a receipt.\n\n### Reliability\nEvery Supabase / Telegram / HTTP node retries 3× · lookups that fail don't stop the alert · AI falls back to a second Gemini model, then to a template · this workflow is its own **Error Workflow** (⑨).\n\nContract: `CONTRACTS.md` §2 (verdict webhook) and §3 (approval).",
+        "height": 960,
+        "width": 1520,
+        "color": 7
+      }
+    },
+    {
+      "id": "26f394ec-4a91-41ec-ab5a-0fcaecfe11ad",
+      "name": "① Intake",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -140
+      ],
+      "parameters": {
+        "content": "## ① Intake\n`POST /webhook/chaukanna-verdict` from the audio bridge.\n\n**Normalize Event** cleans the payload: E.164 phone number, pressure 0–3, `event` type (missing → incident if pressure ≥ 2, else telemetry), `[mm:ss]` transcript, victim OTP digits masked again.",
+        "height": 340,
+        "width": 520,
+        "color": 5
+      }
+    },
+    {
+      "id": "dff32644-ae86-48ef-9e7f-729ace87516c",
+      "name": "② Supabase lookup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        470,
+        -140
+      ],
+      "parameters": {
+        "content": "## ② Supabase lookup\nThree reads, each retried, none can stop the flow:\n- caller in **scam_numbers**? → known scammer\n- the victim's **trusted_contacts** → who gets the Telegram alert\n- an **incident_evidence** row for this `call_id`? → dedupe (a second \"incident\" becomes an escalation)",
+        "height": 340,
+        "width": 730,
+        "color": 5
+      }
+    },
+    {
+      "id": "58610536-51f8-4e29-b29f-c2dacae91210",
+      "name": "③ Severity Router",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1210,
+        -140
+      ],
+      "parameters": {
+        "content": "## ③ Severity Router\n**Build Incident Context** merges the lookups and picks **one** route, so the webhook always gets exactly one reply:\n\nexisting incident → escalation · pressure ≥ 2 → critical · known number → known scammer · pressure 1 → medium · else → low",
+        "height": 340,
+        "width": 560,
+        "color": 3
+      }
+    },
+    {
+      "id": "e2e7ff71-edcc-48bd-84ee-4112aac7c52c",
+      "name": "Branch 1 · Known scammer",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        -1200
+      ],
+      "parameters": {
+        "content": "## 🚫 Branch 1 · Known scammer\nNumber already on the shared blocklist (or the classifier flagged a scam-compound code like +92 / +855).\n**Instant block signal** back to the bridge (plays `warn_known_scammer`) and `report_count` +1 (at most once per call).",
+        "height": 410,
+        "width": 980,
+        "color": 3
+      }
+    },
+    {
+      "id": "e4f97c64-d810-4823-95c9-20288fc0cd13",
+      "name": "Branch 2 · Critical (4 parallel lanes)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        -770
+      ],
+      "parameters": {
+        "content": "## 🔴 Branch 2 · Critical (pressure ≥ 2)\nRuns **once per call**. Four lanes start together:\n\n**A · Family alert** – Telegram with inline buttons, sent *before* any AI runs.\n**B · Evidence log** – transcript + verdict into `incident_evidence`.\n**C · Shared blocklist upsert** – insert the number, or bump `report_count`.\n**D · AI Agent** (below) – drafts the 1930 complaint.",
+        "height": 730,
+        "width": 680,
+        "color": 3
+      }
+    },
+    {
+      "id": "66a3a952-3fef-4e9c-8bac-f8f556072f7c",
+      "name": "⑤ AI Agent · 1930 complaint drafter",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1790,
+        20
+      ],
+      "parameters": {
+        "content": "## ⑤ AI Agent · 1930 complaint drafter\nGemini 2.5 Flash (fallback: Flash-Lite) with 3 **Supabase tools**: `scam_number_history`, `prior_incidents`, `victim_profile`.\nWrites a 3-bullet family alert + a formal complaint in **English and the victim's language**, citing exact `[mm:ss]` timestamps of coercion and OTP demands.\n**Structured Output Parser** forces JSON. If the agent fails → **template complaint** (keyword rules). **Verify citations** checks every timestamp against the transcript.",
+        "height": 540,
+        "width": 940,
+        "color": 6
+      }
+    },
+    {
+      "id": "55c48f1e-90e5-4256-8455-23182734f382",
+      "name": "⑥ Draft → reply → human approval → receipt",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2860,
+        -200
+      ],
+      "parameters": {
+        "content": "## ⑥ Draft → reply → 🧑 human approval → receipt\n1. Save the draft as **`draft_pending_human`** (with the signed resume URL).\n2. **Respond** to the bridge (contract §2: drafts, family alert, `approve_url = $execution.resumeUrl`), then send the AI brief to the family.\n3. **Wait** (resume on webhook, 24 h limit) until the victim taps *Approve & File 1930 Complaint* in the app.\n4. Approved → `complaint_status = 'submitted'` → reply to the app → **Telegram receipt** to the family chat.",
+        "height": 760,
+        "width": 3040,
+        "color": 4
+      }
+    },
+    {
+      "id": "0f46402f-d7cc-4b33-8446-9379f2b419b7",
+      "name": "Escalation / call ended",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        570
+      ],
+      "parameters": {
+        "content": "## 🟠 Escalation / call ended (same call_id)\nUpdates the **same** evidence row (the DB never lets pressure or the OTP/secrecy flags go down), replies at once, and tells the family only when something new happened: an OTP ask, a secrecy demand, higher pressure, or the call ending.",
+        "height": 230,
+        "width": 1480,
+        "color": 2
+      }
+    },
+    {
+      "id": "a42900b0-f5a2-457c-8a31-378d3ed3258c",
+      "name": "Branch 3 · Medium",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        820
+      ],
+      "parameters": {
+        "content": "## 🟡 Branch 3 · Medium (pressure = 1)\nSilent telemetry only: one row in the n8n Data Table `chaukanna_telemetry`. Nobody is disturbed.",
+        "height": 220,
+        "width": 520,
+        "color": 1
+      }
+    },
+    {
+      "id": "c4a60e9f-65cb-4a8e-a89a-dafad30c420b",
+      "name": "Low",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        1060
+      ],
+      "parameters": {
+        "content": "### ⚪ Low (pressure 0)\nAcknowledge and do nothing.",
+        "height": 200,
+        "width": 520,
+        "color": 7
+      }
+    },
+    {
+      "id": "7fc1c02e-cbd1-48e9-838d-db328919598b",
+      "name": "⑦ Approve by call_id",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2860,
+        820
+      ],
+      "parameters": {
+        "content": "## ⑦ Approve by call_id (app fallback)\n`POST /webhook/chaukanna-approve` (contract §3) for when the app never got an `approve_url`.\nFinds the incident (incident_id → call_id → newest pending from the caller), then **resumes the waiting execution** so ⑥ finishes the job. If that execution is gone, it approves directly through the same *Mark complaint submitted* node.",
+        "height": 660,
+        "width": 1500,
+        "color": 4
+      }
+    },
+    {
+      "id": "6702bc5a-bccc-4d75-8b6f-83d60ed3388e",
+      "name": "⑧ Family taps a button",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        560
+      ],
+      "parameters": {
+        "content": "## ⑧ Family taps an alert button\n✅ *I'm calling them now* / ❌ *False alarm* are logged on the incident row and answered in Telegram.",
+        "height": 240,
+        "width": 960,
+        "color": 6
+      }
+    },
+    {
+      "id": "c4bb2c33-a53a-4b2f-81a8-be71221c806d",
+      "name": "⑨ Error handling",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        830
+      ],
+      "parameters": {
+        "content": "## ⑨ Error handling\nThis workflow is its own **Error Workflow** (Settings). Any unhandled failure lands here and alerts the operator on Telegram (set `OPS_TELEGRAM_CHAT_ID` in *Describe failure*).\nInside the flow, network nodes retry 3× and continue on failure, so one broken service never drops the family alert.",
+        "height": 380,
+        "width": 960,
+        "color": 3
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: chaukanna-verdict": {
+      "main": [
+        [
+          {
+            "node": "Normalize Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Event": {
+      "main": [
+        [
+          {
+            "node": "Lookup: caller in scam_numbers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup: caller in scam_numbers": {
+      "main": [
+        [
+          {
+            "node": "Lookup: trusted_contacts of victim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup: trusted_contacts of victim": {
+      "main": [
+        [
+          {
+            "node": "Lookup: open incident for call_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup: open incident for call_id": {
+      "main": [
+        [
+          {
+            "node": "Build Incident Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Incident Context": {
+      "main": [
+        [
+          {
+            "node": "Severity Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Severity Router": {
+      "main": [
+        [
+          {
+            "node": "Block Signal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Compose instant family alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Shape evidence row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Caller already on blocklist?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Agent: 1930 Complaint Drafter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Shape escalation update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Silent telemetry log (n8n Data Table)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: ok (no action)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Block Signal": {
+      "main": [
+        [
+          {
+            "node": "Already on blocklist?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already on blocklist?": {
+      "main": [
+        [
+          {
+            "node": "Increment report_count",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add to shared blocklist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Increment report_count": {
+      "main": [
+        [
+          {
+            "node": "Reply: block caller",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to shared blocklist": {
+      "main": [
+        [
+          {
+            "node": "Reply: block caller",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose instant family alert": {
+      "main": [
+        [
+          {
+            "node": "Telegram: alert family now",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shape evidence row": {
+      "main": [
+        [
+          {
+            "node": "Log evidence to incident_evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Caller already on blocklist?": {
+      "main": [
+        [
+          {
+            "node": "Upsert: bump report_count",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upsert: add caller to blocklist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "scam_number_history": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent: 1930 Complaint Drafter",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prior_incidents": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent: 1930 Complaint Drafter",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "victim_profile": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent: 1930 Complaint Drafter",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 2.5 Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent: 1930 Complaint Drafter",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 2.5 Flash-Lite (fallback)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent: 1930 Complaint Drafter",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Parser: complaint JSON": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent: 1930 Complaint Drafter",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: 1930 Complaint Drafter": {
+      "main": [
+        [
+          {
+            "node": "Verify citations & assemble draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback: template complaint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback: template complaint": {
+      "main": [
+        [
+          {
+            "node": "Verify citations & assemble draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify citations & assemble draft": {
+      "main": [
+        [
+          {
+            "node": "Save draft as draft_pending_human",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save draft as draft_pending_human": {
+      "main": [
+        [
+          {
+            "node": "Build incident reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build incident reply": {
+      "main": [
+        [
+          {
+            "node": "Respond: incident reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond: incident reply": {
+      "main": [
+        [
+          {
+            "node": "Compose AI brief for family",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait for human approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose AI brief for family": {
+      "main": [
+        [
+          {
+            "node": "Telegram: AI brief to family",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for human approval": {
+      "main": [
+        [
+          {
+            "node": "Approval outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval outcome": {
+      "main": [
+        [
+          {
+            "node": "Prepare approval (in-app resume)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply to app: not confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Draft stays pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare approval (in-app resume)": {
+      "main": [
+        [
+          {
+            "node": "Mark complaint submitted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark complaint submitted": {
+      "main": [
+        [
+          {
+            "node": "Approval result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval result": {
+      "main": [
+        [
+          {
+            "node": "Reply to app: complaint filed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to app: complaint filed": {
+      "main": [
+        [
+          {
+            "node": "Fetch family for receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch family for receipt": {
+      "main": [
+        [
+          {
+            "node": "Compose 1930 receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose 1930 receipt": {
+      "main": [
+        [
+          {
+            "node": "Telegram: 1930 receipt to family",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shape escalation update": {
+      "main": [
+        [
+          {
+            "node": "Update evidence (escalation)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update evidence (escalation)": {
+      "main": [
+        [
+          {
+            "node": "Reply: ok (escalation)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply: ok (escalation)": {
+      "main": [
+        [
+          {
+            "node": "New red flag or call ended?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New red flag or call ended?": {
+      "main": [
+        [
+          {
+            "node": "Compose escalation alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose escalation alert": {
+      "main": [
+        [
+          {
+            "node": "Telegram: escalation alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Silent telemetry log (n8n Data Table)": {
+      "main": [
+        [
+          {
+            "node": "Reply: ok (telemetry)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: chaukanna-approve": {
+      "main": [
+        [
+          {
+            "node": "Find incident to approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find incident to approve": {
+      "main": [
+        [
+          {
+            "node": "Pick incident & route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick incident & route": {
+      "main": [
+        [
+          {
+            "node": "Approval route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval route": {
+      "main": [
+        [
+          {
+            "node": "Resume the waiting HITL execution",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare approval (by call_id)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: already submitted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: nothing to approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume the waiting HITL execution": {
+      "main": [
+        [
+          {
+            "node": "Reply: approved via HITL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare approval (by call_id)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare approval (by call_id)": {
+      "main": [
+        [
+          {
+            "node": "Mark complaint submitted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger: family taps a button": {
+      "main": [
+        [
+          {
+            "node": "Parse button tap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse button tap": {
+      "main": [
+        [
+          {
+            "node": "Log family response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log family response": {
+      "main": [
+        [
+          {
+            "node": "Telegram: answer the tap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Describe failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Describe failure": {
+      "main": [
+        [
+          {
+            "node": "Operator chat set?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Operator chat set?": {
+      "main": [
+        [
+          {
+            "node": "Telegram: alert operator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Logged in n8n executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "3pABmPIJpygXS1Md"
+  },
+  "pinData": {},
+  "meta": null
+}
