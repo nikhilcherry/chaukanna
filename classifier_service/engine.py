@@ -25,6 +25,8 @@ from schemas import ClassifyRequest, LLMVerdict, Verdict, norm_lang
 log = logging.getLogger("classifier.engine")
 
 WINDOW = 15
+# A chunk where the keywords just found one of these is answered at once, never held for the LLM.
+CRITICAL_SIGNALS = {"otp", "secrecy", "isolation", "remote_access", "scam_payment", "digital_arrest", "victim_complying", "fin_details"}
 # Whisper priority when several clips become due on the same chunk (higher first).
 CLIP_RANK = {"warn_otp": 4, "warn_known_scammer": 3, "warn_digital_arrest": 2, "warn_secrecy": 1}
 
@@ -38,7 +40,7 @@ def _env_f(name: str, default: float) -> float:
 
 @dataclass
 class Settings:
-    budget_ms: float = field(default_factory=lambda: _env_f("CLASSIFY_BUDGET_MS", 400))  # total response budget
+    budget_ms: float = field(default_factory=lambda: _env_f("CLASSIFY_BUDGET_MS", 450))  # total response budget (spec: < 500)
     llm_timeout_s: float = field(default_factory=lambda: _env_f("LLM_TIMEOUT_S", 4.0))  # hard cap per LLM run
     ttl_s: float = field(default_factory=lambda: _env_f("CALL_TTL_S", 900))  # forget a call after this much silence
     max_calls: int = field(default_factory=lambda: int(_env_f("MAX_CALLS", 500)))
@@ -147,11 +149,12 @@ class Engine:
                 if st.caller_number and st.risk_checked_for != st.caller_number:
                     st.risk = self.callers.check(st.caller_number)
                     st.risk_checked_for = st.caller_number
-                keywords.scan_chunk(st.kw, req.speaker, text, lang)
+                new_signals = keywords.scan_chunk(st.kw, req.speaker, text, lang)
                 if self.backend and text and (req.speaker == "caller" or self.s.llm_on_victim):
                     self._kick_llm(st)
                 fut = st.llm_future
-            await self._maybe_wait(fut, st, t0)
+            if not CRITICAL_SIGNALS.intersection(new_signals):  # the alarm must not wait for anyone
+                await self._maybe_wait(fut, st, t0)
             async with st.lock:
                 v = self._merge(st, idx, lang)
         except Exception as e:  # never 5xx mid-call
@@ -169,7 +172,7 @@ class Engine:
         if remaining <= 0:
             return
         if self.llm_ewma_ms is not None:
-            expected_left = self.llm_ewma_ms / 1000 * 1.2 - (time.monotonic() - st.llm_started)
+            expected_left = self.llm_ewma_ms / 1000 - (time.monotonic() - st.llm_started)
             if not 0 <= expected_left <= remaining:  # too slow, or already overdue: don't gamble the budget
                 return
         await asyncio.wait({fut}, timeout=remaining)
@@ -263,12 +266,18 @@ class Engine:
         otp = kv.asks_otp_or_pin or bool(lv and lv.asks_otp_or_pin) or bool(prev and prev.asks_otp_or_pin)
         secrecy = kv.demands_secrecy or bool(lv and lv.demands_secrecy) or bool(prev and prev.demands_secrecy)
 
-        # Scam type: fresh model opinion > what we already said (sticky) > keyword guess.
+        # Scam type: the model's opinion > what we already said (sticky) > keyword guess, except
+        # that keywords seeing stronger evidence than our last answer outrank the sticky type, and
+        # a model saying "none" clears a low-pressure guess.
+        prev_p = prev.pressure if prev else -1
+        order = [lv.scam_type if lv else None] + (
+            [kv.scam_type, prev.scam_type if prev else None] if kv.pressure > prev_p else [prev.scam_type if prev else None, kv.scam_type])
         stype = "none"
-        for cand in (lv.scam_type if lv else None, prev.scam_type if prev else None, kv.scam_type):
-            if cand and cand != "none":
-                stype = cand
-                break
+        if not (lv and lv.scam_type == "none" and pressure <= 1):
+            for cand in order:
+                if cand and cand != "none":
+                    stype = cand
+                    break
         if stype == "none" and pressure >= 2:
             stype = (risk.scam_type if risk and risk.scam_type else None) or "other"
         if pressure == 0:

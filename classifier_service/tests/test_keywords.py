@@ -132,5 +132,6 @@ def test_registry_add_remove(tmp_path):
     assert reg.check("+919876543210").kind == "listed"
     assert CallerRegistry(local=tmp_path / "local.json").check("9876543210").kind == "listed"  # persisted
     assert reg.remove("+919876543210") and reg.check("9876543210") is None
-    assert reg.check("+92 300 1234567").kind == "risky_country_code"
+    assert reg.check("+92 300 7654321").kind == "risky_country_code"   # unlisted +92 number
+    assert reg.check("+92 300 1234567").kind == "listed"               # seeded, like Supabase
     assert reg.check("+91 80 4012 3456") is None

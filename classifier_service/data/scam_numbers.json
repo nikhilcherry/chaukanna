@@ -1,5 +1,5 @@
 {
-  "_comment": "Seed list of known scam numbers (demo data, not real reports). Numbers are E.164. Runtime additions via POST /scam_numbers go to scam_numbers.local.json (gitignored). Keep in sync with the scam_numbers table the n8n incident responder seeds.",
+  "_comment": "Seed list of known scam numbers (demo data, not real reports). Numbers are E.164. Runtime additions via POST /scam_numbers (the audio bridge adds every incident's caller) go to scam_numbers.local.json (gitignored). The first, fourth and fifth rows are the ones the n8n incident responder seeds in Supabase scam_numbers; keep the two lists in sync.",
   "numbers": [
     {
       "number": "+919988776655",
@@ -15,6 +15,16 @@
       "number": "+918045671234",
       "scam_type": "bank_impersonation",
       "note": "eval-set listed number"
+    },
+    {
+      "number": "+923001234567",
+      "scam_type": "digital_arrest",
+      "note": "Supabase seed: reported 23x (scam-compound code +92)"
+    },
+    {
+      "number": "+85512345678",
+      "scam_type": "prize_lottery",
+      "note": "Supabase seed: reported 4x (scam-compound code +855)"
     }
   ]
 }

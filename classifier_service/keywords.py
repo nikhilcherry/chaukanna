@@ -42,7 +42,7 @@ OTP = _rx(
      r"pin( number| no\.?)", r"pin (bata\w*|bol\w*|daal\w*|enter\w*|share\w*|dijiye|do|de do|type\w*|kya hai)",
      r"(your|apna|aapka|apni|aapki) pin", r"cvv", r"cvc", r"(card|debit card|credit card) (number|details|ke peeche|ke piche)",
      r"(net ?banking |login |bank )?password", r"verification code", r"(6|six|4|four)[- ]digit (code|number|otp|pin)",
-     r"code (bata\w*|bol\w*|share\w*|send|bhej\w*|read|tell|batao|bataiye)", r"(sms|message) (mein|me|par|pe) (jo|aaya|code)",
+     r"code (bata\w*|bol\w*|share\w*|send|bhej\w*|read|tell|batao|bataiye)", r"(chhe|chheh|chaar|6|4|six|four) (number|digit|ank|ankon|anko)\w*", r"(sms|message) (mein|me|par|pe) (jo|aaya|code)",
      r"expiry date", r"otp ?ne", r"otp ?gala", r"otp ?annu"],
     ["ओटीपी", "ओ टी पी", "ओ.टी.पी", "सीवीवी", "पासवर्ड", "वन टाइम पासवर्ड", "पिन नंबर", "पिन बता", "यूपीआई पिन", "एटीएम पिन",
      "कोड बता", "ಒಟಿಪಿ", "ಓಟಿಪಿ", "ಒ ಟಿ ಪಿ", "ಓ ಟಿ ಪಿ", "ಸಿವಿವಿ", "ಪಾಸ್ವರ್ಡ್", "ಪಿನ್ ನಂಬರ್", "ಯುಪಿಐ ಪಿನ್", "ಎಟಿಎಂ ಪಿನ್", "ಕೋಡ್ ಹೇಳಿ"],
@@ -52,7 +52,7 @@ NOT_OTP = re.compile(r"pin ?code|पिन कोड|ಪಿನ್ ಕೋಡ್|w
 PROTECT = _rx(
     [r"never (ask|share|call|request)\w*", r"(do not|don'?t|dont|never) (share|give|tell|disclose)", r"will never",
      r"kabhi (bhi )?(nahi|na|nhi)", r"share (mat|na|nahi) (karein|kijiye|karna|karo|kare)",
-     r"(mat|na|nahi) (bataiye|batayein|bataen|batana|batao|bataye|bataen|dijiye|dena)", r"kisi (ko|se) (bhi )?(share )?(mat|na|nahi)",
+     r"(mat|na|nahi) (bataiye|batayein|bataen|batana|batao|bataye|bataen|dijiye|dena|dein|de|do|den)", r"kisi (ko|se) (bhi )?(share )?(mat|na|nahi)",
      r"yarigu (helbedi|helabedi|kodabedi)", r"share madbedi"],
     ["कभी नहीं", "कभी भी नहीं", "शेयर न करें", "शेयर ना करें", "साझा न करें", "न बताएं", "ना बताएं", "मत बताइए", "मत बताना",
      "ಯಾರಿಗೂ ಹೇಳಬೇಡಿ", "ಯಾರಿಗೂ ಕೊಡಬೇಡಿ", "ಶೇರ್ ಮಾಡಬೇಡಿ", "ಎಂದಿಗೂ ಕೇಳುವುದಿಲ್ಲ", "ಕೇಳುವುದಿಲ್ಲ"],
@@ -77,6 +77,8 @@ SECRECY = _rx(
      r"(strictly|highly|top) confidential", r"confidential (matter|investigation|case|hai|h|rakhna|rakhiye|rakho|rahega)",
      r"(matter|case|investigation|baat) (is )?confidential", r"secret (matter|investigation|operation|case)",
      r"kisi (ko|se) (bhi )?(kuch )?(mat|na|nahi|nahin) (bata|bol|baat|kah)\w*",
+     r"kisi (ko|se) (bhi )?(is baare mein |iske baare mein |is baat ki |kuch )?(charcha|zikr|baat|jikr) (mat|na|nahi|nahin) (kar|karna|karenge|karein|kijiye|karo)\w*",
+     r"\w+ ko (bhi )?(kuch )?(mat|mat hi) (bata|bol)\w*",
      r"(ghar|family|parivar|parivaar|bete|beti|husband|pati|wife|patni|bank|police|beta|mummy|papa|kisi)( walon| wale| waalon)? ko (bhi )?(kuch )?(mat|na|nahi) (bata|bol)\w*",
      r"gupt (rakh|rakhna|rakhiye|hai|jaanch)\w*", r"gopniya", r"yarigu (helbedi|helabedi|tilisabedi)"],
     ["किसी को मत बता", "किसी को न बता", "किसी को ना बता", "किसी को नहीं बता", "किसी को भी मत", "किसी को भी न", "किसी से बात मत",
@@ -90,7 +92,7 @@ ISOLATION = _rx(
     [r"(do not|don'?t|dont) (hang up|disconnect|cut (the |this )?(call|phone)|leave the call)", r"stay on (the )?(video|camera)( call)?",
      r"(stay|remain) on (the )?(call|line) (till|until|for|24|all)", r"keep (your )?(the )?(camera|video) on",
      r"(go|stay|sit) (in|into|to) a (separate|closed|private|locked) room", r"(call|phone|line|video) (bilkul )?(mat|na|nahi|nahin) (kaat|kat|rakh|band|disconnect|cut)\w*",
-     r"(call|phone) disconnect (mat|na)\w*", r"cut (mat|na) (karna|karo|kijiye)", r"akele (room|kamre)", r"band kamre",
+     r"(call|phone) disconnect (mat|na)\w*", r"cut (mat|na) (karna|karo|kijiye)", r"akele (room|kamre)", r"band kamre", r"ghar se bahar (nahi|mat|na) (jayenge|jaiye|jana|niklenge|nikalna)",
      r"(phone|call) cut (madbedi|madabedi|maadbedi)"],
     ["फ़ोन मत काट", "फोन मत काट", "कॉल मत काट", "फ़ोन न काट", "फोन न काट", "कॉल न काट", "कॉल डिस्कनेक्ट मत", "अकेले कमरे", "वीडियो कॉल पर रहिए",
      "ಕಟ್ ಮಾಡಬೇಡಿ", "ಕಟ್ ಮಾಡ್ಬೇಡಿ", "ಕರೆ ಇಡಬೇಡಿ", "ಫೋನ್ ಇಡಬೇಡಿ"],
@@ -99,7 +101,7 @@ AUTHORITY = _rx(
     [r"c\.? ?b\.? ?i\.?", r"cbi", r"police", r"cyber ?(crime|cell|police|branch)", r"crime branch", r"customs", r"custom (department|office|officer|duty|wale|se)", r"narcotics?", r"ncb",
      r"enforcement directorate", r"ed (officer|department|office|se|ki team)", r"trai", r"rbi", r"reserve bank", r"income ?tax", r"interpol",
      r"(supreme|high|district|sessions|family) court", r"court (order|notice|summon\w*|case|mein|me|se|ka|ki|ne|hearing)", r"judge", r"magistrate", r"(sub[- ])?inspector", r"dcp", r"\bips\b", r"thane? (se|mein|me)",
-     r"investigation officer", r"telecom (department|authority)", r"dot (department|se)", r"mumbai police", r"delhi police"],
+     r"investigation officer", r"telecom (department|authority|regulatory)", r"(crime|police|cyber|investigation|vigilance|anti[- ]?corruption|narcotics) (department|dept|officer|cell|bureau)", r"dot (department|se)", r"mumbai police", r"delhi police"],
     ["पुलिस", "सीबीआई", "सी बी आई", "कस्टम", "नारकोटिक्स", "साइबर क्राइम", "साइबर सेल", "क्राइम ब्रांच", "ईडी ", "इनकम टैक्स", "आयकर",
      "अदालत", "कोर्ट", "जज", "इंस्पेक्टर", "ट्राई", "आरबीआई", "थाने", "थाना",
      "ಪೊಲೀಸ್", "ಪೋಲೀಸ್", "ಪೊಲೀಸರು", "ಸಿಬಿಐ", "ಕಸ್ಟಮ್ಸ್", "ಸೈಬರ್ ಕ್ರೈಂ", "ಸೈಬರ್ ಕ್ರೈಮ್", "ನಾರ್ಕೋಟಿಕ್ಸ್", "ಕೋರ್ಟ್", "ನ್ಯಾಯಾಲಯ",
@@ -112,7 +114,7 @@ LEGAL = _rx(
     [r"arrest\w*", r"warrant", r"jail", r"prison", r"f\.?i\.?r\.?", r"(case|complaint|fir) (hai|darj|darz|registered|file|filed|lodged|against|chal|ban|bana|ho gaya|hua)\w*",
      r"(legal|police|strict|criminal) action", r"money laundering", r"hawala", r"drugs?", r"mdma", r"ganja", r"heroin", r"fake passports?",
      r"illegal", r"gair ?(kanooni|kaanooni|qanooni|kanuni)", r"giraft?ar\w*", r"girftar\w*", r"terror(ist|ism)? funding", r"human trafficking",
-     r"arrest madtivi", r"sezed|seized", r"(under|in) investigation"],
+     r"arrest madtivi", r"sezed|seized", r"(under|in) investigation", r"suspect"],
     ["गिरफ्तार", "गिरफ़्तार", "अरेस्ट", "वारंट", "जेल", "एफआईआर", "एफ आई आर", "मनी लॉन्ड्रिंग", "मनी लॉंड्रिंग", "ड्रग्स", "नशीले", "गैरकानूनी",
      "गैर कानूनी", "अवैध", "केस दर्ज", "कानूनी कार्रवाई", "जांच चल",
      "ಅರೆಸ್ಟ್", "ಬಂಧನ", "ಬಂಧಿಸ", "ವಾರಂಟ್", "ಜೈಲ್", "ಜೈಲು", "ಎಫ್ಐಆರ್", "ಮನಿ ಲಾಂಡರಿಂಗ್", "ಡ್ರಗ್ಸ್", "ಮಾದಕ", "ಅಕ್ರಮ", "ಕೇಸ್ ದಾಖಲ",
@@ -121,7 +123,7 @@ LEGAL = _rx(
 # Account/service threats: block, freeze, disconnect...
 BLOCK = _rx(
     [r"(account|card|sim|number|connection|khata|upi|wallet|pan|aadhaa?r)( will be| is| has been| ho| hoga| ko)? (block|blocked|freeze|frozen|suspend|suspended|band|deactivat\w*|disconnect\w*|cancel\w*|close\w*)",
-     r"(block|band|freeze|suspend|deactivate|disconnect|cut) (ho )?(jayega|jaega|jayegi|jaegi|kar diya jayega|kar denge|ho jayega)",
+     r"(block|band|freeze|suspend|deactivate|disconnect|cut|kat) (ho )?(jayega|jaega|jayegi|jaegi|jayenge|jaenge|jayengi|kar diya jayega|kar denge|ho jayega|ho jayenge)",
      r"(will be|get) (blocked|frozen|suspended|deactivated|disconnected|cut)", r"block aagutte", r"block agutte", r"block aagthide",
      r"bandh? ho jayega", r"kat jayega", r"penalty", r"fine of", r"jurmana"],
     ["ब्लॉक हो", "ब्लॉक कर", "बंद हो जाएगा", "बंद हो जायेगा", "बंद कर दिया जाएगा", "फ्रीज", "फ़्रीज़", "सस्पेंड", "कट जाएगा", "जुर्माना",
@@ -154,20 +156,20 @@ APP_LINK = _rx([r"(download|install) (karo|kijiye|kar lo|kar lijiye|madi|maadi|t
 SCAM_PAYMENT = _rx(
     [r"(processing|registration|clearance|reschedule|rescheduling|re-?delivery|redelivery|verification|security|customs|gst|tax|refundable|release|insurance|stamp duty|transfer) (fee|fees|charge|charges|amount|deposit|money)",
      r"safe (account|custody)", r"secure (account|wallet)", r"rbi (account|wallet|safe)", r"government account", r"(verification|security) (amount|deposit|money|rashi)",
-     r"collect request", r"(accept|approve) (the )?(request|payment request)", r"gift ?cards?", r"crypto", r"bitcoin", r"usdt",
+     r"(pay|deposit|invest|jama) .{0,25}(to unlock|to activate|to start|to join|for (the )?(vip|premium)|unlock)", r"collect request", r"(accept|approve) (the )?(request|payment request)", r"gift ?cards?", r"crypto", r"bitcoin", r"usdt",
      r"(enter|daal\w*) (your )?(upi )?pin (to|se) (receive|get|claim)", r"pin (daal\w*|enter\w*) (karke|kar ke)? ?(paise|refund|cashback) (milenge|aayenge)"],
     ["सेफ अकाउंट", "सुरक्षित खाते", "वेरिफिकेशन अमाउंट", "प्रोसेसिंग फीस", "रजिस्ट्रेशन फीस", "ಸೇಫ್ ಅಕೌಂಟ್", "ಪ್ರೊಸೆಸಿಂಗ್ ಫೀ", "ವೆರಿಫಿಕೇಶನ್ ಅಮೌಂಟ್"],
 )
 PAYMENT = _rx(
     [r"transfer", r"send (the )?(money|amount|rs|rupees|\d)", r"(paise|paisa|paisey|rupees?|rupaye|amount|payment|rs\.?|money) (bhej|transfer|daal|jama|pay|send|kar)\w*",
-     r"bhej (do|dijiye|dena|dijie)", r"pay (now|immediately|the|rs|₹|\d|kar\w*|karo)", r"google ?pay", r"phone ?pe", r"paytm (kar|karo|kijiye)",
+     r"bhej (do|dijiye|dena|dijie)", r"bhejiye", r"(paise|paisa|rupaye|rupees|rs\.?|amount|\d[\d,]{2,}) .{0,30}(bhej|transfer|chahiye|maang)\w*", r"pay (now|immediately|the|rs|₹|\d|kar\w*|karo)", r"google ?pay", r"phone ?pe", r"paytm (kar|karo|kijiye)",
      r"rtgs", r"neft", r"imps", r"upi (id|se|kar|karo|payment)", r"jama (karo|kijiye|kar do|karna)", r"duddu (kalisi|haaki|haki|kalsi)"],
     ["ट्रांसफर", "पैसे भेज", "पैसा भेज", "पैसे जमा", "पैसे डाल", "भुगतान", "पेमेंट", "रुपये भेज",
      "ಹಣ ಕಳುಹಿಸ", "ಹಣ ಕಳಿಸ", "ಹಣ ಹಾಕಿ", "ಹಣ ವರ್ಗಾಯಿಸ", "ಟ್ರಾನ್ಸ್ಫರ್", "ದುಡ್ಡು ಕಳಿಸ", "ದುಡ್ಡು ಹಾಕಿ", "ಪೇಮೆಂಟ್", "ಪಾವತಿ"],
 )
-URGENCY = _rx([r"immediately", r"right now", r"urgent\w*", r"turant", r"fauran", r"jaldi", r"abhi ke abhi", r"within (\d+|one|two|24|an?) (hours?|minutes?|mins?)",
+URGENCY = _rx([r"immediately", r"right now", r"urgent\w*", r"turant", r"fauran", r"jaldi (karo|kijiye|kariye|bhejiye|bhejo|bhej do|bataiye|batao|pay|transfer|se)", r"abhi ke abhi", r"within (\d+|one|two|24|an?) (hours?|minutes?|mins?)",
                r"(aaj|today) (hi|only|tak|raat|itself|before)", r"(\d+|do|ek|teen) ghante", r"last (chance|warning)", r"thakshana", r"eega(le)?"],
-              ["तुरंत", "फौरन", "जल्दी", "अभी के अभी", "आज ही", "घंटे में", "ತಕ್ಷಣ", "ಈಗಲೇ", "ಇವತ್ತೇ", "ಗಂಟೆಯೊಳಗೆ"])
+              ["तुरंत", "फौरन", "जल्दी कीजिए", "जल्दी करो", "जल्दी भेज", "जल्दी बताइए", "अभी के अभी", "आज ही", "घंटे में", "ತಕ್ಷಣ", "ಈಗಲೇ", "ಇವತ್ತೇ", "ಗಂಟೆಯೊಳಗೆ"])
 BANK = _rx([r"bank", r"sbi", r"hdfc", r"icici", r"axis", r"kotak", r"pnb", r"canara", r"baroda", r"union bank", r"(credit|debit|atm) card", r"card (block|band)\w*",
             r"account", r"khata", r"transaction", r"upi", r"net ?banking", r"suspicious (activity|transaction|login)", r"unauthori[sz]ed", r"loan", r"emi"],
            ["बैंक", "खाता", "खाते", "कार्ड", "लेनदेन", "ट्रांजैक्शन", "ಬ್ಯಾಂಕ್", "ಖಾತೆ", "ಅಕೌಂಟ್", "ಕಾರ್ಡ್", "ವಹಿವಾಟು", "ಟ್ರಾನ್ಸಾಕ್ಷನ್"])
@@ -175,18 +177,40 @@ PRIZE = _rx([r"lottery", r"lucky (draw|winner|customer)", r"prize", r"you('ve| h
              r"gift (hamper|voucher)", r"cashback", r"reward points?", r"bumper"],
             ["लॉटरी", "इनाम", "आपने जीत", "लकी ड्रा", "कैशबैक", "ಲಾಟರಿ", "ಬಹುಮಾನ", "ಗೆದ್ದಿದ್ದೀರಿ", "ಲಕ್ಕಿ ಡ್ರಾ", "ಕ್ಯಾಶ್ಬ್ಯಾಕ್"])
 RELATIVE = _rx([r"your (son|daughter|husband|wife|father|mother|grandson|granddaughter|nephew|brother)", r"(aapka|aapke|apka|apke) (beta|bete|pati|bhai|pota|nati)",
-                r"(aapki|apki) (beti|patni|poti)", r"papa", r"mummy", r"mumma", r"\bmom\b", r"\bdad\b", r"beta", r"beti", r"nimma (maga|magalu|ganda)"],
-               ["आपका बेटा", "आपके बेटे", "आपकी बेटी", "बेटा", "बेटी", "पापा", "मम्मी", "ನಿಮ್ಮ ಮಗ", "ನಿಮ್ಮ ಮಗಳು", "ಅಪ್ಪ", "ಅಮ್ಮ"])
-TROUBLE = _rx([r"accident", r"hospital", r"police station", r"thane mein", r"lock-?up", r"bail", r"zamanat", r"pakda gaya", r"pakad liya", r"(got |been )?arrested",
+                r"(aapki|apki) (beti|patni|poti)", r"papa", r"mummy", r"mumma", r"mom", r"dad", r"beta", r"beti", r"uncle", r"aunty", r"auntie",
+                r"bhaiya", r"didi", r"chacha", r"mama", r"mausi", r"nimma (maga|magalu|ganda)", r"\w+ ka dost"],
+               ["आपका बेटा", "आपके बेटे", "आपकी बेटी", "बेटा", "बेटी", "पापा", "मम्मी", "अंकल", "ನಿಮ್ಮ ಮಗ", "ನಿಮ್ಮ ಮಗಳು", "ಅಪ್ಪ", "ಅಮ್ಮ", "ಅಂಕಲ್"])
+TROUBLE = _rx([r"accident", r"hospital (mein|me) (admit|bharti|serious)", r"(admit|admitted|icu|serious condition)", r"police station", r"thane mein", r"lock-?up", r"bail", r"zamanat", r"pakda gaya", r"pakad liya", r"(got |been )?arrested",
                r"emergency", r"operation", r"(in|big) trouble", r"musibat", r"phas gaya", r"phans gaya", r"kidnap\w*"],
-              ["एक्सीडेंट", "हादसा", "अस्पताल", "हॉस्पिटल", "थाने में", "जमानत", "पकड़ा गया", "मुसीबत", "फंस गया",
-               "ಆಕ್ಸಿಡೆಂಟ್", "ಅಪಘಾತ", "ಆಸ್ಪತ್ರೆ", "ಹಾಸ್ಪಿಟಲ್", "ಪೊಲೀಸ್ ಸ್ಟೇಷನ್", "ಬೇಲ್", "ಜಾಮೀನು", "ತೊಂದರೆ"])
+              ["एक्सीडेंट", "हादसा", "अस्पताल में भर्ती", "थाने में", "जमानत", "पकड़ा गया", "मुसीबत", "फंस गया",
+               "ಆಕ್ಸಿಡೆಂಟ್", "ಅಪಘಾತ", "ಆಸ್ಪತ್ರೆಗೆ ಸೇರಿಸ", "ಪೊಲೀಸ್ ಸ್ಟೇಷನ್", "ಬೇಲ್", "ಜಾಮೀನು", "ತೊಂದರೆ"])
 COURIER = _rx([r"fedex", r"fed ex", r"dhl", r"blue ?dart", r"dtdc", r"courier", r"parcel", r"package", r"consignment", r"shipment", r"india post"],
               ["फेडेक्स", "पार्सल", "कूरियर", "कुरियर", "ಪಾರ್ಸೆಲ್", "ಕೊರಿಯರ್", "ಫೆಡೆಕ್ಸ್"])
 DELIVERY = _rx([r"delivery( boy| agent| executive| partner| wala)?", r"swiggy", r"zomato", r"zepto", r"blinkit", r"instamart", r"amazon", r"flipkart", r"myntra",
                 r"meesho", r"dunzo", r"big ?basket", r"porter", r"rider", r"(main|your|front|society) gate", r"gate (pe|par|ke paas|near)", r"building",
-                r"flat( no)?", r"floor", r"landmark", r"cash on delivery", r"cod", r"order"],
-               ["डिलीवरी", "ऑर्डर", "गेट", "ಡೆಲಿವರಿ", "ಆರ್ಡರ್", "ಗೇಟ್", "ಅಡ್ರೆಸ್", "ವಿಳಾಸ", "ಲೊಕೇಶನ್"])
+                r"flat( no)?", r"floor", r"landmark", r"cash on delivery", r"cod", r"order", r"rapido", r"ola", r"uber", r"cab", r"driver",
+                r"pick-?up", r"ride( otp)?", r"drop location"],
+               ["डिलीवरी", "ऑर्डर", "गेट", "ड्राइवर", "ಡೆಲಿವರಿ", "ಆರ್ಡರ್", "ಗೇಟ್", "ಅಡ್ರೆಸ್", "ವಿಳಾಸ", "ಲೊಕೇಶನ್", "ಡ್ರೈವರ್"])
+
+# Talking ABOUT scams/news ("aajkal digital arrest scam bahut ho rahe hain") is awareness, not a threat.
+NEWS = _rx([r"news", r"khabar", r"ghotala", r"aajkal", r"aaj kal", r"(scam|fraud|frauds|scams) (bhi |bahut |ho rahe|chal rahe|se bacho|se savdhan)",
+            r"(beware|be careful|savdhan|saavdhan|saavdhaan|alert rehna|dhyan rakhna)", r"did you (see|read|hear)"],
+           ["खबर", "न्यूज़", "आजकल", "सावधान", "ಸುದ್ದಿ", "ನ್ಯೂಸ್", "ಹುಷಾರಾಗಿ"])
+# The caller presents themselves as someone ("main X se bol raha hoon", "this is X from", "ನಾನು X ಇಂದ").
+SELF_ID = _rx([r"(bol|baat kar) (raha|rahi) (hoon|hu|hun|hai)", r"se (bol|baat)", r"(calling|call is) from", r"this is", r"i am", r"i'm",
+               r"my name is", r"main \w+", r"hum \w+ se", r"naanu", r"nanu"],
+              ["बोल रहा", "बोल रही", "मैं ", "ನಾನು", "ಮಾತಾಡ್ತಾ", "ಮಾತನಾಡುತ್ತಿದ್ದೇನೆ"])
+UTILITY = _rx([r"bijli", r"electricity", r"power (cut|connection|supply)", r"light bill", r"bescom", r"msedcl", r"gas (connection|agency)",
+               r"(electricity|bijli|current) (bill|connection|department|vibhag|office)"],
+              ["बिजली", "विद्युत", "ವಿದ್ಯುತ್", "ಕರೆಂಟ್", "ಬೆಸ್ಕಾಂ"])
+TASK_JOB = _rx([r"work from home", r"part[- ]time (job|work|opportunity)", r"like (youtube )?videos", r"rate (hotels|products|movies)",
+                r"telegram (group|channel|task)", r"(prepaid|premium|vip) tasks?", r"earn .{0,30}(per|a|every|daily) day", r"ghar baithe"],
+               ["घर बैठे", "ವರ್ಕ್ ಫ್ರಮ್ ಹೋಮ್"])
+BANK_PROBLEM = _rx([r"suspicious (activity|transaction|login|payment)", r"unauthori[sz]ed", r"card (blocked|misuse|hack)\w*", r"fraud (transaction|payment)",
+                    r"(transaction|payment) of [\d,]+"], ["संदिग्ध", "ಅನುಮಾನಾಸ್ಪದ"])
+FIN_DETAILS = _rx([r"(fd|fixed deposit|savings|bank|account|card|net ?banking) (ki |ke |ka |aur \w+ ki )?(details|statement|number|balance) .{0,25}(bhej|send|share|bata|do|dijiye|batao)\w*",
+                   r"(send|share|tell) (me )?(your )?(bank|account|fd|card) (details|statement|number|balance)"],
+                  ["खाते की जानकारी", "एफडी की"])
 
 # --------------------------------------------------------------------------- victim signals
 DIGIT_RUN = re.compile(r"(?:\d[\s-]*){4,}|\*{3,}|x{4,}|(?:(?:zero|one|two|three|four|five|six|seven|eight|nine|oh)[\s,-]+){3,}(?:zero|one|two|three|four|five|six|seven|eight|nine|oh)")
@@ -238,6 +262,12 @@ LABELS = {
     "prize": "offered a prize/lottery/cashback", "relative": "mentioned a family member", "trouble": "said someone is in trouble",
     "courier": "mentioned a parcel/courier", "delivery": "delivery context", "victim_complying": "the victim started complying",
     "otp_protective": "warned the victim not to share the OTP (legit-bank cue)",
+    "fin_details": "asked for bank/FD details",
+    "bank_problem": "claimed a suspicious transaction / card problem",
+    "task_job": "offered a work-from-home task job",
+    "utility": "said they are from the electricity/gas office",
+    "self_id": "introduced themselves",
+    "news": "talked about scams/news (awareness)",
 }
 
 CALLER_RULES: list[tuple[str, re.Pattern]] = [
@@ -245,9 +275,11 @@ CALLER_RULES: list[tuple[str, re.Pattern]] = [
     ("block_threat", BLOCK), ("targeted", TARGET), ("kyc", KYC), ("id_docs", ID_DOCS), ("expiry", EXPIRY), ("remote_access", REMOTE),
     ("app_or_link", APP_LINK), ("scam_payment", SCAM_PAYMENT), ("payment", PAYMENT), ("urgency", URGENCY), ("bank", BANK),
     ("prize", PRIZE), ("relative", RELATIVE), ("trouble", TROUBLE), ("courier", COURIER), ("delivery", DELIVERY),
+    ("news", NEWS), ("self_id", SELF_ID), ("utility", UTILITY), ("task_job", TASK_JOB), ("bank_problem", BANK_PROBLEM),
+    ("fin_details", FIN_DETAILS),
 ]
 # Signals that say nothing about a scam on their own (not counted for confidence).
-NEUTRAL = {"delivery", "otp_protective", "targeted", "relative", "urgency"}
+NEUTRAL = {"delivery", "otp_protective", "targeted", "relative", "urgency", "news", "self_id"}
 
 
 @dataclass
@@ -331,11 +363,21 @@ def scan_chunk(st: KeywordState, speaker: str, text: str, lang_hint: str = "en")
         # "OTP kisi ko mat bataiye" is the bank protecting you, not the caller isolating you.
         if m and not (kind and kind[0] == "protective"):
             _hit(st, "secrecy", _snip(m, clause), new)
+    news = bool(NEWS.search(joined))
+    aimed = bool(TARGET.search(joined))
     for name, rx in CALLER_RULES:
-        if name not in st.hits:
-            m = rx.search(joined)
-            if m:
-                _hit(st, name, _snip(m, joined), new)
+        if name in st.hits:
+            continue
+        m = rx.search(joined)
+        if not m:
+            continue
+        # "CBI ne minister ko arrest kiya", "aajkal digital arrest scam ho rahe hain": news, not a threat.
+        if name in ("authority", "digital_arrest", "legal_threat") and news and not aimed:
+            continue
+        # An authority word only counts when the caller claims it or aims it at the victim.
+        if name == "authority" and not (aimed or SELF_ID.search(joined)):
+            continue
+        _hit(st, name, _snip(m, joined), new)
     return new
 
 
@@ -356,14 +398,16 @@ def verdict(st: KeywordState, delivery_otp_policy: str = "caution") -> KeywordVe
     bank, prize = h("bank"), h("prize")
     relative_trouble = h("relative") and h("trouble")
     courier, delivery = h("courier"), h("delivery")
+    utility, task_job, bank_problem, fin_details = h("utility"), h("task_job"), h("bank_problem"), h("fin_details")
     complying = h("victim_complying")
     threat = legal or block or da
     courier_scam = courier and (authority or legal)
 
-    context_strong = authority or da or legal or kyc or prize or courier_scam
-    context_weak = bank or id_docs or courier or block or urgency or relative_trouble
+    context_strong = authority or da or legal or kyc or prize or courier_scam or task_job
+    context_weak = bank or id_docs or courier or block or urgency or relative_trouble or utility
     critical_hard = otp or remote or secrecy
-    critical_soft = scam_pay or (app_link and (context_strong or bank or courier or id_docs)) or (isolation and context_strong)
+    critical_soft = scam_pay or (fin_details and (context_strong or bank)) or \
+        (app_link and (context_strong or bank or courier or id_docs or utility)) or (isolation and context_strong)
 
     # Delivery OTP: a rider asking for the parcel OTP is the one OTP request that is usually legit.
     delivery_otp = delivery and otp and not (
@@ -372,15 +416,15 @@ def verdict(st: KeywordState, delivery_otp_policy: str = "caution") -> KeywordVe
         critical_hard = False
 
     p = 0
-    if context_strong or relative_trouble or kyc or (bank and (urgency or block)) or isolation or \
-            (pay and context_weak and not delivery):
+    if context_strong or relative_trouble or kyc or (bank and (urgency or block or bank_problem)) or isolation or \
+            (utility and threat):
         p = 1
     if (critical_hard or critical_soft or da
-            or ((authority or kyc or bank or id_docs or prize or courier) and threat and targeted)
+            or ((authority or kyc or bank or id_docs or prize or courier or utility) and threat and targeted)
             or (relative_trouble and (pay or scam_pay) and (urgency or authority))):
         p = 2
     if ((critical_hard and (context_strong or context_weak)) or (critical_soft and context_strong)
-            or (pay and (authority or da or legal or courier_scam or kyc)) or (relative_trouble and (secrecy or isolation))):
+            or (pay and (authority or da or legal or courier_scam or kyc or task_job)) or (relative_trouble and (secrecy or isolation))):
         p = 3
     if complying and p >= 2:
         p = 3
@@ -397,6 +441,8 @@ def verdict(st: KeywordState, delivery_otp_policy: str = "caution") -> KeywordVe
         stype = "bank_impersonation"
     elif prize:
         stype = "prize_lottery"
+    elif utility or task_job:
+        stype = "other"
     elif p >= 2:
         stype = "other"
     else:

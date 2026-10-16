@@ -2,12 +2,15 @@
 
 Stateful FastAPI microservice for the Chaukanna scam-call guardian. The audio bridge sends each
 ~4-second transcript chunk of a live call, and the service answers with a typed scam verdict in
-**single-digit milliseconds**, even though the LLM behind it takes ~1.5 s.
+**single-digit milliseconds**, even though the model behind it (Jev, ~0.5 s; Gemini fallback, ~1.5 s)
+is far slower. The request and response shapes are in `CONTRACTS.md` §1.
+
+![simulator](docs/screenshots/simulator.png)
 
 ```bash
 cd classifier_service
 pip install -r requirements.txt
-cp .env.example .env              # set GEMINI_API_KEY (or CLASSIFIER_BACKEND=none for keyword-only)
+cp .env.example .env              # set TYPESAFE_API_KEY (Jev) + GEMINI_API_KEY (fallback), or CLASSIFIER_BACKEND=none
 python main.py                    # http://0.0.0.0:8010   (or: uvicorn main:app --port 8010)
 python test_simulator.py --concurrent      # scam call, innocent call, both call legs at once
 python -m pytest -q tests                  # 50+ tests, offline, ~5 s
@@ -100,12 +103,30 @@ Response: the original nine fields, unchanged, plus optional additive fields:
 - `POST /reset/{call_id}` forgets a call and cancels its LLM run.
 - `GET /health` reports the backend, active calls, background LLM p50/p95, circuit state and the delivery-OTP policy.
 - `GET|POST /scam_numbers`, `DELETE /scam_numbers/{number}` manage the known-scam list. Runtime
-  additions persist to `data/scam_numbers.local.json`, which is gitignored.
+  additions persist to `data/scam_numbers.local.json`, which is gitignored. The audio bridge loads
+  this list at startup and POSTs every incident's caller here, so a redial is flagged on its first
+  chunk. The seed list holds the same numbers that `supabase_schema.sql` seeds for n8n.
 
 ## Backends
 
-`CLASSIFIER_BACKEND=gemini | sarvam | local_laya | mock | none`. Every backend returns the same
-`LLMVerdict`; whisper, known-scammer and ratchet logic live in the service.
+`CLASSIFIER_BACKEND=auto | jev | jev_only | gemini | sarvam | local_laya | mock | none`. Every backend
+returns the same `LLMVerdict`; whisper, known-scammer and ratchet logic live in the service.
+
+- `auto` (default): `jev` if `TYPESAFE_API_KEY` is set, else `gemini` if a Gemini key is set, else `none`.
+- `jev`: Jev (TypeSafe System One). One request asks four typed questions over the last 8 chunks:
+  scam_type (choice), pressure (score), asks_otp and demands_secrecy (noul, true at >= 0.65). It takes
+  ~0.5 s. If Jev errors, backs off or takes longer than `JEV_TIMEOUT_S` (1.5 s), Gemini answers instead.
+  Jev writes no text, so `summary_for_family` is a template built from its answers.
+- `jev_only`: Jev without the Gemini fallback (used by `eval.py`).
+
+Eval (`python eval.py`, 28 scam + 19 legit labelled conversations in `evalset/`, results in
+`evalset/results.json`):
+
+| backend | scams caught | caught on time | scam type right | false alarms |
+|---|---|---|---|---|
+| keywords only | 24/28 | 24 | 26 | 0/19 |
+| keywords + Jev | **28/28** | **28** | **28** | 0/19 |
+| keywords + gemini-2.5-flash | 28/28 | 24 | 28 | 0/19 |
 
 - `gemini`: gemini-2.5-flash with `response_schema` and thinking off.
 - `local_laya`: an OpenAI-compatible local endpoint with a 1.5 s timeout, falling back to Gemini through the generic `FallbackBackend`.

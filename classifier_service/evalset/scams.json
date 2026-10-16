@@ -1,0 +1,727 @@
+[
+ {
+  "id": "da_hinglish_cbi_fedex",
+  "lang": "hinglish",
+  "category": "digital_arrest",
+  "expected_scam_type": "digital_arrest",
+  "critical_chunk": 3,
+  "caller_number": "+91 98765 43210",
+  "chunks": [
+   [
+    "caller",
+    "hi",
+    "Namaste, main CBI officer Rajesh Sharma bol raha hoon, Delhi headquarters se."
+   ],
+   [
+    "victim",
+    "hi",
+    "Ji? Kya hua sir, main kuch samjhi nahi."
+   ],
+   [
+    "caller",
+    "hi",
+    "Aapke naam se ek FedEx parcel pakda gaya hai customs mein, usme drugs aur fake passports hain."
+   ],
+   [
+    "victim",
+    "hi",
+    "Nahi nahi, maine toh koi parcel nahi bheja. Yeh galat hai."
+   ],
+   [
+    "caller",
+    "hi",
+    "Aapke Aadhaar par money laundering ka case hai, arrest warrant nikal chuka hai. Aap digital arrest mein hain, call disconnect mat karna."
+   ],
+   [
+    "caller",
+    "hi",
+    "Yeh baat confidential hai, kisi ko mat batana, family ko bhi nahi. Ab verification ke liye apna OTP aur bank PIN batayiye."
+   ]
+  ],
+  "accept_types": [
+   "digital_arrest"
+  ]
+ },
+ {
+  "id": "da_devanagari_mumbai_police",
+  "lang": "hi",
+  "category": "digital_arrest",
+  "expected_scam_type": "digital_arrest",
+  "critical_chunk": 2,
+  "caller_number": "+91 88260 11234",
+  "notes": "victim complies at the end",
+  "chunks": [
+   [
+    "caller",
+    "hi",
+    "नमस्ते, मैं मुंबई पुलिस साइबर क्राइम ब्रांच से इंस्पेक्टर विनोद बोल रहा हूँ।"
+   ],
+   [
+    "caller",
+    "hi",
+    "आपके आधार कार्ड से एक बैंक खाता खुला है जिसमें मनी लॉन्ड्रिंग का पैसा आया है।"
+   ],
+   [
+    "victim",
+    "hi",
+    "क्या? मैंने तो कोई खाता नहीं खोला, आप क्या बोल रहे हैं?"
+   ],
+   [
+    "caller",
+    "hi",
+    "आप अभी डिजिटल अरेस्ट में हैं। वीडियो कॉल पर रहिए, फ़ोन मत काटिए और यह बात किसी को मत बताना।"
+   ],
+   [
+    "caller",
+    "hi",
+    "जाँच के लिए अपनी एफडी का पैसा आरबीआई के वेरिफिकेशन अकाउंट में ट्रांसफर कीजिए, जाँच के बाद वापस मिल जाएगा।"
+   ],
+   [
+    "victim",
+    "hi",
+    "ठीक है सर, मैं अभी बैंक जाकर ट्रांसफर कर देती हूँ, किसी को नहीं बताऊँगी।"
+   ]
+  ],
+  "accept_types": [
+   "digital_arrest"
+  ]
+ },
+ {
+  "id": "da_kannada_customs",
+  "lang": "kn",
+  "category": "digital_arrest",
+  "expected_scam_type": "digital_arrest",
+  "critical_chunk": 2,
+  "caller_number": "+91 80 2345 6789",
+  "chunks": [
+   [
+    "caller",
+    "kn",
+    "ನಮಸ್ಕಾರ, ನಾನು ಬೆಂಗಳೂರು ಏರ್‌ಪೋರ್ಟ್ ಕಸ್ಟಮ್ಸ್ ಆಫೀಸಿನಿಂದ ಮಾತಾಡ್ತಾ ಇದೀನಿ."
+   ],
+   [
+    "caller",
+    "kn",
+    "ನಿಮ್ಮ ಹೆಸರಿನಲ್ಲಿ ತೈವಾನ್‌ಗೆ ಹೋಗ್ತಾ ಇದ್ದ ಪಾರ್ಸೆಲ್‌ನಲ್ಲಿ ಡ್ರಗ್ಸ್ ಸಿಕ್ಕಿದೆ, ನಿಮ್ಮ ಮೇಲೆ ಕೇಸ್ ದಾಖಲಾಗಿದೆ."
+   ],
+   [
+    "victim",
+    "kn",
+    "ಅಯ್ಯೋ, ನಾನು ಯಾವ ಪಾರ್ಸೆಲ್ ಕೂಡ ಕಳಿಸಿಲ್ಲ ಸಾರ್."
+   ],
+   [
+    "caller",
+    "kn",
+    "ಈಗಲೇ ಸ್ಕೈಪ್ ವಿಡಿಯೋ ಕಾಲ್‌ಗೆ ಬನ್ನಿ, ಪೊಲೀಸ್ ಅಧಿಕಾರಿ ಜೊತೆ ಮಾತಾಡಬೇಕು. ಕರೆ ಕಟ್ ಮಾಡಬೇಡಿ."
+   ],
+   [
+    "caller",
+    "kn",
+    "ಈ ವಿಷಯ ಯಾರಿಗೂ ಹೇಳಬೇಡಿ, ಮನೆಯವರಿಗೂ ಕೂಡ. ಇಲ್ಲಾಂದ್ರೆ ಇವತ್ತೇ ಅರೆಸ್ಟ್ ಆಗ್ತೀರಾ."
+   ]
+  ],
+  "accept_types": [
+   "digital_arrest"
+  ]
+ },
+ {
+  "id": "da_english_trai_sim",
+  "lang": "en",
+  "category": "digital_arrest",
+  "expected_scam_type": "digital_arrest",
+  "critical_chunk": 2,
+  "caller_number": "+91 70420 55512",
+  "chunks": [
+   [
+    "caller",
+    "en",
+    "Hello, this call is from the Telecom Regulatory Authority of India regarding your mobile number."
+   ],
+   [
+    "caller",
+    "en",
+    "Your number has been used for illegal advertising and harassment, and it will be disconnected within two hours."
+   ],
+   [
+    "victim",
+    "en",
+    "What? I haven't done anything like that."
+   ],
+   [
+    "caller",
+    "en",
+    "I am transferring your call to the Mumbai police cyber cell, they will record your statement on a video call."
+   ],
+   [
+    "caller",
+    "en",
+    "Sir, there is an arrest warrant against you. Stay on the video call and do not tell anyone about this investigation."
+   ]
+  ],
+  "accept_types": [
+   "digital_arrest",
+   "other"
+  ]
+ },
+ {
+  "id": "da_hinglish_keyword_light",
+  "lang": "hinglish",
+  "category": "digital_arrest",
+  "expected_scam_type": "digital_arrest",
+  "critical_chunk": 2,
+  "caller_number": "+91 99300 44771",
+  "notes": "paraphrased script with few trigger words: tests what the LLM adds",
+  "chunks": [
+   [
+    "caller",
+    "hi",
+    "Main Delhi ke crime department se senior officer bol raha hoon, aapse ek zaroori baat karni hai."
+   ],
+   [
+    "caller",
+    "hi",
+    "Aapke naam se ek khaata khula hai jismein hawala ka gandha paisa aaya hai, aap is maamle mein suspect hain."
+   ],
+   [
+    "victim",
+    "hi",
+    "Sir main toh retired teacher hoon, mera aisa koi khaata nahi hai."
+   ],
+   [
+    "caller",
+    "hi",
+    "Jab tak jaanch chal rahi hai aap ghar se bahar nahi jayenge, aur is baare mein kisi se charcha nahi karenge."
+   ],
+   [
+    "caller",
+    "hi",
+    "Apni saari FD aur savings ki details abhi WhatsApp par bhejiye, humein unhe verify karna hai."
+   ]
+  ],
+  "accept_types": [
+   "digital_arrest"
+  ]
+ },
+ {
+  "id": "kyc_kannada_anydesk",
+  "lang": "kn",
+  "category": "kyc_update",
+  "expected_scam_type": "kyc_update",
+  "critical_chunk": 2,
+  "caller_number": "+91 63621 88990",
+  "notes": "victim installs the app and reads the code",
+  "chunks": [
+   [
+    "caller",
+    "kn",
+    "ನಮಸ್ಕಾರ, ನಾನು SBI bank ಇಂದ ಮಾತಾಡ್ತಾ ಇದೀನಿ, ನಿಮ್ಮ KYC expire ಆಗಿದೆ."
+   ],
+   [
+    "caller",
+    "kn",
+    "ಇವತ್ತು update ಮಾಡಿಲ್ಲ ಅಂದ್ರೆ account block ಆಗುತ್ತೆ, AnyDesk app install ಮಾಡಿ."
+   ],
+   [
+    "victim",
+    "kn",
+    "ಸರಿ ಸಾರ್, ಪ್ಲೇ ಸ್ಟೋರ್‌ನಲ್ಲಿ ಹುಡುಕ್ತಾ ಇದೀನಿ."
+   ],
+   [
+    "caller",
+    "kn",
+    "Install ಆದ್ಮೇಲೆ ಅದರಲ್ಲಿ ಬರೋ ಒಂಬತ್ತು ಅಂಕಿಯ ನಂಬರ್ ನನಗೆ ಹೇಳಿ."
+   ],
+   [
+    "victim",
+    "kn",
+    "ಸರಿ, install ಆಯ್ತು. ನಂಬರ್ 482 913 776."
+   ]
+  ],
+  "accept_types": [
+   "kyc_update"
+  ]
+ },
+ {
+  "id": "kyc_hinglish_link",
+  "lang": "hinglish",
+  "category": "kyc_update",
+  "expected_scam_type": "kyc_update",
+  "critical_chunk": 2,
+  "caller_number": "+91 90043 21987",
+  "chunks": [
+   [
+    "caller",
+    "hi",
+    "Hello madam, main Paytm KYC department se bol rahi hoon, aapka KYC pending hai."
+   ],
+   [
+    "caller",
+    "hi",
+    "Aaj raat tak update nahi kiya toh aapka wallet aur bank account dono suspend ho jayenge."
+   ],
+   [
+    "victim",
+    "hi",
+    "Achha? Kya karna padega?"
+   ],
+   [
+    "caller",
+    "hi",
+    "Maine aapko SMS mein ek link bheja hai, us link pe click karke Aadhaar aur PAN ki photo upload kar dijiye."
+   ]
+  ],
+  "accept_types": [
+   "kyc_update",
+   "bank_impersonation"
+  ]
+ },
+ {
+  "id": "kyc_english_pan_apk",
+  "lang": "en",
+  "category": "kyc_update",
+  "expected_scam_type": "kyc_update",
+  "critical_chunk": 2,
+  "caller_number": "+91 81300 67214",
+  "chunks": [
+   [
+    "caller",
+    "en",
+    "Good afternoon sir, I am calling from your bank's KYC verification desk."
+   ],
+   [
+    "caller",
+    "en",
+    "Your PAN card is not linked with your account, so your account will be frozen in the next 24 hours."
+   ],
+   [
+    "victim",
+    "en",
+    "Oh, I thought I linked it last year."
+   ],
+   [
+    "caller",
+    "en",
+    "No sir, it shows pending. I have sent an SBI KYC app on WhatsApp, please download and install it now."
+   ]
+  ],
+  "accept_types": [
+   "kyc_update",
+   "bank_impersonation"
+  ]
+ },
+ {
+  "id": "bank_english_card_reversal",
+  "lang": "en",
+  "category": "bank_impersonation",
+  "expected_scam_type": "bank_impersonation",
+  "critical_chunk": 4,
+  "caller_number": "+91 92208 13344",
+  "notes": "victim reads out the OTP",
+  "chunks": [
+   [
+    "caller",
+    "en",
+    "Hello, I am calling from the credit card department of ICICI Bank."
+   ],
+   [
+    "caller",
+    "en",
+    "We noticed a suspicious transaction of 49,999 rupees on your card from Delhi. Did you make it?"
+   ],
+   [
+    "victim",
+    "en",
+    "No! I am in Bangalore, I didn't buy anything."
+   ],
+   [
+    "caller",
+    "en",
+    "Don't worry, I will reverse it. You will get a six digit OTP now, please read it to me to cancel the transaction."
+   ],
+   [
+    "victim",
+    "en",
+    "Okay, it says 7 3 9 1 0 4."
+   ]
+  ],
+  "accept_types": [
+   "bank_impersonation"
+  ]
+ },
+ {
+  "id": "bank_devanagari_cvv",
+  "lang": "hi",
+  "category": "bank_impersonation",
+  "expected_scam_type": "bank_impersonation",
+  "critical_chunk": 2,
+  "caller_number": "+91 95600 78123",
+  "chunks": [
+   [
+    "caller",
+    "hi",
+    "नमस्ते, मैं एसबीआई बैंक के हेड ऑफिस से बोल रहा हूँ।"
+   ],
+   [
+    "caller",
+    "hi",
+    "आपका एटीएम कार्ड आज ब्लॉक हो जाएगा क्योंकि उसकी केवाईसी पूरी नहीं है।"
+   ],
+   [
+    "victim",
+    "hi",
+    "अरे, अब क्या करूँ?"
+   ],
+   [
+    "caller",
+    "hi",
+    "कार्ड के पीछे जो तीन अंकों का सीवीवी नंबर है वो बताइए, मैं अभी चालू कर देता हूँ।"
+   ]
+  ],
+  "accept_types": [
+   "bank_impersonation",
+   "kyc_update"
+  ]
+ },
+ {
+  "id": "bank_hinglish_reward_points",
+  "lang": "hinglish",
+  "category": "bank_impersonation",
+  "expected_scam_type": "bank_impersonation",
+  "critical_chunk": 4,
+  "caller_number": "+91 98110 66520",
+  "notes": "the code ask is phrased loosely: tests what the LLM adds",
+  "chunks": [
+   [
+    "caller",
+    "hi",
+    "Sir main HDFC credit card se bol raha hoon, aapke 8,400 reward points aaj expire ho rahe hain."
+   ],
+   [
+    "victim",
+    "hi",
+    "Achha, toh kya karna hai?"
+   ],
+   [
+    "caller",
+    "hi",
+    "Main abhi unhe cash mein convert kar deta hoon, aapke phone pe ek message aayega."
+   ],
+   [
+    "caller",
+    "hi",
+    "Usme jo chhe number hain na, woh mujhe padh ke suna dijiye, turant paise account mein aa jayenge."
+   ]
+  ],
+  "accept_types": [
+   "bank_impersonation"
+  ]
+ },
+ {
+  "id": "courier_otp_fee_en",
+  "lang": "en",
+  "category": "other",
+  "expected_scam_type": "other",
+  "critical_chunk": 2,
+  "caller_number": "+91 74830 22109",
+  "notes": "delivery-themed scam: fee + link + OTP",
+  "chunks": [
+   [
+    "caller",
+    "en",
+    "Hello, I am calling from DTDC courier, your parcel delivery failed because the address was incomplete."
+   ],
+   [
+    "caller",
+    "en",
+    "To redeliver it you have to pay a 25 rupees redelivery fee on the link I sent by SMS."
+   ],
+   [
+    "victim",
+    "en",
+    "Okay, I opened the link, it is asking for card details."
+   ],
+   [
+    "caller",
+    "en",
+    "Yes, enter them and then tell me the OTP you receive, so I can confirm the delivery slot."
+   ]
+  ],
+  "accept_types": [
+   "other",
+   "bank_impersonation",
+   "kyc_update"
+  ]
+ },
+ {
+  "id": "relative_hinglish_accident",
+  "lang": "hinglish",
+  "category": "relative_in_trouble",
+  "expected_scam_type": "other",
+  "critical_chunk": 2,
+  "caller_number": "+91 89510 33402",
+  "chunks": [
+   [
+    "caller",
+    "hi",
+    "Hello uncle, main Rohit ka dost Aman bol raha hoon, Rohit ka accident ho gaya hai."
+   ],
+   [
+    "caller",
+    "hi",
+    "Woh City hospital mein hai, operation abhi karna padega, doctor 50,000 advance maang rahe hain, jaldi bhejiye."
+   ],
+   [
+    "victim",
+    "hi",
+    "Hey bhagwan! Main abhi aata hoon hospital."
+   ],
+   [
+    "caller",
+    "hi",
+    "Nahi uncle, aane ka time nahi hai, aap is number pe PhonePe kar dijiye, aur aunty ko mat batana, pareshan ho jayengi."
+   ]
+  ],
+  "accept_types": [
+   "other"
+  ]
+ },
+ {
+  "id": "relative_kannada_police_station",
+  "lang": "kn",
+  "category": "relative_in_trouble",
+  "expected_scam_type": "other",
+  "critical_chunk": 2,
+  "caller_number": "+91 72599 40118",
+  "chunks": [
+   [
+    "caller",
+    "kn",
+    "ನಮಸ್ಕಾರ ಮೇಡಂ, ನಾನು ಜಯನಗರ ಪೊಲೀಸ್ ಸ್ಟೇಷನ್‌ನಿಂದ ಮಾತಾಡ್ತಾ ಇದೀನಿ. ನಿಮ್ಮ ಮಗ ಇಲ್ಲಿ ಇದ್ದಾನೆ."
+   ],
+   [
+    "caller",
+    "kn",
+    "ಅವನು ಒಂದು ಹುಡುಗಿಗೆ ಕಿರುಕುಳ ಕೊಟ್ಟ ಕೇಸ್‌ನಲ್ಲಿ ಸಿಕ್ಕಿಹಾಕಿಕೊಂಡಿದ್ದಾನೆ. ಬೇಲ್‌ಗೆ ತಕ್ಷಣ ಎಪ್ಪತ್ತು ಸಾವಿರ ಹಣ ಕಳುಹಿಸಿ."
+   ],
+   [
+    "victim",
+    "kn",
+    "ಅಯ್ಯೋ ದೇವರೇ, ಅವನ ಜೊತೆ ಮಾತಾಡಿಸಿ ಸಾರ್."
+   ],
+   [
+    "caller",
+    "kn",
+    "ಈಗ ಮಾತಾಡೋಕೆ ಆಗಲ್ಲ. ಈ ವಿಷಯ ಯಾರಿಗೂ ಹೇಳಬೇಡಿ, ಇಲ್ಲಾಂದ್ರೆ FIR ಆಗುತ್ತೆ. ಫೋನ್‌ಪೇ ಮಾಡಿ."
+   ]
+  ],
+  "accept_types": [
+   "other",
+   "digital_arrest"
+  ]
+ },
+ {
+  "id": "lottery_hinglish_kbc",
+  "lang": "hinglish",
+  "category": "prize_lottery",
+  "expected_scam_type": "prize_lottery",
+  "critical_chunk": 2,
+  "caller_number": "+92 300 1234567",
+  "notes": "+92 country code",
+  "chunks": [
+   [
+    "caller",
+    "hi",
+    "Badhai ho! Main KBC ke office se bol raha hoon, aapka number 25 lakh ki lottery mein lucky draw mein nikla hai."
+   ],
+   [
+    "caller",
+    "hi",
+    "Paise release karne ke liye 12,500 rupaye ki processing fee jama karni hogi, aaj hi."
+   ],
+   [
+    "victim",
+    "hi",
+    "Sach mein? Maine toh koi lottery nahi khareedi thi."
+   ],
+   [
+    "caller",
+    "hi",
+    "Yeh Jio sim ka lucky draw hai. Aur yeh baat kisi ko mat batana, warna inaam cancel ho jayega."
+   ]
+  ],
+  "accept_types": [
+   "prize_lottery"
+  ]
+ },
+ {
+  "id": "prize_english_upi_collect",
+  "lang": "en",
+  "category": "prize_lottery",
+  "expected_scam_type": "prize_lottery",
+  "critical_chunk": 2,
+  "caller_number": "+91 93412 90876",
+  "chunks": [
+   [
+    "caller",
+    "en",
+    "Congratulations madam, you have won a cashback of 5,000 rupees in the Amazon festival lucky draw."
+   ],
+   [
+    "caller",
+    "en",
+    "I am sending a collect request to your Google Pay now, just accept it and enter your UPI PIN to receive the money."
+   ],
+   [
+    "victim",
+    "en",
+    "Okay, I see a request for 5,000. I enter my PIN here?"
+   ],
+   [
+    "caller",
+    "en",
+    "Yes madam, enter the PIN quickly, the offer expires in five minutes."
+   ]
+  ],
+  "accept_types": [
+   "prize_lottery",
+   "bank_impersonation"
+  ]
+ },
+ {
+  "id": "electricity_devanagari",
+  "lang": "hi",
+  "category": "other",
+  "expected_scam_type": "other",
+  "critical_chunk": 2,
+  "caller_number": "+91 62012 88345",
+  "chunks": [
+   [
+    "caller",
+    "hi",
+    "नमस्कार, मैं बिजली विभाग से बोल रहा हूँ, आपका पिछले महीने का बिल अपडेट नहीं हुआ है।"
+   ],
+   [
+    "caller",
+    "hi",
+    "आज रात साढ़े नौ बजे आपका बिजली कनेक्शन कट जाएगा, अगर अभी भुगतान नहीं किया तो।"
+   ],
+   [
+    "victim",
+    "hi",
+    "लेकिन मैंने तो बिल भर दिया था।"
+   ],
+   [
+    "caller",
+    "hi",
+    "सिस्टम में नहीं दिख रहा। मैं जो लिंक भेज रहा हूँ उससे ऐप डाउनलोड कीजिए और दस रुपये का भुगतान कीजिए।"
+   ]
+  ],
+  "accept_types": [
+   "other",
+   "kyc_update"
+  ]
+ },
+ {
+  "id": "known_listed_number",
+  "lang": "en",
+  "category": "known_scammer",
+  "expected_scam_type": "bank_impersonation",
+  "critical_chunk": 1,
+  "caller_number": "+91 80 4567 1234",
+  "notes": "number is on data/scam_numbers.json; the script itself starts innocuously",
+  "chunks": [
+   [
+    "caller",
+    "en",
+    "Hello, am I speaking with Mr. Iyer? Good morning sir."
+   ],
+   [
+    "caller",
+    "en",
+    "I am calling regarding your credit card, there is an important update about your limit."
+   ],
+   [
+    "victim",
+    "en",
+    "Yes, tell me."
+   ],
+   [
+    "caller",
+    "en",
+    "We can increase your limit to three lakhs today, I only need to verify a few details."
+   ]
+  ],
+  "accept_types": [
+   "bank_impersonation",
+   "other"
+  ]
+ },
+ {
+  "id": "intl_855_fedex",
+  "lang": "en",
+  "category": "digital_arrest",
+  "expected_scam_type": "digital_arrest",
+  "critical_chunk": 2,
+  "caller_number": "+855 23 456 789",
+  "notes": "Cambodia country code",
+  "chunks": [
+   [
+    "caller",
+    "en",
+    "Hello, this is FedEx international, Mumbai branch. A parcel booked with your Aadhaar is going to Iran."
+   ],
+   [
+    "caller",
+    "en",
+    "It contains five passports and 200 grams of MDMA, so customs has seized it and a case is registered against you."
+   ],
+   [
+    "victim",
+    "en",
+    "That is impossible, I never booked anything."
+   ],
+   [
+    "caller",
+    "en",
+    "I am connecting you to the narcotics officer now. Do not disconnect, and keep your camera on."
+   ]
+  ],
+  "accept_types": [
+   "digital_arrest"
+  ]
+ },
+ {
+  "id": "task_job_scam_en",
+  "lang": "en",
+  "category": "other",
+  "expected_scam_type": "other",
+  "critical_chunk": 4,
+  "caller_number": "+91 97310 55026",
+  "notes": "few trigger words: tests what the LLM adds",
+  "chunks": [
+   [
+    "caller",
+    "en",
+    "Hi, I'm Neha from a digital marketing company, we have a part-time work from home opportunity."
+   ],
+   [
+    "caller",
+    "en",
+    "You just like YouTube videos and rate hotels, and you earn three to five thousand per day."
+   ],
+   [
+    "victim",
+    "en",
+    "That sounds good, how do I start?"
+   ],
+   [
+    "caller",
+    "en",
+    "First you have to join our Telegram group and pay 2,000 to unlock the premium tasks, it comes back with the first payout."
+   ]
+  ],
+  "accept_types": [
+   "other"
+  ]
+ }
+]

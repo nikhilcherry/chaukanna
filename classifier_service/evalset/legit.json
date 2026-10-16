@@ -1,0 +1,84 @@
+[
+ {"id": "legit_delivery_swiggy_en", "lang": "en", "category": "legit_delivery", "caller_number": "+91 99001 23456", "chunks": [
+  ["caller", "en", "Hello ma'am, I'm the delivery boy from Swiggy Instamart, I'm outside your building."],
+  ["victim", "en", "Oh okay, which gate are you at?"],
+  ["caller", "en", "Main gate near the security cabin. Which floor is it, third floor?"],
+  ["victim", "en", "Yes, flat 302. I'll come down to collect it, give me two minutes."]]},
+
+ {"id": "legit_delivery_amazon_otp_hinglish", "lang": "hinglish", "category": "legit_delivery_otp", "caller_number": "+91 80690 11223",
+  "notes": "DELIVERY_OTP_POLICY case", "chunks": [
+  ["caller", "hi", "Hello ma'am, Amazon delivery hai, main aapke gate pe khada hoon."],
+  ["victim", "hi", "Haan haan, do minute, neeche aa rahi hoon."],
+  ["caller", "hi", "Ma'am parcel ke liye OTP bata dijiye jo SMS mein aaya hai, delivery complete karni hai."],
+  ["victim", "hi", "Main neeche aake bata deti hoon."]]},
+
+ {"id": "legit_delivery_zomato_kannada", "lang": "kn", "category": "legit_delivery", "caller_number": "+91 80471 90021", "chunks": [
+  ["caller", "kn", "ನಮಸ್ಕಾರ ಸಾರ್, Zomato ಇಂದ ಫುಡ್ ಡೆಲಿವರಿ, ನಾನು ನಿಮ್ಮ ಅಪಾರ್ಟ್‌ಮೆಂಟ್ ಹತ್ರ ಇದೀನಿ."],
+  ["victim", "kn", "ಬ್ಲಾಕ್ ಬಿ, ಎರಡನೇ ಫ್ಲೋರ್. ಗೇಟ್ ಹತ್ರ ಸೆಕ್ಯೂರಿಟಿಗೆ ಹೇಳಿ."],
+  ["caller", "kn", "ಸರಿ ಸಾರ್. ಇದು ಕ್ಯಾಶ್ ಆನ್ ಡೆಲಿವರಿ, ಮುನ್ನೂರ ನಲವತ್ತೊಂಬತ್ತು ರೂಪಾಯಿ, ಕ್ಯಾಶ್ ಅಥವಾ PhonePe ಮಾಡಬಹುದು."],
+  ["victim", "kn", "PhonePe ಮಾಡ್ತೀನಿ, ಮೇಲೆ ಬನ್ನಿ."]]},
+
+ {"id": "legit_bank_hdfc_fraud_check_en", "lang": "en", "category": "legit_bank", "caller_number": "+91 22 6160 6161", "chunks": [
+  ["caller", "en", "Good morning, this is Priya from HDFC Bank's fraud monitoring team."],
+  ["caller", "en", "Did you make a transaction of 4,999 rupees at Croma Koramangala about ten minutes ago?"],
+  ["victim", "en", "Yes, that was me, I bought headphones."],
+  ["caller", "en", "Thank you for confirming. Please remember, HDFC Bank will never ask for your OTP or PIN, do not share it with anyone."]]},
+
+ {"id": "legit_bank_sbi_emi_hinglish", "lang": "hinglish", "category": "legit_bank", "caller_number": "+91 80 2559 4000", "chunks": [
+  ["caller", "hi", "Namaste sir, main SBI Jayanagar branch se bol rahi hoon, aapke home loan ki EMI 5 tareekh ko due hai."],
+  ["victim", "hi", "Haan, main is hafte jama kar dunga."],
+  ["caller", "hi", "Aap branch aa jaiye ya YONO app se pay kar dijiye. Aur haan, OTP kisi ko mat bataiye, bank kabhi nahi maangta."],
+  ["victim", "hi", "Theek hai, dhanyavaad."]]},
+
+ {"id": "legit_family_devanagari_mother", "lang": "hi", "category": "legit_family", "caller_number": "+91 98450 77661", "chunks": [
+  ["caller", "hi", "हेलो बेटा, खाना खाया? आज ऑफिस से जल्दी आ गए?"],
+  ["victim", "hi", "हाँ माँ, खा लिया। आपकी दवाई खत्म तो नहीं हुई?"],
+  ["caller", "hi", "दो दिन की बची है। और सुनो, इस महीने का किराया मेरे खाते में ट्रांसफर कर देना।"],
+  ["victim", "hi", "हाँ माँ, कल सुबह कर दूँगा। पापा को मेरा नमस्ते कहना।"]]},
+
+ {"id": "legit_family_kannada_festival", "lang": "kn", "category": "legit_family", "caller_number": "+91 94480 12345", "chunks": [
+  ["caller", "kn", "ಹಲೋ ಅಮ್ಮ, ಹೇಗಿದೀಯ? ದೀಪಾವಳಿಗೆ ನಾವು ಶುಕ್ರವಾರ ಬರ್ತೀವಿ."],
+  ["victim", "kn", "ಒಳ್ಳೇದು ಮಗಳೇ, ಮಕ್ಕಳನ್ನೂ ಕರ್ಕೊಂಡು ಬಾ."],
+  ["caller", "kn", "ಹೂಂ ಅಮ್ಮ. ಹೋಳಿಗೆ ಮಾಡು, ಅಪ್ಪನಿಗೆ ಹೊಸ ಶರ್ಟ್ ತಗೊಂಡು ಬರ್ತೀನಿ."],
+  ["victim", "kn", "ಸರಿ, ಜಾಗ್ರತೆಯಾಗಿ ಬನ್ನಿ."]]},
+
+ {"id": "legit_clinic_aadhaar_en", "lang": "en", "category": "legit_service", "caller_number": "+91 80 4110 2200", "chunks": [
+  ["caller", "en", "Hello, this is Sunrise Clinic calling to remind you of your appointment with Dr. Rao tomorrow at 10 am."],
+  ["victim", "en", "Yes, I remember. Do I need to bring anything?"],
+  ["caller", "en", "Please bring your Aadhaar card for the new registration and your old blood test reports."],
+  ["victim", "en", "Sure, thank you."]]},
+
+ {"id": "legit_police_verification_hinglish", "lang": "hinglish", "category": "legit_service", "caller_number": "+91 80 2294 3800",
+  "notes": "a real passport verification call: police + Aadhaar, no threat or demand", "chunks": [
+  ["caller", "hi", "Namaste, main Basavanagudi police station se constable Ramesh bol raha hoon, aapke passport verification ke liye."],
+  ["victim", "hi", "Ji haan, maine passport ke liye apply kiya tha."],
+  ["caller", "hi", "Kal subah gyarah baje thane aa jaiye, Aadhaar aur address proof ki copy le aana."],
+  ["victim", "hi", "Theek hai, kal aa jaunga."]]},
+
+ {"id": "legit_news_gossip_hinglish", "lang": "hinglish", "category": "legit_family", "caller_number": "+91 99860 21212",
+  "notes": "adversarial: arrest, CBI, money laundering and digital arrest all appear as news", "chunks": [
+  ["caller", "hi", "Arre tumne aaj ki news dekhi? CBI ne us minister ko arrest kar liya money laundering mein."],
+  ["victim", "hi", "Haan dekha, bahut bada ghotala tha."],
+  ["caller", "hi", "Aur aajkal digital arrest scam bhi bahut ho rahe hain, koi police wala bankar call karta hai."],
+  ["caller", "hi", "Mummy papa ko bata dena, koi aisa call aaye toh turant kaat dein, kisi ko OTP na dein."]]},
+
+ {"id": "legit_insurance_renewal_en", "lang": "en", "category": "legit_service", "caller_number": "+91 80 2222 7788", "chunks": [
+  ["caller", "en", "Good evening sir, I am Suresh, your LIC agent. Your policy premium is due on the 20th."],
+  ["victim", "en", "Oh yes, how much is it this time?"],
+  ["caller", "en", "It is 18,450 rupees. You can pay at the branch or in the LIC app, whichever is convenient."],
+  ["victim", "en", "I will pay online this weekend, thanks for reminding."]]},
+
+ {"id": "legit_family_hospital_bill_hinglish", "lang": "hinglish", "category": "legit_family", "caller_number": "+91 98860 55443",
+  "notes": "adversarial: relative + hospital + money transfer, but an ordinary family request", "chunks": [
+  ["caller", "hi", "Papa, mummy ka routine checkup ho gaya, sab reports normal hain."],
+  ["victim", "hi", "Achha, bahut achha. Bill kitna hua?"],
+  ["caller", "hi", "Hospital ka bill 5,000 hua, maine card se de diya. Aap baad mein mere account mein transfer kar dena."],
+  ["victim", "hi", "Haan beta, shaam ko kar dunga."]]},
+
+ {"id": "legit_cab_otp_kannada", "lang": "kn", "category": "legit_delivery_otp", "caller_number": "+91 63600 77120",
+  "notes": "ride OTP: same shape as the delivery-OTP case", "chunks": [
+  ["caller", "kn", "ಹಲೋ ಸಾರ್, ನಾನು Rapido ಡ್ರೈವರ್, ನಿಮ್ಮ pickup location ಗೆ ಬಂದಿದೀನಿ."],
+  ["victim", "kn", "ನಾನು ಮೆಟ್ರೋ ಸ್ಟೇಷನ್ ಗೇಟ್ ಎರಡರ ಹತ್ರ ಇದೀನಿ."],
+  ["caller", "kn", "ಸರಿ ಸಾರ್, ಬಂದೆ. ಬಂದ ಮೇಲೆ ride OTP ಹೇಳಿ."],
+  ["victim", "kn", "ಸರಿ, ಬನ್ನಿ."]]}
+]

@@ -232,7 +232,7 @@ def test_known_scammer_whispers_on_first_chunk():
 def test_risky_country_code_is_a_weak_signal():
     async def go():
         e = engine()
-        v = await e.classify(req("Hello sir, how are you?", number="+855 12 345 678"))
+        v = await e.classify(req("Hello sir, how are you?", number="+855 98 765 432"))
         assert v.known_scammer and v.caller_risk == "risky_country_code"
         assert v.pressure == 1 and v.recommended_whisper_clip == "none"
     run(go())
@@ -281,4 +281,19 @@ def test_known_slow_backend_is_not_waited_for():
         t = time.perf_counter()
         await e.classify(req("Aapke naam se parcel aaya hai."))
         assert (time.perf_counter() - t) * 1000 < 50
+    run(go())
+
+
+def test_keyword_alarm_is_never_held_for_the_llm():
+    async def go():
+        b = ScriptedBackend([lv(1)], delays=[0.3])
+        e = engine(b, budget_ms=450)
+        await e.classify(req("Hello madam, good afternoon."))     # seeds the ~300 ms estimate
+        await asyncio.sleep(0.4)
+        t = time.perf_counter()
+        v = await e.classify(req(OTP_CHUNK))                        # waitable LLM, but keywords found an OTP ask
+        assert (time.perf_counter() - t) * 1000 < 50 and v.recommended_whisper_clip == "warn_otp"
+        t = time.perf_counter()
+        await e.classify(req("Theek hai, aap baad mein call kijiye."))  # quiet chunk: waits for the fresh verdict
+        assert 0.2 < time.perf_counter() - t < 0.45
     run(go())
