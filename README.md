@@ -4,6 +4,8 @@ Pre-generates Chaukanna's scam-warning whispers with Sarvam AI TTS (`bulbul:v3`,
 speaker `ritu`). The Flutter app plays them from local assets mid-call, so a
 warning needs no network and adds no latency.
 
+![the 24 clips](docs/screenshots/clips.png)
+
 4 warnings x 3 languages (`hi`, `kn`, `en`) x 2 variants = 24 WAVs (24 kHz mono
 16-bit) in `output_assets/`, plus `manifest.json`:
 
