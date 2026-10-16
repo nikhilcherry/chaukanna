@@ -21,8 +21,10 @@ class Pal {
   static Color onColor(Color c) => c.computeLuminance() > 0.18 ? Colors.black : Colors.white;
 }
 
-/// Bundled fallbacks so Devanagari and Kannada always render, with real bold.
-const kIndicFallback = ['NotoSansDevanagari', 'NotoSansKannada'];
+/// Bundled fallbacks so Devanagari and Kannada always render, with real bold. 'NotoColorEmoji'
+/// is not bundled: a phone skips the unknown name and uses its system emoji font, and
+/// tool/screenshots_test.dart loads the file under that name so emoji render in README shots.
+const kIndicFallback = ['NotoSansDevanagari', 'NotoSansKannada', 'NotoColorEmoji'];
 
 ThemeData buildTheme() {
   final base = ThemeData.dark().textTheme.apply(bodyColor: Pal.text, displayColor: Pal.text);

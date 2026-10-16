@@ -6,6 +6,13 @@ digital-arrest / KYC scam calls. Calls run app-to-app over LiveKit. The Python b
 messages. The app shows the live risk, whispers a pre-recorded warning, and after a
 high-risk call shows what n8n already did, along with the 1930 complaint for the human to confirm.
 
+| Call guardian | Alarm + whisper | After the call |
+|---|---|---|
+| ![call](docs/screenshots/app-3-call-rising-pressure.png) | ![alarm](docs/screenshots/app-4-alarm-digital-arrest-hi.png) | ![post-call](docs/screenshots/app-7-post-call.png) |
+| ![otp alarm](docs/screenshots/app-5-alarm-otp.png) | ![kannada alarm](docs/screenshots/app-4-alarm-digital-arrest-kn.png) | ![complaint](docs/screenshots/app-8-post-call-complaint.png) |
+
+Rendered from the offline scripted call with `flutter test --update-goldens tool/screenshots_test.dart`.
+
 Screens: **call guardian** (gauge, chips, live transcript, Protected badge) → **alarm**
 (bilingual warning + whisper, Hang up / I understand) → **post-call** (n8n results,
 complaint draft in the call language + English, Confirm & Submit 1930 Report).
@@ -37,7 +44,7 @@ flutter build apk --debug \
 | `LIVEKIT_URL`, `LIVEKIT_TOKEN` | empty | Room + token. The identity **must** be `victim`, because the bridge only sends to that identity. The debug log prints the token's identity and expiry at connect. |
 | `LIVEKIT_TOKEN_URL` | empty | Alternative: GET → `{"token","url"}` |
 | `N8N_APPROVAL_WEBHOOK` | `https://n8n.premortem.tech/webhook/chaukanna-approve` | Fallback when no `approve_url` arrived |
-| `VICTIM_ID` / `VICTIM_NAME` / `VICTIM_LANG` | `demo-victim-1` / `Papa` / `hi` | Payload id, simulated family alert, clips preloaded before the call language is known |
+| `VICTIM_ID` / `VICTIM_NAME` / `VICTIM_LANG` | `demo-victim-1` / `Kamala Devi` / `hi` | Payload id, simulated family alert, clips preloaded before the call language is known |
 | `MUTE_MIC_DURING_WHISPER` | `true` | Pause the victim's mic while a warning plays, so the caller can't hear it |
 | `SPEAKER_DEFAULT` | `true` | Calls start on the loudspeaker |
 | `WHISPER_ROUTE` | `call` | `call` = voice-call audio route; `media` = like music (simulated calls always use media) |

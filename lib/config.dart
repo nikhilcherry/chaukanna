@@ -26,7 +26,7 @@ class AppConfig {
   static const victimId = String.fromEnvironment('VICTIM_ID', defaultValue: 'demo-victim-1');
 
   /// How the family refers to the protected person in simulated alerts.
-  static const victimName = String.fromEnvironment('VICTIM_NAME', defaultValue: 'Papa');
+  static const victimName = String.fromEnvironment('VICTIM_NAME', defaultValue: 'Kamala Devi');
 
   /// Language whose whisper clips are preloaded before the first verdict says
   /// which language the call is in (hi | kn | en).
