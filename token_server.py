@@ -5,7 +5,12 @@
 Callers can only join as identity "caller-*", can publish audio, and cannot read data
 messages meant for the victim. The phone number goes into participant metadata, which
 the bridge reads as caller_number.
+
+GET /victim-token?key=<VICTIM_TOKEN_KEY> -> {"token","url"} for the Flutter app's
+--dart-define=LIVEKIT_TOKEN_URL. It is off (404) unless VICTIM_TOKEN_KEY is set, because a
+victim token can read the guardian's data messages and the dialer is meant to be public.
 """
+import hmac
 import json
 import os
 import re
@@ -15,6 +20,8 @@ from urllib.parse import parse_qs, urlparse
 
 from dotenv import load_dotenv
 from livekit import api
+
+import tokens
 
 load_dotenv()
 HERE = Path(__file__).parent
@@ -47,6 +54,14 @@ class H(BaseHTTPRequestHandler):
                 ident = "caller-" + ident
             tok = mint(room, ident, q.get("name", ""), q.get("phone", ""))
             return self._send(200, json.dumps({"token": tok, "url": os.getenv("LIVEKIT_URL", ""), "room": room, "identity": ident}).encode())
+        if u.path == "/victim-token":
+            want = os.getenv("VICTIM_TOKEN_KEY", "")
+            got = parse_qs(u.query).get("key", [""])[0]
+            if not want or not hmac.compare_digest(got.encode(), want.encode()):
+                return self._send(404, b'{"error":"not found"}')
+            room = os.getenv("LIVEKIT_ROOM", "chaukanna")
+            tok = tokens.mint("victim", room, ttl=tokens.parse_ttl(os.getenv("VICTIM_TOKEN_TTL", "12h")))
+            return self._send(200, json.dumps({"token": tok, "url": os.getenv("LIVEKIT_URL", ""), "room": room, "identity": "victim"}).encode())
         self._send(404, b'{"error":"not found"}')
 
 

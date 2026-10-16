@@ -1,0 +1,55 @@
+{
+ "synthetic": true,
+ "made_with": "Sarvam TTS bulbul:v3 (caller ashutosh, victim roopa)",
+ "layout": "stereo: left = caller, right = victim",
+ "timeline": [
+  {
+   "speaker": "caller",
+   "start": 0.4,
+   "end": 3.9,
+   "text": "नमस्ते, मैं CBI Mumbai से Inspector Sharma बोल रहा हूँ।"
+  },
+  {
+   "speaker": "victim",
+   "start": 4.5,
+   "end": 5.95,
+   "text": "जी? कौन बोल रहे हैं?"
+  },
+  {
+   "speaker": "caller",
+   "start": 6.55,
+   "end": 13.12,
+   "text": "आपके Aadhaar card से एक parcel भेजा गया है, उसमें drugs और fake passports मिले हैं। यह money laundering case है।"
+  },
+  {
+   "speaker": "victim",
+   "start": 13.72,
+   "end": 15.85,
+   "text": "लेकिन मैंने तो कोई parcel नहीं भेजा।"
+  },
+  {
+   "speaker": "caller",
+   "start": 16.45,
+   "end": 22.68,
+   "text": "आप अभी digital arrest में हैं। यह बात किसी को मत बताइए, family को भी नहीं, और call मत काटिए।"
+  },
+  {
+   "speaker": "victim",
+   "start": 23.28,
+   "end": 25.07,
+   "text": "ठीक है sir, मैं किसी को नहीं बताऊँगी।"
+  },
+  {
+   "speaker": "caller",
+   "start": 25.67,
+   "end": 29.94,
+   "text": "Verification के लिए आपके phone पर एक OTP आया है, वो मुझे अभी बताइए।"
+  },
+  {
+   "speaker": "victim",
+   "start": 30.54,
+   "end": 33.1,
+   "text": "OTP है चार पाँच छह सात आठ नौ।"
+  }
+ ]
+}

@@ -25,7 +25,7 @@ import httpx
 
 from audio import pcm_to_wav, rms
 from config import CLIP_SEVERITY, SAMPLE_RATE, Config
-from stt import MockSTT, SarvamError, SarvamSTT
+from stt import SttError, build_stt
 
 log = logging.getLogger("chaukanna.bridge")
 
@@ -34,6 +34,15 @@ Publish = Callable[[dict], Awaitable[bool]]   # True if the message went out
 
 # --------------------------------------------------------------------------- caller numbers
 _DEFAULT_SCAM_PREFIXES = "+92,+855,+95"
+# Numbers learned at runtime: the classifier's scam list (synced at startup) plus every caller
+# this bridge raised an incident for, so a redial is flagged in call_started before any speech.
+_learned_numbers: set[str] = set()
+
+
+def remember_scammer(number: str) -> None:
+    n = normalize_number(number)
+    if n.startswith("+"):
+        _learned_numbers.add(n)
 
 
 def normalize_number(raw: str) -> str:
@@ -56,17 +65,64 @@ def locally_known_scammer(number: str) -> bool:
         return False
     prefixes = [p.strip() for p in os.getenv("KNOWN_SCAM_PREFIXES", _DEFAULT_SCAM_PREFIXES).split(",") if p.strip()]
     known = {normalize_number(n) for n in os.getenv("KNOWN_SCAM_NUMBERS", "").split(",") if n.strip()}
-    return number in known or any(number.startswith(p) for p in prefixes)
+    return number in known or number in _learned_numbers or any(number.startswith(p) for p in prefixes)
+
+
+# --------------------------------------------------------------------------- OTP masking
+_DIGIT_WORDS = frozenset("""
+zero oh one two three four five six seven eight nine
+ek do teen char chaar paanch panch chhe che chhah saat aath nau shunya
+शून्य एक दो तीन चार पांच पाँच छह छः छे सात आठ नौ
+ಸೊನ್ನೆ ಒಂದು ಎರಡು ಮೂರು ನಾಲ್ಕು ಐದು ಆರು ಏಳು ಎಂಟು ಒಂಬತ್ತು
+""".split())
+_DIGIT_CHARS = set("0123456789०१२३४५६७८९೦೧೨೩೪೫೬೭೮೯")
+_PUNCT = ".,!?;:।॥-–—\"'()[]"
+
+
+def _digit_count(tok: str) -> int:
+    core = tok.strip(_PUNCT).lower()
+    if core in _DIGIT_WORDS:
+        return 1
+    flat = re.sub(r"[-.,/]", "", core)
+    return len(flat) if flat and all(c in _DIGIT_CHARS for c in flat) else 0
+
+
+def mask_otp(text: str) -> str:
+    """Victim side only: a run of tokens that spells 4+ digits (numerals, spaced digits, or spoken
+    digit words in en/hi/kn) becomes ******, before the text reaches the classifier, n8n, the
+    evidence log or a recording. Trailing punctuation is kept."""
+    toks = list(re.finditer(r"\S+", text))
+    out, last, i = [], 0, 0
+    while i < len(toks):
+        j, n = i, 0
+        while j < len(toks) and (c := _digit_count(toks[j].group())):
+            n += c
+            j += 1
+        if n >= 4:
+            tail = toks[j - 1].group()
+            keep = tail[len(tail.rstrip(_PUNCT)):]
+            out.append(text[last:toks[i].start()] + "******" + keep)
+            last = toks[j - 1].end()
+            i = j
+        else:
+            i = max(j, i + 1)
+    out.append(text[last:])
+    return "".join(out)
 
 
 # --------------------------------------------------------------------------- mock classifier
 _SCAM_WORDS = {
     "digital_arrest": ["cbi", "digital arrest", "arrest", "police", "narcotics", "money laundering", "warrant",
-                       "पुलिस", "गिरफ्तार", "सीबीआई"],
-    "kyc_update": ["kyc", "aadhaar", "aadhar", "pan card", "blocked", "anydesk", "आधार"],
-    "bank_impersonation": ["bank", "card", "cvv", "upi", "transaction"],
-    "prize_lottery": ["lottery", "prize", "winner", "lucky"],
+                       "customs", "drugs", "fake passport", "पुलिस", "गिरफ्तार", "सीबीआई", "डिजिटल अरेस्ट", "अरेस्ट",
+                       "मनी लॉन्ड्रिंग", "ड्रग्स", "नारकोटिक्स", "कस्टम", "वारंट", "ಪೊಲೀಸ್", "ಸಿಬಿಐ", "ಅರೆಸ್ಟ್"],
+    "kyc_update": ["kyc", "pan card", "blocked", "anydesk", "teamviewer", "केवाईसी", "ब्लॉक", "एनीडेस्क"],
+    "bank_impersonation": ["bank", "credit card", "debit card", "cvv", "upi", "transaction", "बैंक", "ट्रांजैक्शन"],
+    "prize_lottery": ["lottery", "prize", "winner", "lucky", "लॉटरी", "इनाम"],
 }
+_OTP_WORDS = ("otp", "o.t.p", " pin", "cvv", "password", "ओटीपी", "पिन", "सीवीवी", "ಒಟಿಪಿ", "ಓಟಿಪಿ", "******")
+_SECRECY_WORDS = ("don't tell", "do not tell", "tell no one", "secret", "confidential", "kisi ko mat", "किसी को न",
+                  "किसी को मत", "किसी को भी मत", "family को भी नहीं", "फैमिली को भी नहीं", "call मत काट", "कॉल मत काट",
+                  "ಯಾರಿಗೂ ಹೇಳಬೇಡಿ")
 
 
 def mock_verdict(call_id: str, text: str, language: str, known_scammer: bool = False) -> dict:
@@ -77,9 +133,8 @@ def mock_verdict(call_id: str, text: str, language: str, known_scammer: bool = F
         h = sum(w in t for w in words)
         if h > hits:
             scam, hits = kind, h
-    otp = any(w in t for w in ("otp", "o.t.p", " pin", "cvv", "password", "ओटीपी", "******"))
-    secrecy = any(w in t for w in ("don't tell", "do not tell", "tell no one", "secret", "confidential",
-                                   "kisi ko mat", "किसी को न", "किसी को मत"))
+    otp = any(w in t for w in _OTP_WORDS)
+    secrecy = any(w in t for w in _SECRECY_WORDS)
     pressure = min(3, hits + int(otp) + int(secrecy) + 2 * int(known_scammer))
     if pressure < 2:
         clip = "none"
@@ -149,6 +204,7 @@ class CallState:
     events: deque = field(default_factory=deque)
     sender: asyncio.Task | None = None
     stats: list[dict] = field(default_factory=list)          # per transcribed chunk latencies
+    segments: list[dict] = field(default_factory=list)       # every STT'd chunk, for recordings
     skipped: int = 0                                          # silent / empty chunks
     stt_failures: int = 0
     first_whisper_t: float | None = None                      # seconds into the call
@@ -184,8 +240,8 @@ class Pipeline:
     def __init__(self, cfg: Config, http: httpx.AsyncClient, publish: Publish, stt=None,
                  classifier: str = "http") -> None:
         self.cfg, self.http, self.publish = cfg, http, publish
-        self.stt = stt or (MockSTT() if cfg.mock_stt else SarvamSTT(cfg, http))
-        self.classifier = classifier                         # "http" | "mock"
+        self.stt = stt or build_stt(cfg, http, cfg.stt_engine)
+        self.classifier = "mock" if cfg.classifier_url == "mock" else classifier   # "http" | "mock"
         self._bg: set[asyncio.Task] = set()
 
     def _spawn(self, coro) -> asyncio.Task:
@@ -201,7 +257,7 @@ class Pipeline:
         st = CallState(call_id=call_id, caller_number=num, caller_label=caller_label or caller_number,
                        victim_id=victim_id or self.cfg.victim_id, known_scammer=locally_known_scammer(num))
         log.info("[%s] call started (caller %s%s)", call_id, num or "?",
-                 ", KNOWN SCAMMER prefix" if st.known_scammer else "")
+                 ", KNOWN SCAMMER (scam list or scam-compound code)" if st.known_scammer else "")
         return st
 
     def call_started_msg(self, st: CallState) -> dict:
@@ -239,10 +295,12 @@ class Pipeline:
 
     # ---- one chunk ----------------------------------------------------------------------
     async def process_chunk(self, st: CallState, speaker: str, pcm: bytes, t_start: float | None = None,
-                            speech_end: float | None = None, cut_at: float | None = None) -> dict | None:
+                            speech_end: float | None = None, cut_at: float | None = None,
+                            cached: tuple[str, str] | None = None, note: dict | None = None) -> dict | None:
         """t_start: seconds since call start where this audio begins. speech_end: monotonic time the
         last voiced audio of the chunk was heard (latency is measured from here to the victim).
-        cut_at: monotonic time the chunk was cut (queue wait is measured from here)."""
+        cut_at: monotonic time the chunk was cut (queue wait is measured from here).
+        cached: (text, language) to use instead of STT. note: receives text/language/source."""
         if st.ended:
             return None
         t_proc = time.monotonic()
@@ -250,18 +308,28 @@ class Pipeline:
         cut_at = cut_at if cut_at is not None else t_proc
         if t_start is None:
             t_start = max(0.0, st.rel(speech_end) - len(pcm) / 2 / SAMPLE_RATE)
-        if rms(pcm) < self.cfg.silence_rms:
+        if cached is None and rms(pcm) < self.cfg.silence_rms:
             st.skipped += 1
             log.debug("%s/%s: silent chunk skipped", st.call_id, speaker)
             return None
-        wav = pcm_to_wav(pcm)
-        try:
-            text, lang = await self.stt.transcribe(wav, pcm)
-        except SarvamError as e:
-            log.warning("STT failed: %s", e)
-            st.stt_failures += 1
-            return None
+        if cached is not None:
+            text, lang, source = cached[0], cached[1], "cache"
+        else:
+            try:
+                text, lang, source = await self.stt.transcribe(pcm_to_wav(pcm), pcm)
+            except SttError as e:
+                log.warning("STT failed: %s", e)
+                st.stt_failures += 1
+                return None
         t_stt = time.monotonic()
+        if speaker == "victim":
+            text = mask_otp(text)
+        if note is not None:
+            note.update(text=text, language=lang, source=source)
+        dur = len(pcm) / 2 / SAMPLE_RATE
+        st.segments.append({"speaker": speaker, "start": round(t_start, 3), "end": round(t_start + dur, 3),
+                            "speech_end": round(min(t_start + dur, st.rel(speech_end)), 3), "text": text,
+                            "language": lang, "source": source})
         if not text or st.ended:
             st.skipped += 1
             return None
@@ -275,7 +343,7 @@ class Pipeline:
         lat = {"audio_ms": int(len(pcm) / 2 / SAMPLE_RATE * 1000), "queue_ms": int((t_proc - cut_at) * 1000),
                "stt_ms": int((t_stt - t_proc) * 1000), "classify_ms": int((t_cls - t_stt) * 1000)}
         lat["e2e_ms"] = int((time.monotonic() - speech_end) * 1000)
-        msg["latency_ms"], msg["latency"] = lat["e2e_ms"], lat
+        msg["latency_ms"], msg["latency"], msg["stt_source"] = lat["e2e_ms"], lat, source
         delivered = await self.publish(msg)
         if delivered and clip != "none":
             st.delivered_whispers.add(clip)
@@ -284,12 +352,15 @@ class Pipeline:
         st.stats.append({**lat, "speaker": speaker, "whisper": clip, "t": t_start})
         if clip != "none" and st.first_whisper_t is None:
             st.first_whisper_t = st.rel(time.monotonic())
-        log.info("[%s] %s: %r -> %s p=%d%s  (stt %d ms, classify %d ms, speech-end->victim %d ms)",
+        log.info("[%s] %s: %r -> %s p=%d%s  (%s %d ms, classify %d ms, speech-end->victim %d ms)",
                  st.call_id, speaker, text[:70], verdict["scam_type"], verdict["pressure"],
-                 f" WHISPER {clip}" if clip != "none" else "", lat["stt_ms"], lat["classify_ms"], lat["e2e_ms"])
+                 f" WHISPER {clip}" if clip != "none" else "", source, lat["stt_ms"], lat["classify_ms"],
+                 lat["e2e_ms"])
         ev = self.n8n_event_for(st, verdict)
         if ev:
             self.queue_event(st, ev)
+        if ev == "incident":
+            self._spawn(self.report_scammer(st, verdict))
         return msg
 
     def verdict_msg(self, st: CallState, speaker: str, text: str, lang: str, verdict: dict, clip: str) -> dict:
@@ -360,6 +431,41 @@ class Pipeline:
         (replayed to a victim who joins late)."""
         clips = [c for c in st.whispered if c not in exclude]
         return max(clips, key=lambda c: CLIP_SEVERITY.get(c, 1)) if clips else "none"
+
+    # ---- shared scam list -------------------------------------------------------------
+    async def report_scammer(self, st: CallState, verdict: dict) -> bool:
+        """n8n adds an incident's caller to Supabase; the classifier keeps its own list. Add the
+        number there too, or a redial from it would not be flagged (CONTRACTS.md §1)."""
+        if not self.cfg.report_scammers or self.classifier == "mock" or not st.caller_number.startswith("+"):
+            return False
+        remember_scammer(st.caller_number)
+        body = {"number": st.caller_number, "scam_type": verdict.get("scam_type") or "other",
+                "note": f"Chaukanna incident {st.call_id}"}
+        try:
+            r = await self.http.post(self.cfg.scam_numbers_url, json=body, timeout=3)
+            r.raise_for_status()
+        except httpx.HTTPError as e:
+            log.warning("[%s] could not add %s to the classifier scam list (%s)", st.call_id,
+                        st.caller_number, e.__class__.__name__)
+            return False
+        log.info("[%s] %s added to the shared scam list", st.call_id, st.caller_number)
+        return True
+
+    async def sync_known_numbers(self) -> int:
+        """Load the classifier's scam list so call_started can flag a listed caller at once."""
+        if self.classifier == "mock":
+            return 0
+        try:
+            r = await self.http.get(self.cfg.scam_numbers_url, timeout=3)
+            r.raise_for_status()
+            rows = r.json().get("numbers", [])
+        except (httpx.HTTPError, ValueError, AttributeError) as e:
+            log.info("scam list not loaded from %s (%s)", self.cfg.scam_numbers_url, e.__class__.__name__)
+            return 0
+        for row in rows:
+            remember_scammer(row.get("number", "") if isinstance(row, dict) else str(row))
+        log.info("loaded %d known scam numbers from the classifier", len(rows))
+        return len(rows)
 
     # ---- n8n ----------------------------------------------------------------------------
     def n8n_event_for(self, st: CallState, v: dict) -> str | None:

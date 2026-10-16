@@ -34,9 +34,10 @@ class Config:
     victim_id: str = "demo-victim-1"
     sarvam_key: str = ""
     stt_model: str = "saaras:v3"
-    stt_mode: str = "transcribe"
+    stt_mode: str = "codemix"
     classifier_url: str = "http://localhost:8010/classify"
     n8n_url: str = ""
+    report_scammers: bool = True        # share incident numbers with the classifier's scam list
     n8n_pressure: int = 2
     n8n_incident_timeout: float = 45.0
     whisper_cooldown: float = 20.0
@@ -47,6 +48,7 @@ class Config:
     chunk_max_s: float = 4.0
     pause_ms: int = 300
     mock_stt: bool = False
+    stt_engine: str = "auto"            # auto (Sarvam + whisper fallback) | sarvam | whisper | mock
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -60,9 +62,10 @@ class Config:
             victim_id=e("VICTIM_ID", "demo-victim-1"),
             sarvam_key=e("SARVAM_API_KEY", ""),
             stt_model=e("SARVAM_STT_MODEL", "saaras:v3"),
-            stt_mode=e("SARVAM_STT_MODE", "transcribe"),
+            stt_mode=e("SARVAM_STT_MODE", "codemix"),
             classifier_url=e("CLASSIFIER_URL", "http://localhost:8010/classify"),
             n8n_url=e("N8N_WEBHOOK_URL", ""),
+            report_scammers=e("REPORT_SCAMMERS", "1").strip().lower() not in ("0", "false", "no", ""),
             n8n_pressure=int(e("N8N_PRESSURE_THRESHOLD", "2")),
             n8n_incident_timeout=float(e("N8N_INCIDENT_TIMEOUT_SECONDS", "45")),
             whisper_cooldown=float(e("WHISPER_COOLDOWN_SECONDS", "20")),
@@ -72,6 +75,7 @@ class Config:
             chunk_min_s=float(e("CHUNK_MIN_SECONDS", "1.5")),
             chunk_max_s=float(e("CHUNK_MAX_SECONDS", "4")),
             pause_ms=int(e("PAUSE_MS", "300")),
+            stt_engine=e("STT_ENGINE", "auto"),
         )
 
     def chunker_kw(self) -> dict:
@@ -83,3 +87,9 @@ class Config:
         """http://host:8010/classify -> http://host:8010/reset"""
         u = self.classifier_url.rstrip("/")
         return (u[: -len("/classify")] if u.endswith("/classify") else u) + "/reset"
+
+    @property
+    def scam_numbers_url(self) -> str:
+        """http://host:8010/classify -> http://host:8010/scam_numbers"""
+        u = self.classifier_url.rstrip("/")
+        return (u[: -len("/classify")] if u.endswith("/classify") else u) + "/scam_numbers"

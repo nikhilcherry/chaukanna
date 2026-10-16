@@ -2,6 +2,7 @@ import asyncio
 import io
 import json
 import sys
+import tempfile
 import unittest
 import wave
 from pathlib import Path
@@ -12,6 +13,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import audio  # noqa: E402
+import replay  # noqa: E402
+import stt  # noqa: E402
 import bridge  # noqa: E402
 import pipeline  # noqa: E402
 from config import Config, new_call_id  # noqa: E402
@@ -44,7 +47,8 @@ class FakeServices:
 
     def __init__(self, verdicts=(), n8n_reply=None, n8n_delay=0.0):
         self.verdicts = list(verdicts)
-        self.n8n, self.resets, self.classify_bodies = [], [], []
+        self.n8n, self.resets, self.classify_bodies, self.reported = [], [], [], []
+        self.scam_list = []
         self.n8n_reply = n8n_reply if n8n_reply is not None else {"ok": True}
         self.n8n_delay = n8n_delay
 
@@ -55,6 +59,11 @@ class FakeServices:
             if body["event"] == "incident" and self.n8n_delay:
                 await asyncio.sleep(self.n8n_delay)
             return httpx.Response(200, json=self.n8n_reply if body["event"] == "incident" else {"ok": True})
+        if req.url.path == "/scam_numbers":
+            if req.method == "GET":
+                return httpx.Response(200, json={"numbers": self.scam_list, "risky_country_codes": {}})
+            self.reported.append(json.loads(req.content))
+            return httpx.Response(200, json={"added": self.reported[-1]["number"]})
         if req.url.path.startswith("/reset/"):
             self.resets.append(req.url.path.rsplit("/", 1)[1])
             return httpx.Response(200, json={"cleared": True})
@@ -131,6 +140,7 @@ class Helpers(unittest.TestCase):
         self.assertRegex(a, r"^chaukanna-[0-9a-f]{8}$")
 
     def test_normalize_number(self):
+        pipeline._learned_numbers.clear()
         self.assertEqual(pipeline.normalize_number("+91 98765-43210 - CBI Officer"), "+919876543210")
         self.assertEqual(pipeline.normalize_number("9876543210"), "+919876543210")
         self.assertEqual(pipeline.normalize_number("Unknown"), "Unknown")
@@ -142,6 +152,9 @@ class Helpers(unittest.TestCase):
 
 
 class Flow(unittest.IsolatedAsyncioTestCase):
+    def tearDown(self):
+        pipeline._learned_numbers.clear()     # incidents teach the process-wide scam list
+
     async def run_chunks(self, svc, verdicts_count, c=None, end=True):
         sent = []
 
@@ -200,6 +213,35 @@ class Flow(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(incident_msgs[0]["call_id"], "call-1")
         self.assertEqual(svc.resets, ["call-1"])
 
+    async def test_incident_caller_joins_shared_scam_list(self):
+        svc = FakeServices([verdict(1), verdict(2, "warn_digital_arrest"), verdict(3, "warn_otp", otp=True)])
+        await self.run_chunks(svc, 3)
+        self.assertEqual(svc.reported, [{"number": "+919876543210", "scam_type": "digital_arrest",
+                                         "note": "Chaukanna incident call-1"}])     # once, at the incident
+        async with svc.client() as http:
+            async def pub(m): return True
+            redial = pipeline.Pipeline(cfg(), http, pub).new_call("call-2", "+91 98765 43210")
+        self.assertTrue(redial.known_scammer)                         # flagged in call_started
+
+    async def test_report_scammers_off_and_unknown_number(self):
+        svc = FakeServices([verdict(2, "warn_digital_arrest")])
+        await self.run_chunks(svc, 1, cfg(report_scammers=False))
+        self.assertEqual(svc.reported, [])
+        async with svc.client() as http:
+            async def pub(m): return True
+            p = pipeline.Pipeline(cfg(), http, pub)
+            self.assertFalse(await p.report_scammer(p.new_call("c", "CBI Officer"), verdict(2)))
+        self.assertEqual(svc.reported, [])
+
+    async def test_sync_known_numbers_from_classifier(self):
+        svc = FakeServices()
+        svc.scam_list = [{"number": "+919988776655", "scam_type": "kyc_update", "note": ""}]
+        async with svc.client() as http:
+            async def pub(m): return True
+            p = pipeline.Pipeline(cfg(), http, pub)
+            self.assertEqual(await p.sync_known_numbers(), 1)
+            self.assertTrue(p.new_call("c", "+91 99887 76655").known_scammer)
+
     async def test_escalations_coalesce_behind_slow_incident(self):
         svc = FakeServices([verdict(2, "warn_digital_arrest"), verdict(2, "warn_secrecy", secrecy=True),
                             verdict(3, "warn_otp", otp=True, secrecy=True)], n8n_delay=0.3)
@@ -237,6 +279,105 @@ class Flow(unittest.IsolatedAsyncioTestCase):
             async def pub(m): raise AssertionError
             p = pipeline.Pipeline(Config(mock_stt=True), http, pub)
             self.assertIsNone(await p.process_chunk(p.new_call("c"), "caller", b"\x00\x00" * 64000))
+
+
+class Masking(unittest.TestCase):
+    def test_otp_masked_in_all_forms(self):
+        m = pipeline.mask_otp
+        self.assertEqual(m("ओटीपी है 4 5 6 7 8 नौ।"), "ओटीपी है ******।")
+        self.assertEqual(m("OTP 456789."), "OTP ******.")
+        self.assertEqual(m("it is four five six seven, ok"), "it is ******, ok")
+        self.assertEqual(m("ek do teen char paanch chhe"), "******")
+        self.assertEqual(m("ಒಂದು ಎರಡು ಮೂರು ನಾಲ್ಕು."), "******.")
+        self.assertEqual(m("call me at 2 pm, I have 2 kids"), "call me at 2 pm, I have 2 kids")
+
+
+class VictimMasking(unittest.IsolatedAsyncioTestCase):
+    async def test_victim_digits_never_leave_the_bridge(self):
+        svc = FakeServices([verdict(3, "warn_otp", otp=True)])
+        sent = []
+
+        async def pub(m):
+            sent.append(m)
+            return True
+
+        async with svc.client() as http:
+            p = pipeline.Pipeline(cfg(), http, pub, stt=stt.MockSTT(["OTP is 4 5 6 7 8 9"]))
+            st = p.new_call("c")
+            await p.process_chunk(st, "victim", LOUD)
+            await p.end_call(st)
+            await p.drain()
+        self.assertEqual(svc.classify_bodies[0]["chunk_text"], "OTP is ******")
+        self.assertEqual(sent[0]["chunk_text"], "OTP is ******")
+        self.assertNotIn("4 5 6", json.dumps(svc.n8n, ensure_ascii=False))
+        self.assertEqual(st.segments[0]["text"], "OTP is ******")
+
+
+class FailingSTT:
+    name = "sarvam"
+
+    def __init__(self, status):
+        self.status, self.calls = status, 0
+
+    async def transcribe(self, wav, pcm):
+        self.calls += 1
+        raise stt.SttError("boom", self.status)
+
+
+class Router(unittest.IsolatedAsyncioTestCase):
+    async def test_429_opens_breaker_and_uses_fallback(self):
+        primary, fallback = FailingSTT(429), stt.MockSTT(["local"])
+        r = stt.SttRouter(primary, fallback)
+        self.assertEqual((await r.transcribe(b"", b""))[2], "mock")
+        self.assertEqual((await r.transcribe(b"", b""))[2], "mock")
+        self.assertEqual(primary.calls, 1)                       # breaker open: Sarvam not retried yet
+
+    async def test_single_timeout_falls_back_without_breaker(self):
+        primary = FailingSTT(None)
+        r = stt.SttRouter(primary, stt.MockSTT(["local"]))
+        await r.transcribe(b"", b"")
+        await r.transcribe(b"", b"")                             # second failure opens it
+        await r.transcribe(b"", b"")
+        self.assertEqual(primary.calls, 2)
+
+    async def test_no_fallback_raises(self):
+        with self.assertRaises(stt.SttError):
+            await stt.SttRouter(FailingSTT(500), None).transcribe(b"", b"")
+
+
+class ReplayInputs(unittest.TestCase):
+    def test_stereo_is_two_speakers_and_cache_roundtrip(self):
+        left = np.frombuffer(speechlike([2.0], seed=1), dtype=np.int16)
+        right = np.frombuffer(b"\x00\x00" * 16000 * 1 + speechlike([1.6], seed=2), dtype=np.int16)
+        n = max(len(left), len(right))
+        st_ = np.zeros((n, 2), dtype=np.int16)
+        st_[:len(left), 0], st_[:len(right), 1] = left, right
+        d = Path(tempfile.mkdtemp())
+        wav = d / "call.wav"
+        wav.write_bytes(audio.pcm_to_wav(st_.tobytes(), channels=2))
+        c = Config()
+        segs, cached = replay.build_segments(c, wav)
+        self.assertFalse(cached)
+        self.assertEqual([x.speaker for x in segs], ["caller", "victim"])
+        for x in segs:
+            x.text, x.language, x.source = f"{x.speaker} words", "hi", "sarvam"
+        self.assertIsNotNone(replay.write_cache(wav, segs, c))
+        segs2, cached2 = replay.build_segments(c, wav)
+        self.assertTrue(cached2)
+        self.assertEqual([(x.speaker, x.text, x.source) for x in segs2],
+                         [("caller", "caller words", "cache"), ("victim", "victim words", "cache")])
+        self.assertEqual(len(segs2[1].pcm), len(segs[1].pcm))
+        wav.write_bytes(wav.read_bytes() + b"\x00\x00")           # re-recorded: cache no longer matches
+        self.assertFalse(replay.build_segments(c, wav)[1])
+
+    def test_mock_transcripts_are_never_cached(self):
+        d = Path(tempfile.mkdtemp())
+        wav = d / "m.wav"
+        wav.write_bytes(audio.pcm_to_wav(speechlike([2.0])))
+        segs, _ = replay.build_segments(Config(), wav)
+        for x in segs:
+            x.text, x.source = "canned", "mock"
+        self.assertIsNone(replay.write_cache(wav, segs, Config()))
 
 
 # --------------------------------------------------------------------------- session lifecycle
@@ -367,3 +508,31 @@ class Consumer(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VictimTokenEndpoint(unittest.TestCase):
+    def test_victim_token_needs_the_key(self):
+        import os
+        import threading
+        import urllib.error
+        import urllib.request
+        from unittest import mock
+        import token_server
+        env = {"LIVEKIT_API_KEY": "k", "LIVEKIT_API_SECRET": "s" * 32, "LIVEKIT_URL": "wss://lk", "VICTIM_TOKEN_KEY": "sesame"}
+        with mock.patch.dict(os.environ, env):
+            srv = token_server.ThreadingHTTPServer(("127.0.0.1", 0), token_server.H)
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+            base = f"http://127.0.0.1:{srv.server_address[1]}/victim-token"
+            try:
+                for bad in ("", "?key=wrong"):
+                    with self.assertRaises(urllib.error.HTTPError) as e:
+                        urllib.request.urlopen(base + bad)
+                    self.assertEqual(e.exception.code, 404)
+                body = json.loads(urllib.request.urlopen(base + "?key=sesame").read())
+                self.assertEqual((body["identity"], body["url"]), ("victim", "wss://lk"))
+                self.assertEqual(body["token"].count("."), 2)
+                with mock.patch.dict(os.environ, {"VICTIM_TOKEN_KEY": ""}):
+                    with self.assertRaises(urllib.error.HTTPError):
+                        urllib.request.urlopen(base + "?key=")      # off when no key is configured
+            finally:
+                srv.shutdown()

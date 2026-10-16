@@ -6,6 +6,7 @@
 
 POST /classify          keyword verdict (the bridge's mock), ratcheted per call like the real one
 POST /reset/{call_id}   clears a call
+GET|POST /scam_numbers  the shared scam list (the bridge adds every incident's caller)
 POST /webhook/...       records the n8n event; `incident` gets the CONTRACTS §2 reply after --incident-delay
 GET  /_log              everything received, as JSON (tests assert on it)
 GET  /health
@@ -25,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pipeline import mock_verdict  # noqa: E402
 
 LOCK = threading.Lock()
-STATE: dict = {"classify": [], "reset": [], "n8n": [], "calls": {}}
+STATE: dict = {"classify": [], "reset": [], "n8n": [], "scam_numbers": [], "calls": {}}
 INCIDENT_DELAY = 0.5
 
 
@@ -82,11 +83,19 @@ class H(BaseHTTPRequestHandler):
         if self.path == "/_log":
             with LOCK:
                 return self._json(200, {k: v for k, v in STATE.items() if k != "calls"})
+        if self.path == "/scam_numbers":
+            with LOCK:
+                return self._json(200, {"numbers": list(STATE["scam_numbers"]), "risky_country_codes": {}})
         self._json(404, {"error": "not found"})
 
     def do_POST(self):
         if self.path == "/classify":
             return self._json(200, classify(self._body()))
+        if self.path == "/scam_numbers":
+            body = self._body()
+            with LOCK:
+                STATE["scam_numbers"].append(body)
+            return self._json(200, {"added": body.get("number", "")})
         if self.path.startswith("/reset/"):
             cid = self.path.rsplit("/", 1)[1]
             with LOCK:

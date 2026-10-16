@@ -1,0 +1,114 @@
+{
+ "format": 1,
+ "wav": "synthetic_scam_call_hinglish.wav",
+ "wav_sha256": "99155064e452e14a9336bda32f623acaa9ebeb00dcd4326baa7489d6d87d1a32",
+ "created": "2026-10-15T20:07:28+0530",
+ "stt": "saaras:v3/codemix",
+ "chunking": {
+  "min_s": 1.5,
+  "max_s": 4.0,
+  "pause_ms": 300,
+  "silence_rms": 120.0
+ },
+ "segments": [
+  {
+   "speaker": "caller",
+   "start": 0.24,
+   "end": 4.08,
+   "speech_end": 3.78,
+   "text": "नमस्ते मैं CBI मुंबई से Inspector शर्मा बोल रहा हूँ",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "victim",
+   "start": 4.3,
+   "end": 6.14,
+   "speech_end": 5.84,
+   "text": "जी कौन बोल रहे हैं",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 6.38,
+   "end": 10.32,
+   "speech_end": 10.26,
+   "text": "आपके आधार कार्ड से 1 पार्सल भेजा गया है उसमें drugs और fake",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 10.32,
+   "end": 13.2,
+   "speech_end": 12.9,
+   "text": "पासपोर्ट्स मिले हैं, यह money laundering case है।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "victim",
+   "start": 13.56,
+   "end": 16.04,
+   "speech_end": 15.74,
+   "text": "लेकिन मैंने तो अभी parcel नहीं भेजा",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 16.28,
+   "end": 20.28,
+   "speech_end": 20.2,
+   "text": "आप अभी digital arrest में हैं यह बात किसी को मत बताइए",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 20.28,
+   "end": 22.92,
+   "speech_end": 22.62,
+   "text": "family को भी नहीं और call मत काटिए",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "victim",
+   "start": 23.12,
+   "end": 25.26,
+   "speech_end": 24.96,
+   "text": "ठीक है सर मैं किसी को नहीं बताऊँगी",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 25.48,
+   "end": 28.84,
+   "speech_end": 28.54,
+   "text": "वेरिफिकेशन के लिए आपके phone पर एक OTP आया है।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 28.84,
+   "end": 30.34,
+   "speech_end": 29.86,
+   "text": "वो मुझे अभी बताइए",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "victim",
+   "start": 30.48,
+   "end": 33.24,
+   "speech_end": 32.94,
+   "text": "OTP है ******",
+   "language": "hi",
+   "source": "sarvam"
+  }
+ ]
+}

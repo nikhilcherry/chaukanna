@@ -22,10 +22,12 @@ import time
 import httpx
 from dotenv import load_dotenv
 
+import replay
 import tokens
-from audio import Chunk, PauseChunker, chunk_stream, load_wav_16k_mono
+from audio import Chunk, PauseChunker
 from config import DATA_TOPIC, GUARDIAN_IDENTITY, SAMPLE_RATE, Config, new_call_id
 from pipeline import CallState, Pipeline
+from stt import SttRouter
 
 log = logging.getLogger("chaukanna.bridge")
 
@@ -436,19 +438,19 @@ class LiveSession:
 
 
 # --------------------------------------------------------------------------- replay mode
-def replay_chunks(cfg: Config, args) -> list[tuple[float, str, float, float, bytes]]:
-    """(end_s, speaker, start_s, speech_end_s, pcm) per chunk, cut exactly as the live path would."""
-    pcm = load_wav_16k_mono(args.replay_file)
-    out = []
-    for c in chunk_stream(pcm, **cfg.chunker_kw()):
-        out.append((c.end / SAMPLE_RATE, args.replay_speaker, c.start / SAMPLE_RATE, c.speech_end / SAMPLE_RATE, c.pcm))
-    return sorted(out, key=lambda x: x[0])
-
-
 async def run_replay(cfg: Config, http: httpx.AsyncClient, args) -> CallState:
-    session = LiveSession(cfg, http, identity=GUARDIAN_IDENTITY + "-replay", manage_calls=False)
-    items = replay_chunks(cfg, args)
-    log.info("replay: %d chunks from %s at %.1fx", len(items), args.replay_file, args.speed)
+    """Feed a WAV through the same pipeline at real-time pace (stereo: caller left, victim right).
+    Uses `<wav>.transcripts.json` instead of STT when present, and writes it after a real-STT run."""
+    segs, from_cache = replay.build_segments(cfg, args.replay_file, args.replay_speaker,
+                                            use_cache=not args.refresh_cache and cfg.stt_engine != "mock")
+    speakers = sorted({x.speaker for x in segs})
+    log.info("replay: %d chunks (%s) from %s at %.1fx%s", len(segs), "+".join(speakers), args.replay_file,
+             args.speed, " - cached transcripts, no STT" if from_cache else "")
+    session = LiveSession(cfg, http, identity=GUARDIAN_IDENTITY + "-replay", manage_calls=False,
+                          classifier=args.classifier)
+    await session.pipe.sync_known_numbers()
+    if not from_cache and isinstance(session.pipe.stt, SttRouter) and args.whisper_warmup:
+        await session.pipe.stt.warm()
     hb = None
     if args.no_livekit:
         session.stdout = True
@@ -471,9 +473,14 @@ async def run_replay(cfg: Config, http: httpx.AsyncClient, args) -> CallState:
 
     async def worker(q: asyncio.Queue, speaker: str) -> None:
         while True:
-            pcm, t_start, speech_end, cut_at = await q.get()
+            seg, speech_end, cut_at = await q.get()
+            note: dict = {}
             try:
-                await session.pipe.process_chunk(st, speaker, pcm, t_start, speech_end, cut_at)
+                await session.pipe.process_chunk(
+                    st, speaker, seg.pcm, seg.start, speech_end, cut_at,
+                    cached=(seg.text, seg.language or "en") if from_cache else None, note=note)
+                if not from_cache and note:
+                    seg.text, seg.language, seg.source = note["text"], note["language"], note["source"]
             except Exception:
                 log.exception("chunk processing failed")
             finally:
@@ -482,12 +489,12 @@ async def run_replay(cfg: Config, http: httpx.AsyncClient, args) -> CallState:
     workers = []
     t0 = time.monotonic()
     try:
-        for end_s, speaker, start_s, speech_end_s, pcm in items:
-            await asyncio.sleep(max(0.0, t0 + end_s / args.speed - time.monotonic()))   # real-time pacing
-            if speaker not in queues:
-                queues[speaker] = asyncio.Queue()
-                workers.append(asyncio.create_task(worker(queues[speaker], speaker)))
-            queues[speaker].put_nowait((pcm, start_s, t0 + speech_end_s / args.speed, time.monotonic()))
+        for seg in segs:
+            await asyncio.sleep(max(0.0, t0 + seg.end / args.speed - time.monotonic()))   # real-time pacing
+            if seg.speaker not in queues:
+                queues[seg.speaker] = asyncio.Queue()
+                workers.append(asyncio.create_task(worker(queues[seg.speaker], seg.speaker)))
+            queues[seg.speaker].put_nowait((seg, t0 + seg.speech_end / args.speed, time.monotonic()))
         for q in queues.values():
             await q.join()
         await session.end_call(st, "replay finished")
@@ -498,6 +505,10 @@ async def run_replay(cfg: Config, http: httpx.AsyncClient, args) -> CallState:
         if hb:
             hb.cancel()
         await session.close_room()
+    if not from_cache:
+        written = replay.write_cache(args.replay_file, segs, cfg)
+        if written:
+            log.info("replay: transcripts cached in %s (next replay needs no STT)", written)
     return st
 
 
@@ -514,6 +525,12 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--speed", type=float, default=1.0, help="replay speed factor (1.0 = real time)")
     ap.add_argument("--no-livekit", action="store_true", help="replay without joining a room; print messages")
     ap.add_argument("--mock-stt", action="store_true", help="skip Sarvam; canned transcript (wiring tests)")
+    ap.add_argument("--stt", choices=["auto", "sarvam", "whisper", "mock"],
+                    help="auto = Sarvam with local whisper fallback (default; env STT_ENGINE)")
+    ap.add_argument("--classifier", choices=["http", "mock"], default="http",
+                    help="mock = the bridge's keyword verdict, no classifier service needed")
+    ap.add_argument("--refresh-cache", action="store_true", help="replay: ignore <wav>.transcripts.json")
+    ap.add_argument("--whisper-warmup", action="store_true", help="load the local whisper model at start")
     ap.add_argument("--verbose", "-v", action="store_true")
     return ap
 
@@ -526,9 +543,13 @@ def main(argv: list[str] | None = None) -> int:
     logging.getLogger("httpx").setLevel(logging.WARNING)
     cfg = Config.from_env()
     cfg.mock_stt = args.mock_stt
+    if args.stt:
+        cfg.stt_engine = args.stt
+    if cfg.mock_stt:
+        cfg.stt_engine = "mock"
 
     missing = []
-    if not cfg.mock_stt and not cfg.sarvam_key:
+    if cfg.stt_engine in ("auto", "sarvam") and not cfg.sarvam_key and not args.replay_file:
         missing.append("SARVAM_API_KEY")
     if not args.replay_file and not cfg.livekit_url:
         missing.append("LIVEKIT_URL")
@@ -545,7 +566,10 @@ def main(argv: list[str] | None = None) -> int:
             if args.replay_file:
                 await run_replay(cfg, http, args)
                 return
-            session = LiveSession(cfg, http)
+            session = LiveSession(cfg, http, classifier=args.classifier)
+            await session.pipe.sync_known_numbers()
+            if args.whisper_warmup and isinstance(session.pipe.stt, SttRouter):
+                session.spawn(session.pipe.stt.warm())
             try:
                 await session.run_forever()
             finally:

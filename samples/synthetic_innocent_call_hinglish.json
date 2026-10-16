@@ -1,0 +1,31 @@
+{
+ "synthetic": true,
+ "made_with": "Sarvam TTS bulbul:v3 (caller ashutosh, victim roopa)",
+ "layout": "stereo: left = caller, right = victim",
+ "timeline": [
+  {
+   "speaker": "caller",
+   "start": 0.4,
+   "end": 4.07,
+   "text": "नमस्ते aunty, मैं Amazon delivery से Ravi बोल रहा हूँ।"
+  },
+  {
+   "speaker": "victim",
+   "start": 4.67,
+   "end": 6.12,
+   "text": "हाँ बेटा, बोलो।"
+  },
+  {
+   "speaker": "caller",
+   "start": 6.72,
+   "end": 10.73,
+   "text": "आपका parcel आ गया है, मैं gate पर हूँ। आप नीचे आ सकती हैं क्या?"
+  },
+  {
+   "speaker": "victim",
+   "start": 11.33,
+   "end": 12.78,
+   "text": "हाँ, दो मिनट में आती हूँ।"
+  }
+ ]
+}
