@@ -49,6 +49,7 @@ abstract class WhisperEngine {
 class JustAudioWhisperEngine implements WhisperEngine {
   final Map<String, AudioPlayer> _players = {};
   final Map<String, String> _loaded = {}; // clip -> joined asset keys
+  final Map<String, Future<void>> _inflight = {};
   WhisperRoute _route = WhisperRoute.call;
   int _generation = 0;
   Completer<WhisperOutcome>? _active;
@@ -79,17 +80,36 @@ class JustAudioWhisperEngine implements WhisperEngine {
     } catch (_) {}
   }
 
-  Future<void> _load(String clip, List<ClipRef> seq) async {
+  /// Loads are serialised per player: just_audio interrupts an in-flight
+  /// setAudioSources when another starts, so a preload racing a whisper (the
+  /// first verdict often switches the call language) would make the whisper fail.
+  Future<void> _load(String clip, List<ClipRef> seq) {
     final key = seq.map((r) => r.asset).join('|');
-    if (_loaded[clip] == key) return;
-    _loaded.remove(clip);
-    final p = _player(clip);
-    try {
-      await p.setAudioSources([for (final r in seq) AudioSource.asset(r.asset)], preload: true);
-    } catch (e) {
-      throw WhisperFailure('Could not load ${seq.map((r) => r.asset).join(' + ')}: $e');
-    }
-    _loaded[clip] = key;
+    if (_loaded[clip] == key) return Future.value();
+    final pending = _inflight[clip];
+    final job = () async {
+      if (pending != null) {
+        try {
+          await pending;
+        } catch (_) {}
+      }
+      if (_loaded[clip] == key) return;
+      _loaded.remove(clip);
+      final p = _player(clip);
+      try {
+        await p.setAudioSources([for (final r in seq) AudioSource.asset(r.asset)], preload: true);
+      } catch (e) {
+        throw WhisperFailure('Could not load ${seq.map((r) => r.asset).join(' + ')}: $e');
+      }
+      _loaded[clip] = key;
+    }();
+    _inflight[clip] = job;
+    unawaited(
+      job.then((_) {}, onError: (Object _) {}).whenComplete(() {
+        if (identical(_inflight[clip], job)) _inflight.remove(clip);
+      }),
+    );
+    return job;
   }
 
   @override
