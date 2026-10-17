@@ -1,0 +1,195 @@
+{
+ "format": 1,
+ "wav": "chat_en.wav",
+ "wav_sha256": "fbe36d689b4e7c466dd32a85eec3f9788c0432478b1ea2740a7db44974e4ae94",
+ "created": "2026-10-17T23:12:04+0530",
+ "stt": "saaras:v3/codemix",
+ "chunking": {
+  "min_s": 1.5,
+  "max_s": 4.0,
+  "pause_ms": 300,
+  "silence_rms": 120.0
+ },
+ "segments": [
+  {
+   "speaker": "caller",
+   "start": 0.3,
+   "end": 2.68,
+   "speech_end": 2.38,
+   "text": "Hello Aunty, Good Evening.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 2.68,
+   "end": 5.66,
+   "speech_end": 5.36,
+   "text": "This is Priya from Nextdoor. How are you?",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 10.32,
+   "end": 13.1,
+   "speech_end": 13.0,
+   "text": "It's been so long since we spoke.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 13.1,
+   "end": 14.98,
+   "speech_end": 14.68,
+   "text": "everything fine at home",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 19.56,
+   "end": 22.86,
+   "speech_end": 22.56,
+   "text": "My brother's wedding is next month, you must come.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 27.48,
+   "end": 31.14,
+   "speech_end": 31.12,
+   "text": "The invitation cards are being printed, they should reach your house.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 31.14,
+   "end": 32.64,
+   "speech_end": 31.74,
+   "text": "Next week",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 36.7,
+   "end": 40.1,
+   "speech_end": 40.04,
+   "text": "And I asked the doctor",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 40.1,
+   "end": 43.96,
+   "speech_end": 43.9,
+   "text": "about your medicine? He said take it in the morning before breakfast.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 43.96,
+   "end": 45.46,
+   "speech_end": 44.46,
+   "text": "First",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 49.66,
+   "end": 53.54,
+   "speech_end": 53.24,
+   "text": "Yesterday I went to the bank to update my pension passbook.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 53.66,
+   "end": 56.08,
+   "speech_end": 55.78,
+   "text": "There was such a long queue.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 60.64,
+   "end": 63.46,
+   "speech_end": 63.16,
+   "text": "My cousin just joined police training",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 63.5,
+   "end": 66.46,
+   "speech_end": 66.16,
+   "text": "He will get his posting next year.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 71.62,
+   "end": 75.62,
+   "speech_end": 75.36,
+   "text": "Please eat properly aunty and take care of your health.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 80.56,
+   "end": 84.54,
+   "speech_end": 84.24,
+   "text": "There is a bhajan at the temple next Sunday. Shall we go together?",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 89.14,
+   "end": 90.9,
+   "speech_end": 90.6,
+   "text": "I will come to pick you up",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 90.9,
+   "end": 92.48,
+   "speech_end": 92.18,
+   "text": "at 10 in the morning.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 97.06,
+   "end": 100.24,
+   "speech_end": 99.94,
+   "text": "Okay aunty, my mother also says hello.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 104.88,
+   "end": 108.78,
+   "speech_end": 108.48,
+   "text": "Alright, we will talk more when we meet. Take care. Bye.",
+   "language": "en",
+   "source": "sarvam"
+  }
+ ]
+}

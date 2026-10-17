@@ -1,0 +1,213 @@
+{
+ "format": 1,
+ "wav": "chat.wav",
+ "wav_sha256": "b14b2b5ccc272133984c3538d2a01fc333f0390d3fa2bccc39af42d4c27824b4",
+ "created": "2026-10-17T23:12:05+0530",
+ "stt": "saaras:v3/codemix",
+ "chunking": {
+  "min_s": 1.5,
+  "max_s": 4.0,
+  "pause_ms": 300,
+  "silence_rms": 120.0
+ },
+ "segments": [
+  {
+   "speaker": "caller",
+   "start": 0.5,
+   "end": 2.84,
+   "speech_end": 2.54,
+   "text": "हेलो दीदी नमस्ते",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 2.98,
+   "end": 4.96,
+   "speech_end": 4.66,
+   "text": "मैं सुनीता बोल रही हूं।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 5.1,
+   "end": 6.6,
+   "speech_end": 6.12,
+   "text": "कैसी हैं आप?",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 11.32,
+   "end": 15.32,
+   "speech_end": 15.26,
+   "text": "बहुत दिन हो गए बात नहीं हुई घर पर सब ठीक है",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 20.46,
+   "end": 24.0,
+   "speech_end": 23.7,
+   "text": "हमारे यहाँ तो अगले महीने बिट्टू की शादी है",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 24.02,
+   "end": 26.0,
+   "speech_end": 25.7,
+   "text": "आपको आना ही पड़ेगा।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 30.92,
+   "end": 33.1,
+   "speech_end": 32.8,
+   "text": "card अभी छप रहे हैं",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 33.16,
+   "end": 36.28,
+   "speech_end": 35.98,
+   "text": "अगले हफ़्ते तक आपके घर पहुँच जाएगा।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 40.96,
+   "end": 44.72,
+   "speech_end": 44.42,
+   "text": "और हां, आपकी दवाई वाली बात Dr. से पूछी थी।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 44.72,
+   "end": 47.44,
+   "speech_end": 47.14,
+   "text": "उन्होंने कहा सुबह खाली पेट लेनी है",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 52.94,
+   "end": 56.86,
+   "speech_end": 56.56,
+   "text": "कल मैं बैंक गई थी पेंशन की पासबुक अपडेट करवानी थी",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 56.86,
+   "end": 58.36,
+   "speech_end": 57.88,
+   "text": "बहुत भीड़ थी।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 63.42,
+   "end": 67.42,
+   "speech_end": 67.26,
+   "text": "मेरा छोटा बेटा भी अब पुलिस की ट्रेनिंग में है",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 67.42,
+   "end": 69.66,
+   "speech_end": 69.36,
+   "text": "अगले साल पोस्टिंग होगी",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 74.4,
+   "end": 77.02,
+   "speech_end": 76.72,
+   "text": "दीदी आप ठीक से खाना खाया करिए",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 77.02,
+   "end": 78.62,
+   "speech_end": 78.32,
+   "text": "अपना ध्यान रखिए।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 83.7,
+   "end": 86.34,
+   "speech_end": 86.04,
+   "text": "मंदिर में अगले रविवार भजन है।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 86.34,
+   "end": 87.84,
+   "speech_end": 87.28,
+   "text": "साथ चलेंगे।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 92.6,
+   "end": 95.64,
+   "speech_end": 95.34,
+   "text": "मैं सुबह दस बजे आ जाऊँगी आपको लेने।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 100.96,
+   "end": 104.66,
+   "speech_end": 104.36,
+   "text": "अच्छा बिट्टू भी आपको नमस्ते बोल रहा है",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 109.44,
+   "end": 112.72,
+   "speech_end": 112.42,
+   "text": "ठीक है दीदी बाकी बातें मिलकर करेंगे",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 112.72,
+   "end": 114.96,
+   "speech_end": 114.66,
+   "text": "अपना ध्यान रखना नमस्ते",
+   "language": "hi",
+   "source": "sarvam"
+  }
+ ]
+}

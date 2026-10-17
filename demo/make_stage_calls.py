@@ -16,7 +16,7 @@ sys.path.insert(0, str(HERE))
 from dotenv import load_dotenv  # noqa: E402
 load_dotenv(GEN / ".env")
 import generate  # noqa: E402
-from stage_lines import CALLS, GAP_S  # noqa: E402
+from stage_lines import CALLS, GAP_S, PACE  # noqa: E402
 
 SR = 24000
 OUT = HERE / "stage"
@@ -28,7 +28,7 @@ def tts(text: str, voices: list[str], lang: str = "hi-IN") -> tuple[array.array,
     for speaker in voices:                     # first voice this model knows wins
         try:
             raw = generate.synthesize({"text": text, "target_language_code": lang, "model": generate.MODEL,
-                                       "speaker": speaker, "pace": 1.0, "speech_sample_rate": SR}, key)
+                                       "speaker": speaker, "pace": PACE, "speech_sample_rate": SR}, key)
             with wave.open(io.BytesIO(raw)) as w:
                 assert w.getframerate() == SR and w.getnchannels() == 1 and w.getsampwidth() == 2
                 return array.array("h", w.readframes(w.getnframes())), speaker

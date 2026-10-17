@@ -30,7 +30,9 @@ rehearsals in a row at the venue, with the hall's network. Otherwise Plan B; not
 1. Laptop on power, lid open, sleep off. **If Wi-Fi changed:** `docker --context default restart n8n` and
    `sudo systemctl restart cloudflared`.
 2. Close every old n8n editor tab (a stale tab can overwrite the workflow; never press Publish in one).
-3. Projector: `http://localhost:8787/console/`, **Live** tab, "Jump to a new call" ticked, browser zoom ~125%.
+3. Projector: **`http://localhost:8787/console/stage.html`** (full screen, F11). Three panes follow the same call:
+   the call graph and pressure gauge (left), the scam network zoomed onto the live caller (top right), and n8n's
+   incident workflow step by step (bottom right). The single console (`/console/`) is still there for Q&A.
 4. `demo/stage.sh check`: OK for livekit, bridge, classifier, n8n, supabase. telegram WARN is fine unless a
    real chat id was set. (After force-closing the app, LiveKit needs ~30 s to notice it left.)
 5. Kamala's phone ≥ 2 m from the PA speakers. Its microphone hears the room: in the 21:56 run on the real phone,
@@ -59,32 +61,34 @@ rehearsals in a row at the venue, with the hall's network. Otherwise Plan B; not
 ## The run
 
 Plan A: `demo/stage.sh phone-run`. Plan B: `demo/stage.sh run`. Enter before each call.
-Seconds count from the start of the recording (Plan A: about 1 s after Kamala answers).
+Seconds count from the start of the recording (Plan A: about 1 s after Kamala answers). The recordings run at
+pace 0.9 with 5 s between lines, so the audience can follow the graph, the warnings and n8n (timings from the
+17 Oct 23:08 run on Kamala's phone).
 
-### 1. Delivery call · 27 s · stays silent  (Plan A: only with a third phone in `phones.env`; else skipped)
+### 1. Delivery call · 34 s · stays silent  (Plan A: only with a third phone in `phones.env`; else skipped)
 
 | s | Audience hears | Console shows |
 |---|---|---|
-| 0–25 | "Namaste aunty, Amazon delivery… parcel at the gate… watchman" | transcript ~1 s after each sentence, pressure **0 calm** |
-| 27 | hang-up | stamp **SAFE CALL · left alone** |
+| 0–32 | "Namaste aunty, Amazon delivery… parcel at the gate… watchman" | transcript ~1 s after each sentence, pressure **0 calm** |
+| 34 | hang-up | stamp **SAFE CALL · left alone** |
 
 > **Presenter:** "Kamala Devi is 68. A delivery boy calls. Chaukanna is listening, and it stays quiet. Most tools
 > would have flagged the word 'parcel'. This one does not cry wolf."
 
-### 2. Scam call · 53 s · the hero
+### 2. Scam call · 73 s · the hero
 
 Plan A: the OPPO rings Kamala's phone; the normal dialer shows the number; she answers; the app turns on the
 loudspeaker and the warnings come up **over the dialer**.
 
 | s | Audience hears | Console / phone |
 |---|---|---|
-| 0–20 | "Blue Dart courier… parcel in your name… are you home?" | pressure 0, graph grows from the caller |
-| 23 | "stuck at Mumbai customs, linked to your Aadhaar" | pressure **1 caution**: the phone says only *"Listening closely. No scam so far"* (no scam is named before the warnings start) |
-| **31** | "drugs and fake passports… money laundering" | **WARNING 1**: *"Digital arrest is a scam. Hang up!"* · pressure **2** · banner **n8n incident** |
-| 40 | "transferring you to the CBI officer… don't tell anyone" | pressure **3** · **WARNING 2**: *"Don't keep it secret! We're alerting your family."* |
-| **49** | "an OTP has come on your phone, tell me quickly" | **WARNING 3**: *"Don't share your OTP! It's a scam."* |
-| 52 | (n8n answers, ~21 s after the incident) | banner: **evidence saved · caller blocklisted · 1930 draft ready** (+ family alerted if Telegram is set) |
-| 53 | hang-up | stamp **SCAM CALL · peak p3** |
+| 0–25 | "Blue Dart courier… parcel in your name… are you home?" | pressure 0, graph grows from the caller; n8n pane empty |
+| 27 | "stuck at Mumbai customs, linked to your Aadhaar" | pressure **1 caution**: the phone says only *"Listening closely. No scam so far"*; n8n pane: **Caution noted** (a quiet log, no alert) |
+| **39** | "drugs and fake passports… money laundering" | **WARNING 1**: *"Digital arrest is a scam. Hang up!"* · pressure **2** · banner **n8n incident** · n8n pane: **Incident running…**, steps appear: lookups, family alert text, evidence saved, caller blocklisted, **Gemini** drafting the 1930 complaint |
+| 52–54 | "transferring you to the CBI officer… don't tell anyone" | pressure **3** · **WARNING 2**: *"Don't keep it secret! We're alerting your family."* · network: the number now sits on both scam lists |
+| 57 | (n8n answers, ~18 s after the incident) | banner: **evidence saved · caller blocklisted · 1930 draft ready**; n8n pane: incident **waiting for her approval** |
+| **67** | "an OTP has come on your phone, tell me quickly" | **WARNING 3**: *"Don't share your OTP! It's a scam."* |
+| 73 | hang-up | stamp **SCAM CALL · peak p3**. If Kamala approves the complaint in the app, the n8n pane shows "Mark complaint submitted… Compose 1930 receipt" |
 
 > **Presenter (first 20 s):** "Now a courier. Sounds normal. Watch the needle."
 > **At the first warning, Plan A:** "That is an ordinary phone call. Chaukanna heard it on the loudspeaker and
@@ -93,8 +97,12 @@ loudspeaker and the warnings come up **over the dialer**.
 > **Plan B:** "There. Only Kamala hears that: her microphone pauses while it plays, so the scammer can't." (Then
 > the same n8n line.)
 > **After the OTP warning:** "Three warnings, each one landing within a couple of seconds of his sentence."
+> **When the n8n pane says "waiting for her approval" (≈57 s), point bottom right:** "That is n8n working live: it
+> looked up the number, saved the evidence, blocked the caller, and Gemini wrote the 1930 complaint in Hindi. Nothing
+> is filed until Kamala approves it." **Top right:** "And the number is now on the shared scam list, so its next call
+> is caught at once."
 
-### 3. Her son asks for an OTP · 28 s · stays calm  (Plan A: needs Ravi's phone)
+### 3. Her son asks for an OTP · 30 s · stays calm  (Plan A: needs Ravi's phone)
 
 Plan A: the operator says "Ravi, call now"; Ravi dials Kamala and holds his phone at the scammer station; the
 dialer shows **Ravi (son)**.
@@ -106,13 +114,13 @@ dialer shows **Ravi (son)**.
 > **Presenter:** "Same word, OTP. But it is her son, a saved contact, and a gas-delivery code. Chaukanna stays calm.
 > A guardian that panics at every OTP gets switched off in a week."
 
-### 4. The scammer calls back · 17 s · caught instantly
+### 4. The scammer calls back · 18 s · caught instantly
 
 | s | Audience hears | Console / phone |
 |---|---|---|
 | 0 | (call starts) | the number is already **on the scam list**: red caller, before anyone speaks |
 | **7** | "Hello madam, the call got cut…" | **WARNING**: *"Careful! This number is a known scammer."* |
-| 17 | hang-up | stamp **SCAM CALL** |
+| 18 | hang-up | stamp **SCAM CALL** · network: the number now has **two calls** |
 
 > **Presenter:** "He calls back. This time she is warned before he finishes his first sentence."
 

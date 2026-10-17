@@ -5,7 +5,8 @@ with tools/robot_caller.py. Lines are separated by GAP_S of silence so the bridg
 `expect` is what the run sheet promises the audience; check_stage_calls.py verifies it against the classifier.
 """
 
-GAP_S = 3.0
+GAP_S = 5.0          # slow enough for an audience to follow the graph, the warnings and n8n
+PACE = 0.9           # Sarvam TTS speaking pace (1.0 = normal)
 
 CALLS = {
     "delivery": {
