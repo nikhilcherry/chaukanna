@@ -222,6 +222,15 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--rule);font:40
   .tx .sp{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* embedded in stage.html: just the bench, filling its frame */
+body.embed{padding:0}
+body.embed header.mast,body.embed .thesis,body.embed .lower,body.embed footer,body.embed #system,body.embed .rail,body.embed .story-btn{display:none!important}
+body.embed .wrap{max-width:none}
+body.embed .bench{height:100vh!important;border:0;grid-template-columns:minmax(0,1fr) 330px!important}
+body.embed .canvaswrap{height:auto!important;flex:1!important}
+body.embed .readout{border-left:1px solid var(--rule)!important;border-top:0!important}
+body.embed-network .bench{grid-template-columns:minmax(0,1fr) 290px!important}
+body.embed-network .trigger,body.embed-network .legend{display:none!important}
 </style>
 </head>
 <body>
@@ -360,6 +369,8 @@ const $ = s => document.querySelector(s);
 const MONO = '"JetBrains Mono",ui-monospace,monospace';
 const VICTIM = "Kamala Devi";                       // CONTRACTS.md demo victim
 const KEY = new URLSearchParams(location.search).get("key");
+const EMBED = new URLSearchParams(location.search).get("embed");   // "call" | "network": a pane of stage.html
+if (EMBED) document.body.classList.add("embed", "embed-" + EMBED);
 const KQ = KEY ? "?key="+encodeURIComponent(KEY) : "";
 let css = {};
 function readCss(){ const s=getComputedStyle(document.documentElement);
@@ -446,7 +457,10 @@ function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect?ctx.roundRect(x-w/2,y-
 let hoverN=null, nowUtt=null;
 function draw(now){
   ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
-  if(G.nodes.length){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const n of G.nodes){ if(n.x<x0)x0=n.x; if(n.x>x1)x1=n.x; if(n.y<y0)y0=n.y; if(n.y>y1)y1=n.y; }
+  const nb = selN&&mode==="network" ? neighbourhood(selN) : null;
+  // On the stage, the camera closes in on the selected caller's part of the network.
+  const fit = EMBED==="network"&&nb&&nb.size>1 ? [...nb] : G.nodes;
+  if(fit.length){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const n of fit){ if(n.x<x0)x0=n.x; if(n.x>x1)x1=n.x; if(n.y<y0)y0=n.y; if(n.y>y1)y1=n.y; }
     const pad=56, tx=(x0+x1)/2, ty=(y0+y1)/2, ts=Math.min(1.35,(W-2*pad)/Math.max(60,x1-x0),(H-2*pad-30)/Math.max(60,y1-y0));
     const k=cam.init&&!dragN?.08:(dragN?0:1); cam.x+=(tx-cam.x)*k; cam.y+=(ty-cam.y)*k; cam.s+=(ts-cam.s)*k; cam.init=true; }
   const S=cam.s; ctx.setTransform(DPR*S,0,0,DPR*S,DPR*(W/2-S*cam.x),DPR*(H/2-8-S*cam.y));
@@ -461,7 +475,7 @@ function draw(now){
     else if(e.kind==="to") col=alpha(css["ink-3"],.22);
     else if(e.kind==="alerts"||e.kind==="family"||e.kind==="is") col=alpha(css.legit,.6);
     else if(e.kind==="dialed") col=alpha(pcol(e.b.data.p||0),.6);
-    if(selN&&mode==="network"&&e.a!==selN&&e.b!==selN) col=alpha(css["ink-3"],.1);
+    if(nb&&!(nb.has(e.a)&&nb.has(e.b))) col=alpha(css["ink-3"],.1);
     ctx.strokeStyle = age<1 ? alpha(css.trace,.9-.55*age) : col;
     ctx.lineWidth=e.kind==="whisper"||e.kind==="listed"?1.5:(age<1?1.4:.8); ctx.setLineDash(e.kind==="whisper"||e.kind==="about"||e.kind==="family"?[3,4]:[]);
     ctx.beginPath(); ctx.moveTo(e.a.x,e.a.y); ctx.lineTo(e.b.x,e.b.y); ctx.stroke(); }
@@ -469,7 +483,6 @@ function draw(now){
   for(const p of G.pulses){ const t=(now-p.t)/1000; if(t>1) continue; ctx.strokeStyle=alpha(p.c||css.trace,.9*(1-t)); ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(p.n.x,p.n.y,10+t*70,0,6.283); ctx.stroke(); }
   G.pulses=G.pulses.filter(p=>now-p.t<1000);
-  const nb = selN&&mode==="network" ? new Set([selN,...G.edges.filter(e=>e.a===selN||e.b===selN).flatMap(e=>[e.a,e.b])]) : null;
   for(const n of G.nodes){ const g=Math.min(1,(now-n.born)/380), s=.35+.65*g; const d=n.data;
     const dim = nb&&!nb.has(n); ctx.globalAlpha = g*(dim?.22:1);
     if(n.type==="ncall"){ const r=(4+Math.min(4,(d.p||0)*1.3))*s; ctx.beginPath(); ctx.arc(n.x,n.y,r,0,6.283);
@@ -516,6 +529,12 @@ function draw(now){
   if(hoverN){ ctx.strokeStyle=css.trace; ctx.lineWidth=1.5/S; ctx.beginPath(); ctx.arc(hoverN.x,hoverN.y,15,0,6.283); ctx.stroke(); }
 }
 function frame(now){ tick(); tick(); draw(now); advance(now); requestAnimationFrame(frame); }
+// What lights up around a selected node: its neighbours, and for a call also what that call touches
+// (the victim, the scam type), so a selected number shows its calls and where they went.
+function neighbourhood(n){
+  const s=new Set([n]), near=m=>{ for(const e of G.edges){ if(e.a===m) s.add(e.b); else if(e.b===m) s.add(e.a); } };
+  near(n); for(const m of [...s]) if(m.type==="ncall"&&m!==n) near(m);
+  return s; }
 
 let dragN=null, downAt=null, selN=null, mode="call";
 function pick(x,y){ let best=null,bd=(16/cam.s)**2; for(const n of G.nodes){const d=(n.x-x)**2+(n.y-y)**2; if(d<bd){bd=d;best=n;}} return best; }
@@ -920,6 +939,7 @@ function buildNet(M){
     if(n.trusted) for(const vid of (n.victims.size?[...n.victims]:[...M.victims.keys()].slice(0,1))) edge(N,G.byId.get("victim:"+vid),"family"); }
   for(const c of M.calls.values()){ const N=c.number?G.byId.get("num:"+c.number):null;
     const C=node("call:"+c.id,"ncall",{...c},N||G.byId.get("victim:"+c.victim));
+    C.label = c.live ? `live call · p${c.p}` : "";
     if(N) edge(N,C,"dialed"); edge(C,G.byId.get("victim:"+c.victim),"to");
     if(c.type&&c.type!=="none"){ const T=node("ntype:"+c.type,"stype",{name:c.type,calls:M.types.get(c.type)},C); T.label=`${typeName(c.type)} (${M.types.get(c.type)})`; edge(C,T,"ctype"); } }
   for(const v of M.victims.values()){ const Vn=G.byId.get("victim:"+v.id);
@@ -1000,8 +1020,17 @@ async function refreshNet(){
   if(sig!==netSig){ const first=!netSig; netSig=sig; buildNet(M);
     if(first){ const old=performance.now()-5000; for(const n of G.nodes) n.born=old; for(const e of G.edges) e.born=old; for(let i=0;i<320;i++) tick(); cam.init=false; } }
   paintNet(M); if(railKind==="network") paintRail("network");
-  netTimer=setTimeout(refreshNet,15000);
+  // On the stage the network follows the live call: its number is selected (its other calls and lists
+  // light up) and the graph refreshes every 2.5 s, so pressure, the incident ring and the Supabase
+  // incident appear as they happen.
+  const liveCall=[...M.calls.values()].find(c=>c.live);
+  if(EMBED==="network"&&liveCall){ const Nn=liveCall.number&&G.byId.get("num:"+liveCall.number), Cn=G.byId.get("call:"+liveCall.id);
+    if(Nn&&selN!==Nn&&!userPicked) selectNet(Nn);
+    pulse(Cn); }
+  netTimer=setTimeout(refreshNet, EMBED==="network" ? (liveCall?2500:6000) : 15000);
 }
+let userPicked=false;   // a click on the network graph wins over following the live call
+cv.addEventListener("pointerup",()=>{ if(mode==="network"&&EMBED==="network") userPicked=!!selN; });
 /* status strip: is every part of the system up? */
 const SYS=[["livekit","LiveKit room"],["bridge","Bridge"],["victim_phone","Victim phone"],["classifier","Classifier"],["n8n","n8n"],["supabase","Supabase"],["telegram","Telegram"]];
 function paintSystem(){ const h=HEALTH; if(!h) return; $("#system").hidden=false;
@@ -1017,6 +1046,13 @@ async function boot(){
   try{ const r=await fetch("api/calls"+KQ,{cache:"no-store"}); if(r.ok){ LIVE=true; liveRows=(await r.json()).calls||[]; } }catch(e){}
   if(LIVE){ $("#tab-live").disabled=false; $("#tab-live").title=""; $("#dialer-link").hidden=false; pollHealth(); }
   const h=decodeURIComponent(location.hash.slice(1));
+  if(EMBED==="network"){ $("#follow").checked=false; await enterNetwork(); return; }   // stays on the network
+  if(EMBED==="call"){                     // the call pane: the call on now, else the last one, else a sample
+    const c=liveRows[0];
+    if(LIVE&&c){ followed.add(c.call_id); paintRail("live"); await load(c.call_id,{live:true}); }
+    else { paintRail("samples"); await load("sample-courier-to-cbi"); }
+    if(LIVE) setTimeout(pollCalls,1500);   // jump to the next call as it starts
+    return; }
   if(h==="network"){ await load("sample-courier-to-cbi"); await enterNetwork(); }
   else if(h==="story"){ paintRail("samples"); await load("sample-courier-to-cbi"); setTimeout(()=>story(),600); }
   else if(h.startsWith("live:")&&LIVE){ paintRail("live"); await load(h.slice(5),{live:true}).catch(()=>load("sample-courier-to-cbi")); }

@@ -17,6 +17,7 @@ answers on this machine (loopback) unless ?key=<CONSOLE_KEY> matches, and it sen
 /console/api/network joins the call logs, the classifier's lists and Supabase (through the n8n
 feed workflow, CONTRACTS §7) into one graph.
 """
+import calendar
 import hmac
 import json
 import os
@@ -113,7 +114,7 @@ def supabase_feed() -> dict:
     key = os.getenv("CONSOLE_FEED_KEY", "")
     if not url or not key:
         return {"ok": False, "error": "CONSOLE_FEED_KEY / N8N_WEBHOOK_URL not set", "ms": 0}
-    return cached("feed", 30, lambda: probe(lambda: get_json(url, {"X-Chaukanna-Key": key}, timeout=8)))
+    return cached("feed", 8, lambda: probe(lambda: get_json(url, {"X-Chaukanna-Key": key}, timeout=8)))
 
 
 def system_health() -> dict:
@@ -148,6 +149,125 @@ def system_health() -> dict:
         "checked": time.time(),
     }
     return out
+
+
+# --------------------------------------------------------------------------- n8n, step by step (console)
+_n8n_done: dict[str, dict] = {}     # finished executions never change: summarize once
+_n8n_lock = threading.Lock()
+N8N_KINDS = (("supabase", "database"), ("datatable", "database"), ("telegram", "telegram"), ("gemini", "ai"),
+             ("langchain", "ai"), ("openai", "ai"), ("httprequest", "http"), ("code", "code"),
+             ("respondtowebhook", "reply"), ("webhook", "trigger"),
+             ("wait", "wait"), (".if", "logic"), ("switch", "logic"), ("filter", "logic"), ("merge", "logic"), ("set", "code"))
+
+
+def n8n_api(path: str, timeout: float = 6):
+    key = os.getenv("N8N_API_KEY", "")
+    if not key:
+        raise ValueError("N8N_API_KEY not set")
+    base = os.getenv("N8N_API_URL", "http://localhost:5678/api/v1").rstrip("/")
+    return get_json(base + path, {"X-N8N-API-KEY": key}, timeout)
+
+
+def n8n_workflow_id() -> str:
+    return os.getenv("N8N_INCIDENT_WORKFLOW_ID", "3pABmPIJpygXS1Md")
+
+
+def n8n_kinds() -> dict[str, str]:
+    """Node name -> a short kind (database, telegram, ai, code, logic, ...) for icons."""
+    def load():
+        out = {}
+        for n in n8n_api(f"/workflows/{n8n_workflow_id()}").get("nodes", []):
+            t = n.get("type", "").lower()
+            out[n["name"]] = next((k for key, k in N8N_KINDS if key in t), "step")
+        return out
+    return cached("n8n-kinds", 600, load)
+
+
+def summarize_execution(ex: dict, kinds: dict[str, str]) -> dict:
+    """Which steps ran, when, how long, and whether they worked. Outputs are dropped: they carry transcripts."""
+    rd = ((ex.get("data") or {}).get("resultData") or {}).get("runData") or {}
+    steps, call_id, event = [], None, None
+    for name, runs in rd.items():
+        for r in runs or []:
+            main = ((r.get("data") or {}).get("main") or [])
+            steps.append({"node": name, "kind": kinds.get(name, "step"), "t": r.get("startTime"), "ms": r.get("executionTime"),
+                          "ok": r.get("executionStatus", "success") == "success" and not r.get("error"),
+                          "items": sum(len(x or []) for x in main)})
+    try:
+        j = rd["Normalize Event"][0]["data"]["main"][0][0]["json"]
+        call_id, event = j.get("call_id"), j.get("event")
+    except (KeyError, IndexError, TypeError):
+        pass
+    steps.sort(key=lambda s: s["t"] or 0)
+    return {"id": str(ex.get("id")), "status": ex.get("status"), "started": ex.get("startedAt"), "stopped": ex.get("stoppedAt"),
+            "call_id": call_id, "event": event, "steps": steps}
+
+
+_n8n_absent: set[int] = set()       # ids that 404'd below the newest id found: never there
+_n8n_meta: dict[int, dict] = {}     # id -> {"workflowId", "startedAt", "status"} for ids found by probing
+_n8n_hi = 0                         # newest execution id seen
+
+
+def _utc(ts: str | None) -> float:
+    try:
+        return calendar.timegm(time.strptime((ts or "")[:19], "%Y-%m-%dT%H:%M:%S"))   # n8n gives UTC
+    except ValueError:
+        return 0.0
+
+
+def n8n_progress(call_id: str, since: float) -> dict:
+    """The incident workflow's executions for one call, step by step, including ones still running.
+    The public API lists only finished executions, so running and waiting ones (an incident waits for
+    the victim's approval) are found by id: the gaps in the listing, and a few ids above the newest."""
+    global _n8n_hi
+    wf = n8n_workflow_id()
+    try:
+        kinds = n8n_kinds()
+        listing = cached("n8n-list", 1.0, lambda: n8n_api(f"/executions?workflowId={wf}&limit=15"))
+    except (ValueError, urllib.error.URLError, OSError) as e:
+        return {"ok": False, "error": str(getattr(e, "reason", e))[:120], "executions": []}
+    rows = {int(r["id"]): r for r in listing.get("data", [])}
+    with _n8n_lock:
+        _n8n_hi = max([_n8n_hi, *rows])
+        lo = min(rows) if rows else _n8n_hi
+        probe = [i for i in range(lo, _n8n_hi + 13) if i not in rows and i not in _n8n_absent]
+    newest_found, missing = 0, []
+    for i in probe:
+        meta = _n8n_meta.get(i)
+        if meta is None or meta.get("status") in ("running", "new", "waiting"):
+            try:
+                meta = n8n_api(f"/executions/{i}", timeout=3)
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    missing.append(i)
+                continue
+            except (ValueError, urllib.error.URLError, OSError):
+                continue
+            _n8n_meta[i] = {k: meta.get(k) for k in ("workflowId", "startedAt", "status")}
+        newest_found = max(newest_found, i)
+        if _n8n_meta[i].get("workflowId") == wf:
+            rows[i] = _n8n_meta[i]
+    with _n8n_lock:
+        _n8n_hi = max(_n8n_hi, newest_found)
+        _n8n_absent.update(i for i in missing if i < _n8n_hi)   # a gap below a real run never fills
+    out = []
+    for eid, row in sorted(rows.items()):
+        if since and _utc(row.get("startedAt")) < since - 5:
+            continue
+        with _n8n_lock:
+            summary = _n8n_done.get(str(eid))
+        if summary is None:
+            try:
+                summary = summarize_execution(n8n_api(f"/executions/{eid}?includeData=true"), kinds)
+            except (ValueError, urllib.error.URLError, OSError):
+                continue
+            if summary["status"] in ("success", "error", "crashed", "canceled"):
+                with _n8n_lock:
+                    _n8n_done[str(eid)] = summary
+        if not call_id or summary["call_id"] == call_id:
+            out.append(summary)
+    out.sort(key=lambda s: s["started"] or "")
+    return {"ok": True, "workflow": wf, "executions": out}
 
 
 def network() -> dict:
@@ -191,8 +311,13 @@ class H(BaseHTTPRequestHandler):
         if rest.startswith("api/"):
             if not self._console_allowed(q):
                 return self._send(403, b'{"error":"the console API answers on this machine only"}', cors=False)
+            if rest == "api/n8n":
+                since = float(q["since"]) if re.fullmatch(r"\d{9,11}(\.\d+)?", q.get("since", "")) else 0.0
+                call = q.get("call", "") if re.fullmatch(r"[A-Za-z0-9_-]{0,80}", q.get("call", "")) else ""
+                return self._send(200, json.dumps(n8n_progress(call, since)).encode(), cors=False,
+                                  extra=[("Cache-Control", "no-store")])
             if rest in ("api/health", "api/network"):
-                body = cached(rest, 4, system_health) if rest == "api/health" else cached(rest, 8, network)
+                body = cached(rest, 4, system_health) if rest == "api/health" else cached(rest, 2, network)
                 return self._send(200, json.dumps(body, ensure_ascii=False).encode(), cors=False,
                                   extra=[("Cache-Control", "no-store")])
             if rest == "api/calls":

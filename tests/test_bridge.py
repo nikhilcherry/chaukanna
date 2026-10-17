@@ -782,3 +782,70 @@ class ConsoleNetwork(unittest.TestCase):
         with mock.patch.dict(os.environ, {"N8N_WEBHOOK_URL": "", "CONSOLE_FEED_KEY": "", "CONSOLE_FEED_URL": ""}):
             token_server._cache.clear()
             self.assertIn("not set", token_server.supabase_feed()["error"])
+
+
+class ConsoleN8n(unittest.TestCase):
+    """/console/api/n8n: the incident workflow's runs for one call, step by step, no outputs."""
+
+    def test_finds_waiting_and_running_runs_and_drops_outputs(self):
+        import os
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from unittest import mock
+        import token_server as ts
+
+        def run(eid, status, call, steps):
+            rd = {"Normalize Event": [{"startTime": 1000, "executionTime": 5, "executionStatus": "success",
+                                       "data": {"main": [[{"json": {"call_id": call, "event": "incident", "transcript": "secret words"}}]]}}]}
+            for i, (name, ok) in enumerate(steps):
+                rd[name] = [{"startTime": 1001 + i, "executionTime": 10, "executionStatus": "success" if ok else "error",
+                             "data": {"main": [[{"json": {"transcript": "secret words"}}]]}}]
+            return {"id": eid, "status": status, "workflowId": "WF", "startedAt": "2026-10-17T17:00:00.000Z",
+                    "stoppedAt": None, "data": {"resultData": {"runData": rd}}}
+
+        runs = {10: run(10, "success", "c1", [("Lookup", True)]), 11: run(11, "waiting", "c1", [("Gemini", True), ("Save", False)]),
+                12: run(12, "success", "c2", []), 14: run(14, "running", "c1", [("Lookup", True)])}
+        fetched = []
+
+        class Fake(BaseHTTPRequestHandler):
+            def do_GET(self):
+                p = self.path
+                if p.startswith("/api/v1/workflows/WF"):
+                    body = {"nodes": [{"name": "Lookup", "type": "n8n-nodes-base.supabase"},
+                                      {"name": "Gemini", "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini"},
+                                      {"name": "Normalize Event", "type": "n8n-nodes-base.code"}]}
+                elif p.startswith("/api/v1/executions?"):          # the API lists finished runs only
+                    body = {"data": [{k: runs[i][k] for k in ("id", "status", "workflowId", "startedAt")} for i in (12, 10)]}
+                else:
+                    eid = int(p.split("/executions/")[1].split("?")[0])
+                    fetched.append(p)
+                    if eid not in runs:
+                        self.send_response(404); self.end_headers(); return
+                    body = runs[eid]
+                self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
+                self.wfile.write(json.dumps(body).encode())
+
+            def log_message(self, *a):
+                pass
+
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), Fake)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.shutdown)
+        env = {"N8N_API_KEY": "k", "N8N_API_URL": f"http://127.0.0.1:{srv.server_address[1]}/api/v1", "N8N_INCIDENT_WORKFLOW_ID": "WF"}
+        with mock.patch.dict(os.environ, env):
+            ts._cache.clear(); ts._n8n_done.clear(); ts._n8n_meta.clear(); ts._n8n_absent.clear(); ts._n8n_hi = 0
+            out = ts.n8n_progress("c1", 0)
+            self.assertTrue(out["ok"])
+            self.assertEqual([(e["id"], e["status"]) for e in out["executions"]], [("10", "success"), ("11", "waiting"), ("14", "running")])
+            waiting = out["executions"][1]
+            self.assertEqual([(s["node"], s["kind"], s["ok"]) for s in waiting["steps"]],
+                             [("Normalize Event", "code", True), ("Gemini", "ai", True), ("Save", "step", False)])
+            self.assertNotIn("secret words", json.dumps(out))                 # outputs carry transcripts: never passed on
+            self.assertIn(13, ts._n8n_absent)                                 # a missing id is not asked for again
+            before = len([p for p in fetched if p.startswith("/api/v1/executions/10")])
+            ts._cache.clear()
+            ts.n8n_progress("c1", 0)
+            self.assertEqual(len([p for p in fetched if p.startswith("/api/v1/executions/10")]), before)   # finished: cached
+        with mock.patch.dict(os.environ, {"N8N_API_KEY": ""}):
+            ts._cache.clear()
+            self.assertFalse(ts.n8n_progress("c1", 0)["ok"])

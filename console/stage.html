@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chaukanna stage</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 1h8l4 7-4 7H4L0 8z' fill='%232A45C9'/%3E%3C/svg%3E">
+<meta name="description" content="Projector view: the live call, the scam network and n8n's workflow, all following the same call.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --ground:#E9ECE8; --panel:#F4F6F2; --ink:#141B22; --ink-2:#44505B; --ink-3:#6F7A85; --rule:#C9CFC9;
+  --trace:#2A45C9; --trace-soft:rgba(42,69,201,.12);
+  --fraud:#B8321F; --legit:#2D7A68; --bank:#A8792A; --unsure:#8A6D14;
+  --display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --serif:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#0E1317; --panel:#141B21; --ink:#E6EAE6; --ink-2:#A9B3BB; --ink-3:#77838E; --rule:#26313A;
+  --trace:#7D93FF; --trace-soft:rgba(125,147,255,.14);
+  --fraud:#F0674E; --legit:#5BC2A6; --bank:#D7A650; --unsure:#D8B84A;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0E1317; --panel:#141B21; --ink:#E6EAE6; --ink-2:#A9B3BB; --ink-3:#77838E; --rule:#26313A;
+  --trace:#7D93FF; --trace-soft:rgba(125,147,255,.14);
+  --fraud:#F0674E; --legit:#5BC2A6; --bank:#D7A650; --unsure:#D8B84A;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--ground);color:var(--ink);font:14px/1.4 var(--serif);display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--rule)}
+.brand{font:700 19px/1 var(--display);letter-spacing:-.01em}
+.brand span{color:var(--ink-3);font-weight:500}
+.livechip{font:600 12.5px/1 var(--mono);padding:6px 9px;border:1px solid var(--rule);color:var(--ink-2);white-space:nowrap}
+.livechip.on{background:var(--fraud);border-color:var(--fraud);color:#fff}
+.livechip.on::before{content:"● ";animation:blink 1.1s ease-in-out infinite}
+@keyframes blink{50%{opacity:.3}}
+.strip{display:flex;flex-wrap:wrap;gap:4px 12px;margin-left:auto;font:500 11px/1.2 var(--mono);color:var(--ink-3)}
+.strip span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.strip i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.grid{flex:1;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-rows:minmax(0,1.1fr) minmax(0,.9fr);gap:1px;background:var(--rule);min-height:0}
+.pane{background:var(--panel);display:flex;flex-direction:column;min-height:0;min-width:0}
+.pane.call{grid-row:1 / span 2}
+.hd{display:flex;justify-content:space-between;gap:8px;padding:7px 12px;border-bottom:1px solid var(--rule);font:500 11px/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.hd b{color:var(--ink);font-weight:600;letter-spacing:.06em}
+iframe{border:0;flex:1;width:100%;min-height:0;display:block;background:var(--panel)}
+#flow{flex:1;overflow:auto;padding:8px 12px 14px;min-height:0}
+.empty{font:400 13px/1.5 var(--serif);color:var(--ink-3);padding:10px 2px}
+.run{border:1px solid var(--rule);background:var(--ground);margin:0 0 8px}
+.run .top{display:flex;align-items:baseline;gap:8px;padding:7px 9px;flex-wrap:wrap}
+.run .ev{font:700 14px/1.1 var(--display)}
+.run .why{font:400 12px/1.3 var(--serif);color:var(--ink-3);flex:1;min-width:12ch}
+.run .st{font:600 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 6px;border:1px solid currentColor;white-space:nowrap}
+.st.running{color:var(--trace)} .st.waiting{color:var(--bank)} .st.success{color:var(--legit)} .st.error,.st.crashed{color:var(--fraud)}
+.run.incident{border-color:var(--fraud)}
+.run.incident .ev{color:var(--fraud)}
+.steps{list-style:none;margin:0;padding:0 9px 7px;font:400 12px/1.35 var(--mono)}
+.steps li{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:8px;align-items:center;padding:3px 0;border-top:1px dashed var(--rule)}
+.steps li.new{animation:arrive 1.6s ease-out}
+@keyframes arrive{0%{background:var(--trace-soft);transform:translateX(-6px)}100%{background:transparent;transform:none}}
+.steps .k{font:700 9.5px/1 var(--mono);text-align:center;padding:3px 0;border:1px solid var(--ink-3);color:var(--ink-2)}
+.k.database{border-color:var(--legit);color:var(--legit)} .k.ai{background:var(--trace);border-color:var(--trace);color:#fff}
+.k.telegram{background:#229ED9;border-color:#229ED9;color:#fff} .k.logic{border-color:var(--bank);color:var(--bank)}
+.k.reply,.k.trigger{border-color:var(--ink-3);color:var(--ink-3)}
+.steps .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.steps .ms{color:var(--ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.steps li.bad .n{color:var(--fraud)}
+.steps li.wait .n{color:var(--bank)}
+.more{font:400 11px/1.3 var(--mono);color:var(--ink-3);padding:0 9px 7px}
+@media (max-width:1000px){
+  body{overflow:auto}
+  .grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto}
+  .pane.call{grid-row:auto;height:90vh} .pane.net{height:70vh} .pane.n8n{min-height:50vh}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">chaukanna <span>/ stage</span></div>
+  <div class="livechip" id="livechip">No call yet</div>
+  <div class="strip" id="strip"></div>
+</header>
+<main class="grid">
+  <section class="pane call"><iframe id="f-call" title="The live call"></iframe></section>
+  <section class="pane net"><div class="hd"><span>Scam network · every call, number and incident</span><b id="net-note"></b></div><iframe id="f-net" title="The scam network"></iframe></section>
+  <section class="pane n8n"><div class="hd"><span>n8n · incident workflow, step by step</span><b id="n8n-note"></b></div><div id="flow"><p class="empty">Waiting for a call.</p></div></section>
+</main>
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const KEY = new URLSearchParams(location.search).get("key");
+const KQ = KEY ? "?key=" + encodeURIComponent(KEY) : "", KA = KEY ? "&key=" + encodeURIComponent(KEY) : "";
+$("#f-call").src = "index.html?embed=call" + KA;
+$("#f-net").src = "index.html?embed=network" + KA;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
+const mmss = t => { t = Math.max(0, Math.round(t || 0)); return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); };
+const css = n => getComputedStyle(document.documentElement).getPropertyValue("--" + n).trim();
+const EVENT = {
+  telemetry: ["Caution noted", "pressure 1: n8n logs it quietly, no alert"],
+  incident: ["Incident", "pressure 2: look up the caller, alert the family, save evidence, block the number, draft the 1930 complaint"],
+  escalation: ["Escalation", "pressure rose or a new red flag: update the evidence"],
+  call_ended: ["Call ended", "close the incident record"],
+};
+const KIND = { database: "DB", ai: "AI", telegram: "TG", code: "JS", logic: "IF", trigger: "IN", reply: "OUT", http: "HTTP", wait: "WAIT", step: "··" };
+const STATUS = { running: "running…", waiting: "waiting for her approval", success: "done", error: "error", crashed: "crashed", canceled: "canceled", new: "starting" };
+const seen = new Set();
+let current = null;
+
+function paintRuns(runs, call) {
+  const box = $("#flow");
+  if (!runs.length) {
+    box.innerHTML = `<p class="empty">${call ? "No n8n run for this call yet. n8n hears about the call at pressure 1 (a quiet caution note) and gets the incident at pressure 2." : "Waiting for a call."}</p>`;
+    $("#n8n-note").textContent = ""; return;
+  }
+  const t0 = call?.started || 0, last = runs[runs.length - 1].id;
+  const incident = runs.find(r => r.event === "incident");
+  // The incident stays open; side runs (caution note, escalations, call ended) shrink to one line once done.
+  box.innerHTML = runs.map(r => {
+    const [label, why] = EVENT[r.event] || [r.event || "Run", ""];
+    const start = Date.parse(r.started) / 1000, end = r.stopped ? Date.parse(r.stopped) / 1000 : Date.now() / 1000;
+    const open = r === incident || r.status === "running" || (!incident && r.id === last);
+    const steps = open ? r.steps : [];
+    const items = steps.map((s, i) => {
+      const key = r.id + ":" + i, fresh = !seen.has(key); seen.add(key);
+      const ms = s.ms == null ? "" : s.ms >= 1000 ? (s.ms / 1000).toFixed(1) + " s" : s.ms + " ms";
+      return `<li class="${fresh ? "new" : ""} ${s.ok ? "" : "bad"}"><span class="k ${esc(s.kind)}">${KIND[s.kind] || "··"}</span><span class="n" title="${esc(s.node)}">${s.ok ? "" : "✗ "}${esc(s.node)}</span><span class="ms">${ms}</span></li>`;
+    }).join("") + (open && r.status === "waiting" ? `<li class="wait"><span class="k wait">WAIT</span><span class="n">waiting for Kamala to approve the 1930 complaint</span><span class="ms">⏸</span></li>` : "");
+    return `<div class="run ${esc(r.event)} ${open ? "open" : "shut"}" data-id="${esc(r.id)}"><div class="top"><span class="ev">${esc(label)}</span>${open ? `<span class="why">${esc(why)}</span>` : `<span class="why">${r.steps.length} steps</span>`}
+      <span class="st ${esc(r.status)}">${esc(STATUS[r.status] || r.status)} · ${mmss(start - t0)}${r.status === "running" ? "" : " · " + Math.max(0, end - start).toFixed(1) + " s"}</span></div>
+      ${open ? `<ul class="steps">${items}</ul>` : ""}</div>`;
+  }).join("");
+  $("#n8n-note").textContent = `${runs.length} run${runs.length === 1 ? "" : "s"}${incident ? " · incident " + (STATUS[incident.status] || incident.status) : ""}`;
+  // keep the run that matters in view: the one running now, else the incident (its newest steps)
+  const focus = runs.find(r => r.status === "running") || incident;
+  const card = focus && box.querySelector(`.run[data-id="${CSS.escape(focus.id)}"]`);
+  if (card) box.scrollTop = Math.max(card.offsetTop - box.offsetTop - 8, card.offsetTop - box.offsetTop + card.offsetHeight - box.clientHeight);
+}
+
+async function poll() {
+  let live = false;
+  try {
+    const calls = (await (await fetch("api/calls" + KQ, { cache: "no-store" })).json()).calls || [];
+    const now = Date.now() / 1000;
+    const on = calls.find(c => !c.ended && now - c.updated < 90);
+    const call = on || calls[0] || null;
+    live = !!on;
+    if (call?.call_id !== current?.call_id) { seen.clear(); }
+    current = call;
+    const chip = $("#livechip");
+    chip.className = "livechip" + (live ? " on" : "");
+    chip.textContent = !call ? "No call yet" : `${live ? "LIVE" : "Last call"} · ${call.caller_label || call.caller_number || call.call_id} · pressure ${call.peak_pressure}${live ? " · " + mmss(now - call.started) : call.duration_seconds ? " · " + Math.round(call.duration_seconds) + " s" : ""}`;
+    $("#net-note").textContent = live ? "following the live caller" : "";
+    if (call) {
+      const r = await (await fetch(`api/n8n?call=${encodeURIComponent(call.call_id)}&since=${Math.floor(call.started || 0)}${KA}`, { cache: "no-store" })).json();
+      if (r.ok) paintRuns(r.executions || [], call);
+      else $("#flow").innerHTML = `<p class="empty">n8n is not reachable from here (${esc(r.error)}).</p>`;
+    } else paintRuns([], null);
+  } catch (e) { /* the token server restarted: try again */ }
+  setTimeout(poll, live ? 1500 : 4000);
+}
+
+const SYS = [["livekit","LiveKit"],["bridge","Bridge"],["victim_phone","Phone"],["classifier","Classifier"],["n8n","n8n"],["supabase","Supabase"],["telegram","Telegram"]];
+async function health() {
+  try {
+    const h = await (await fetch("api/health" + KQ, { cache: "no-store" })).json();
+    $("#strip").innerHTML = SYS.map(([k, name]) => { const s = h[k] || {};
+      const c = s.ok ? css("legit") : (k === "telegram" || k === "victim_phone") ? css("bank") : css("fraud");
+      return `<span title="${esc(name + ": " + (s.detail || ""))}"><i style="background:${c}"></i>${name}</span>`; }).join("");
+  } catch (e) {}
+  setTimeout(health, 10000);
+}
+poll(); health();
+})();
+</script>
+</body>
+</html>
