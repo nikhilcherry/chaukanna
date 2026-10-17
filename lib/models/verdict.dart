@@ -5,7 +5,7 @@ import 'dart:convert';
 class Verdict {
   final String callId;
   final String transcript;
-  final String scamType; // digital_arrest | kyc_update | bank_impersonation | prize_lottery | other | none
+  final String scamType; // see CONTRACTS.md §1 (digital_arrest | ... | sextortion | other | none)
   final int pressure; // 0..3
   final bool asksOtpOrPin;
   final bool demandsSecrecy;
@@ -87,6 +87,13 @@ String scamLabelFor(String scamType) =>
       'kyc_update': 'KYC Update Scam',
       'bank_impersonation': 'Bank Impersonation',
       'prize_lottery': 'Prize / Lottery Scam',
+      'pension_scam': 'Pension / Life Certificate Scam',
+      'relative_emergency': 'Fake Family Emergency',
+      'utility_disconnection': 'Electricity Disconnection Scam',
+      'insurance_bonus': 'Fake Insurance Bonus',
+      'upi_collect': 'UPI "Receive Money" Trap',
+      'investment_tip': 'Investment / Stock Tips Scam',
+      'sextortion': 'Sextortion Threat',
       'other': 'Suspected Scam',
     }[scamType] ??
     'Suspected Scam';

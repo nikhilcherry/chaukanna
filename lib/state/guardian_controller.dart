@@ -13,6 +13,7 @@ import '../services/approval_client.dart';
 import '../services/clip_catalog.dart';
 import '../services/call_tap.dart';
 import '../services/livekit_service.dart';
+import '../services/otp_sms.dart';
 import '../services/phone_layer.dart';
 import '../services/whisper_gate.dart';
 import '../services/whisper_player.dart';
@@ -252,6 +253,7 @@ class GuardianController extends ChangeNotifier {
     }
     await _transport?.start();
     await _initPhone();
+    _watchOtpSms();
     _notify();
   }
 
@@ -362,6 +364,23 @@ class GuardianController extends ChangeNotifier {
         unawaited(_tap?.stop());
         _notify();
     }
+  }
+
+  StreamSubscription<IncomingSms>? _smsSub;
+
+  /// Android with a live guardian only: tell it what each OTP SMS is for (purpose, sender, amount),
+  /// so it can tell a delivery code from a payment OTP. The code itself never leaves the phone.
+  void _watchOtpSms() {
+    if (_transport == null || kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    _smsSub = SmsWatcher.messages().listen(
+      (sms) {
+        final ctx = classifyOtpSms(sms.sender, sms.body);
+        if (ctx == null) return;
+        _log('OTP SMS: ${ctx.describe()} (the code stays on this phone)');
+        unawaited(_transport?.sendOtpSms(ctx.toJson()));
+      },
+      onError: (Object e) => _log('SMS watch unavailable: $e'),
+    );
   }
 
   void _tick() {
@@ -1227,6 +1246,13 @@ class GuardianController extends ChangeNotifier {
         'kyc_update': 'KYC update scam',
         'bank_impersonation': 'bank impersonation scam',
         'prize_lottery': 'prize/lottery scam',
+        'pension_scam': 'pension / life-certificate scam',
+        'relative_emergency': 'fake family-emergency scam',
+        'utility_disconnection': 'electricity-disconnection scam',
+        'insurance_bonus': 'fake insurance-bonus scam',
+        'upi_collect': 'UPI "receive money" scam',
+        'investment_tip': 'investment / stock-tips scam',
+        'sextortion': 'sextortion threat',
       }[t] ??
       'suspected scam';
 
@@ -1244,6 +1270,7 @@ class GuardianController extends ChangeNotifier {
     _engine.dispose();
     unawaited(_phoneSub?.cancel());
     unawaited(_tap?.stop());
+    unawaited(_smsSub?.cancel());
     unawaited(_transport?.dispose());
     _notices.close();
     super.dispose();

@@ -185,6 +185,24 @@ class LiveKitTransport {
     } catch (_) {}
   }
 
+  /// Tell the guardian what an OTP SMS on this phone is for (CONTRACTS.md §6). Never the code.
+  Future<bool> sendOtpSms(Map<String, Object?> context) async {
+    final me = _room?.localParticipant;
+    if (me == null) return false;
+    try {
+      await me.publishData(
+        utf8.encode(jsonEncode(context)),
+        reliable: true,
+        destinationIdentities: [guardianIdentity],
+        topic: 'chaukanna.otp_sms',
+      );
+      return true;
+    } catch (e) {
+      log('OTP SMS context not sent: $e');
+      return false;
+    }
+  }
+
   Future<void> setMicEnabled(bool on) async {
     _micOn = on;
     try {
