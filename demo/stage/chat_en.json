@@ -1,0 +1,67 @@
+{
+ "call": "chat_en",
+ "voice": "priya",
+ "seconds": 87.2,
+ "timeline": [
+  {
+   "start": 0.5,
+   "end": 4.85,
+   "text": "Hello aunty, good evening! This is Priya from next door. How are you?"
+  },
+  {
+   "start": 7.85,
+   "end": 11.44,
+   "text": "It's been so long since we spoke. Is everything fine at home?"
+  },
+  {
+   "start": 14.44,
+   "end": 17.25,
+   "text": "My brother's wedding is next month, you must come."
+  },
+  {
+   "start": 20.25,
+   "end": 25.8,
+   "text": "The invitation cards are being printed, they should reach your house next week."
+  },
+  {
+   "start": 28.8,
+   "end": 35.28,
+   "text": "And I asked the doctor about your medicine. He said take it in the morning before breakfast."
+  },
+  {
+   "start": 38.28,
+   "end": 44.34,
+   "text": "Yesterday I went to the bank to update my pension passbook. There was such a long queue."
+  },
+  {
+   "start": 47.34,
+   "end": 52.04,
+   "text": "My cousin just joined police training, he will get his posting next year."
+  },
+  {
+   "start": 55.04,
+   "end": 58.88,
+   "text": "Please eat properly aunty, and take care of your health."
+  },
+  {
+   "start": 61.88,
+   "end": 65.63,
+   "text": "There is a bhajan at the temple next Sunday. Shall we go together?"
+  },
+  {
+   "start": 68.63,
+   "end": 71.45,
+   "text": "I will come to pick you up at ten in the morning."
+  },
+  {
+   "start": 74.45,
+   "end": 77.01,
+   "text": "Okay aunty, my mother also says hello."
+  },
+  {
+   "start": 80.01,
+   "end": 84.19,
+   "text": "Alright, we will talk more when we meet. Take care, bye!"
+  }
+ ]
+}
