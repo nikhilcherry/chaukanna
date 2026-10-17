@@ -63,6 +63,16 @@ delete from scam_numbers where phone_number = '+919876543210';
 
 and on the classifier: `curl -X DELETE localhost:8010/scam_numbers/+919876543210`.
 
+## Console network feed
+
+`console_feed_workflow.json` is a second, read-only workflow ("Chaukanna · Console network feed",
+`GET /webhook/chaukanna-network`): it reads `incident_evidence`, `scam_numbers` and `trusted_contacts` with the
+same Supabase credential and returns them without transcripts, complaint text or chat ids (CONTRACTS §7). The
+guardian console (`chaukanna-audio-bridge`, `/console/` → Network) uses it to join every incident with the calls
+the bridge logged and both scam lists. Import it, attach "Chaukanna Supabase (Connect)" to the three Supabase
+nodes and a Header Auth credential (`X-Chaukanna-Key` = the bridge's `CONSOLE_FEED_KEY`) to the webhook, and
+activate it. It saves no successful executions, since the console polls it.
+
 ## State on 2026-10-16
 
 - Active on `n8n.premortem.tech`; `test_webhooks.sh high` returns the AI complaint in English and Hindi

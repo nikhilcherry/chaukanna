@@ -1,0 +1,188 @@
+{
+  "name": "Chaukanna · Console network feed",
+  "nodes": [
+    {
+      "id": "f9ce158a-b9c9-4ab3-a738-8417b8739124",
+      "name": "GET /chaukanna-network",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "7e9ad928-4fd3-44ce-83fd-b1547a9015f2",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "chaukanna-network",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ttvSYHUAMB5BLwFO",
+          "name": "Chaukanna console feed key"
+        }
+      }
+    },
+    {
+      "id": "584d231f-7cdf-49fe-b907-6374f7912d25",
+      "name": "Incidents",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "incident_evidence",
+        "returnAll": true
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "pslicaFM3bMUOnT4",
+          "name": "Chaukanna Supabase (Connect)"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "ef39a623-ba86-4869-bc56-17a9ee209780",
+      "name": "Scam numbers",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "scam_numbers",
+        "returnAll": true
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "pslicaFM3bMUOnT4",
+          "name": "Chaukanna Supabase (Connect)"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "id": "95d12e2f-083f-4dfa-9063-0d12390e41c7",
+      "name": "Trusted contacts",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "trusted_contacts",
+        "returnAll": true
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "pslicaFM3bMUOnT4",
+          "name": "Chaukanna Supabase (Connect)"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "id": "f74d6cda-f13e-44c3-8091-b84ff24f6921",
+      "name": "Build feed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// One response for the guardian console: who called whom, which numbers are listed, who gets alerts.\n// Transcripts, complaint text and Telegram chat ids never leave n8n.\nconst rows = name => $(name).all().map(i => i.json).filter(j => j && Object.keys(j).length && !j.error);\nconst incidents = rows('Incidents').map(r => ({\n  id: r.id, call_id: r.call_id, victim_id: r.victim_id, caller_number: r.caller_number, scam_type: r.scam_type,\n  max_pressure: r.max_pressure, complaint_status: r.complaint_status, family_response: r.family_response,\n  known_scammer: r.known_scammer, asks_otp_or_pin: r.asks_otp_or_pin, demands_secrecy: r.demands_secrecy,\n  last_event: r.last_event, has_draft: !!r.complaint_draft_text, created_at: r.created_at, updated_at: r.updated_at,\n  submitted_at: r.submitted_at,\n})).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 300);\nconst scam_numbers = rows('Scam numbers').map(r => ({\n  phone_number: r.phone_number, scam_type: r.scam_type, report_count: r.report_count, risk_level: r.risk_level,\n  first_seen: r.first_seen, last_seen: r.last_seen, last_call_id: r.last_call_id,\n}));\nconst trusted_contacts = rows('Trusted contacts').map(r => ({\n  victim_id: r.victim_id, victim_name: r.victim_name, contact_name: r.contact_name, phone_number: r.phone_number,\n  preferred_language: r.preferred_language, telegram_ready: /^-?\\d{5,}$/.test(String(r.telegram_chat_id || '')),\n}));\nreturn [{ json: { ok: true, at: new Date().toISOString(), incidents, scam_numbers, trusted_contacts } }];\n"
+      }
+    },
+    {
+      "id": "ba6d102d-536d-4d5e-9143-da5e48a83315",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "GET /chaukanna-network": {
+      "main": [
+        [
+          {
+            "node": "Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incidents": {
+      "main": [
+        [
+          {
+            "node": "Scam numbers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scam numbers": {
+      "main": [
+        [
+          {
+            "node": "Trusted contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trusted contacts": {
+      "main": [
+        [
+          {
+            "node": "Build feed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build feed": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "timezone": "Asia/Kolkata"
+  }
+}
