@@ -13,7 +13,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 from backends import LLMContext, get_backend  # noqa: E402
 from engine import Engine  # noqa: E402
-from schemas import ClassifyRequest, Verdict  # noqa: E402
+from schemas import ClassifyRequest, OtpContext, Verdict  # noqa: E402
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("classifier")
@@ -84,6 +84,7 @@ async def health() -> dict:
         "circuit_open": engine.fail_streak >= engine.s.breaker_failures,
         "delivery_otp_policy": engine.s.delivery_otp_policy,
         "known_numbers": len(engine.callers.numbers),
+        "trusted_numbers": len(engine.callers.trusted),
     }
 
 
@@ -109,6 +110,38 @@ async def add_number(n: ScamNumber) -> dict:
 @app.delete("/scam_numbers/{number}")
 async def remove_number(number: str) -> dict:
     return {"removed": engine.callers.remove(number)}
+
+
+@app.post("/otp_context", response_model=Verdict)
+async def otp_context(ctx: OtpContext) -> Verdict:
+    """The victim's phone got an OTP SMS during the call: what it is for (never the code).
+    Returns the re-merged verdict, so a payment OTP can trigger the warning before anyone asks."""
+    return await engine.note_otp_sms(ctx)
+
+
+class TrustedNumber(BaseModel):
+    number: str
+    name: str = ""
+    note: str = ""
+
+
+@app.get("/trusted_numbers")
+async def list_trusted() -> dict:
+    """The victim's family / saved contacts. A plain OTP request from one of them stays calm (pressure 1)."""
+    return {"numbers": list(engine.callers.trusted.values())}
+
+
+@app.post("/trusted_numbers")
+async def add_trusted(n: TrustedNumber) -> dict:
+    try:
+        return {"added": engine.callers.trust(n.number, n.name, n.note)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.delete("/trusted_numbers/{number}")
+async def remove_trusted(number: str) -> dict:
+    return {"removed": engine.callers.untrust(number)}
 
 
 if __name__ == "__main__":

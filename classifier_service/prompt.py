@@ -15,13 +15,32 @@ scam_type:
 - bank_impersonation: pretends to be bank / card / insurance / UPI staff: "suspicious transaction", "card blocked", "reward
   points", "limit increase", asks for OTP, CVV, PIN, UPI PIN, or to approve a collect request.
 - prize_lottery: lottery, KBC, lucky draw, gift, cashback/refund, "you won", asks for a processing fee or bank details.
-- other: clearly fraudulent but none of the above: relative-in-trouble ("your son had an accident / is at the police
-  station, send money for bail, don't tell anyone"), electricity-disconnection, investment/task, job, sextortion, tech support.
+- pension_scam: "treasury / pension office": the pension or DA arrears will stop or are pending, the life certificate
+  (Jeevan Pramaan) must be updated today, asks for Aadhaar, an OTP, a link click or a fee.
+- relative_emergency: "pehchana kaun?", a grandchild / son / nephew (or a friend or "police" on their behalf) is in an
+  accident, hospital or police station and needs money right now, often from a "new number", "don't tell papa".
+- utility_disconnection: electricity / gas office says the bill was not updated and the power will be cut tonight; pay
+  on this number or link, or install an app.
+- insurance_bonus: LIC / insurance policy maturity, bonus, refund or lapsed-policy money is waiting, but a GST, tax or
+  processing charge must be paid first.
+- upi_collect: a caller who does NOT claim to be a bank, official or prize company ("I sent you money by mistake", an
+  online buyer paying an advance) asks you to enter your UPI PIN, scan this QR or approve a collect request to
+  "receive" it (a PIN or QR only ever sends money). A "bank" refund through a collect request is bank_impersonation.
+- investment_tip: stock tips / IPO / trading-app / VIP group with guaranteed or doubled returns, asks to invest or pay.
+- sextortion: a recorded "obscene" video call, threatens to send it to family or make it viral unless paid, sometimes
+  followed by a fake "cyber police" caller about a complaint.
+- other: clearly fraudulent but none of the above: a parcel redelivery / address-update / delivery fee through a link
+  (without a police or customs story), task/job scams, tech support, fake loans.
 - none: an ordinary call. Default when unsure.
+
+When a call fits two types, pick the story the caller tells (a prize claimed through a collect request is prize_lottery).
+Everyday pension, insurance-premium and family-emergency talk is NOT a scam without a demand: a real bank reminding a
+pensioner to submit the life certificate at the branch, or an LIC agent's premium-due reminder, is none.
 
 pressure (0-3), from the caller's behaviour so far:
 0 = ordinary conversation.
-1 = suspicious opening: unsolicited official/bank/courier identity claim, mentions a problem, no demand or threat yet.
+1 = suspicious opening: unsolicited official/bank identity claim, or a parcel/account/document "problem", no demand or
+    threat yet. A courier simply calling about a delivery is 0 until customs, police or a crime come in.
 2 = active coercion: threats (arrest, case, block, penalty) aimed at the victim, urgency, authority pressure, orders to
     stay on the line or follow instructions.
 3 = critical: caller demands an OTP/PIN/CVV, money transfer, a fee, an app install or screen share, or secrecy/isolation,

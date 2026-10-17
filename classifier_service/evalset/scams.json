@@ -456,7 +456,7 @@
   "id": "relative_hinglish_accident",
   "lang": "hinglish",
   "category": "relative_in_trouble",
-  "expected_scam_type": "other",
+  "expected_scam_type": "relative_emergency",
   "critical_chunk": 2,
   "caller_number": "+91 89510 33402",
   "chunks": [
@@ -482,14 +482,14 @@
    ]
   ],
   "accept_types": [
-   "other"
+   "relative_emergency"
   ]
  },
  {
   "id": "relative_kannada_police_station",
   "lang": "kn",
   "category": "relative_in_trouble",
-  "expected_scam_type": "other",
+  "expected_scam_type": "relative_emergency",
   "critical_chunk": 2,
   "caller_number": "+91 72599 40118",
   "chunks": [
@@ -515,7 +515,7 @@
    ]
   ],
   "accept_types": [
-   "other",
+   "relative_emergency",
    "digital_arrest"
   ]
  },
@@ -591,7 +591,7 @@
   "id": "electricity_devanagari",
   "lang": "hi",
   "category": "other",
-  "expected_scam_type": "other",
+  "expected_scam_type": "utility_disconnection",
   "critical_chunk": 2,
   "caller_number": "+91 62012 88345",
   "chunks": [
@@ -617,7 +617,7 @@
    ]
   ],
   "accept_types": [
-   "other",
+   "utility_disconnection",
    "kyc_update"
   ]
  },

@@ -95,6 +95,115 @@ def test_courier_otp_with_fee_is_a_scam_even_with_delivery_words():
     assert peak(calls) >= 3
 
 
+# ---------------------------------------------------------------- scams aimed at the elderly
+@pytest.mark.parametrize("chunks,stype,min_p", [
+    ([("caller", "Main district treasury office se bol raha hoon, aapka jeevan pramaan update nahi hua hai."),
+      ("caller", "Aaj nahi kiya to aapki pension band ho jayegi. Jo link bheja hai us par click karke OTP bataiye.")], "pension_scam", 3),
+    ([("caller", "ನಿಮ್ಮ ಪಿಂಚಣಿ ನಿಲ್ಲುತ್ತೆ, ಲೈಫ್ ಸರ್ಟಿಫಿಕೇಟ್ ಅಪ್ಡೇಟ್ ಆಗಿಲ್ಲ"), ("caller", "ನಿಮ್ಮ ಒಟಿಪಿ ಹೇಳಿ")], "pension_scam", 3),
+    ([("caller", "Hello dadi, pehchana kaun? Main aapka pota bol raha hoon, mera accident ho gaya hai."),
+      ("caller", "Hospital mein hoon, turant 20000 rupaye bhej do, papa ko mat batana.")], "relative_emergency", 3),
+    ([("caller", "Bijli vibhag se bol raha hoon, aapka pichle mahine ka bill update nahi hua."),
+      ("caller", "Aaj raat 9:30 baje aapki bijli kat jayegi, abhi is number par 450 rupaye pay kijiye.")], "utility_disconnection", 3),
+    ([("caller", "Sir LIC head office se bol raha hoon, aapki policy maturity ka bonus 3 lakh 40 hazaar release hona hai."),
+      ("caller", "Uske liye 18 percent GST charge 6200 rupaye pehle jama karna hoga.")], "insurance_bonus", 3),
+    ([("caller", "Main OLX se aapka sofa khareed raha hoon, advance bhej raha hoon."),
+      ("caller", "Maine collect request bheja hai, usme apna UPI PIN daal dijiye to paise aapke account mein aa jayenge.")], "upi_collect", 3),
+    ([("caller", "Sir maine galti se aapko 5000 bhej diye, please QR scan karke wapas kar dijiye.")], "upi_collect", 2),
+    ([("caller", "Sir hamara VIP stock tips group join kijiye, daily 5 percent guaranteed return milega."),
+      ("caller", "Bas 10000 se start kijiye, is link se trading app install kijiye.")], "investment_tip", 3),
+    ([("caller", "Aapki video call ki recording hamare paas hai, nude video hai."),
+      ("caller", "50000 bhejo warna aapke rishtedaaron ko bhej denge aur YouTube par viral kar denge.")], "sextortion", 3),
+    ([("caller", "मैं साइबर क्राइम से बोल रहा हूँ, आपकी अश्लील वीडियो की शिकायत आई है"), ("caller", "केस बंद कराने के लिए पैसे भेजिए")], "sextortion", 3),
+])
+def test_elderly_scam_types(chunks, stype, min_p):
+    _, vs = run_call(chunks)
+    assert vs[-1].scam_type == stype, (vs[-1].scam_type, vs[-1].summary)
+    assert vs[-1].pressure >= min_p, (vs[-1].pressure, vs[-1].summary)
+
+
+@pytest.mark.parametrize("chunks", [
+    [("caller", "Papa, pension aa gayi kya is mahine? Bank jaake passbook update kara lena.")],
+    [("caller", "Namaste, LIC branch se bol rahi hoon, aapki policy ka premium 25 tareekh ko due hai.")],
+    [("caller", "Aapki policy lapse ho jayegi agar premium time par nahi bhara, branch aakar jama kar dijiye.")],
+    [("caller", "Main SBI branch se, aapka life certificate November mein jama hona hai, branch aa jaiye.")],
+    [("caller", "Beta, share market aaj gira hai, news dekhi?")],
+    [("caller", "Bijli office se bol rahe hain, kal subah 10 se 2 baje tak maintenance ke liye light nahi rahegi.")],
+    [("caller", "Dadi main Rohan, kal shaam ko aa raha hoon milne.")],
+])
+def test_elderly_everyday_calls_stay_calm(chunks):
+    assert peak(chunks) <= 1
+
+
+# ---------------------------------------------------------------- not every OTP request is a scam
+@pytest.mark.parametrize("text", [
+    "Ola se bol raha hoon, main pickup point par khada hoon, ride OTP bata dijiye.",
+    "Indane gas cylinder delivery ke liye aaya hoon, DAC code bata dijiye.",
+    "Urban Company se technician, AC service ke liye aaya hoon, start OTP bataiye.",
+    "Amazon return pickup ke liye aaya hoon, pickup OTP bata dijiye.",
+    "Auto wala bol raha hoon, gate pe hoon, ride ka OTP batao.",
+])
+def test_everyday_codes_stay_calm(text):
+    st, vs = run_call([("caller", text)])
+    assert "otp" in st.hits and vs[-1].pressure <= 1 and vs[-1].scam_type == "none"
+
+
+def trusted_call(chunks, name="Ravi (son)"):
+    st = K.KeywordState()
+    for sp, text in chunks:
+        K.scan_chunk(st, sp, text, "hi")
+    return K.verdict(st, "caution", trusted=name)
+
+
+def test_family_contact_asking_for_their_otp_stays_calm():
+    chunk = [("caller", "Mummy, Netflix ka OTP aaya hoga tumhare phone pe, bata do na.")]
+    v = trusted_call(chunk)
+    assert v.pressure == 1 and v.scam_type == "none" and v.benign_otp and "Ravi" in v.summary
+    assert peak(chunk) >= 2   # the same words from an unknown number still alarm
+
+
+@pytest.mark.parametrize("text,is_payment", [
+    ("mere phone pe OTP aaya hai", False), ("tumhare phone pe message aaya", False),
+    ("PhonePe kar dijiye 500 rupaye", True), ("phone pe se bhej do", True), ("phonepe number do", True),
+])
+def test_phone_pe_is_not_phonepe(text, is_payment):
+    st = K.KeywordState()
+    K.scan_chunk(st, "caller", text, "hi")
+    assert ("payment" in st.hits) == is_payment, st.hits
+
+
+@pytest.mark.parametrize("text", [
+    "Mummy, SBI ka OTP aaya hai, jaldi bata do.",                                # a bank OTP
+    "Mummy OTP bata do, aur papa ko mat batana.",                                 # secrecy
+    "Mummy galti se mera WhatsApp code tumhare phone pe aa gaya, bata do.",       # the classic excuse
+    "Mummy ek app install karo jo link bheja hai, phir OTP batao.",               # app / link
+])
+def test_family_contact_cannot_hide_a_scam_behind_trust(text):
+    assert trusted_call([("caller", text)]).pressure >= 2
+
+
+@pytest.mark.parametrize("text", [
+    "Sir galti se aapke number par mera OTP chala gaya, please bata dijiye.",
+    "Aapke WhatsApp ka code aaya hoga, woh bata dijiye.",
+    "Aapke 5G upgrade ke liye OTP aaya hai, bata dijiye.",
+])
+def test_otp_excuses_are_critical(text):
+    st, vs = run_call([("caller", text)])
+    assert "otp_pretext" in st.hits and vs[-1].pressure == 3 and vs[-1].asks_otp_or_pin
+
+
+def test_trusted_numbers(tmp_path):
+    files = dict(local=tmp_path / "l.json", trusted=tmp_path / "t.json")
+    reg = CallerRegistry(**files)
+    assert reg.trusted_name("+91 98450 12345") is None
+    reg.trust("98450 12345", "Ravi (son)")
+    assert reg.trusted_name("+919845012345") == "Ravi (son)"
+    assert CallerRegistry(**files).trusted_name("9845012345") == "Ravi (son)"   # persisted
+    reg.add("+919845012345", "other", "reported")                              # a reported number is never trusted
+    assert reg.trusted_name("+919845012345") is None
+    reg.remove("+919845012345")
+    assert reg.untrust("+919845012345") and reg.trusted_name("+919845012345") is None
+
+
 def test_language_detection():
     assert K.detect_language("नमस्ते", "en") == "hi"
     assert K.detect_language("ನಮಸ್ಕಾರ", "en") == "kn"

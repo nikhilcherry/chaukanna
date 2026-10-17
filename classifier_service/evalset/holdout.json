@@ -27,7 +27,7 @@
   ["caller", "hi", "दो घंटे में आपकी सिम बंद हो जाएगी। मैं एक मैसेज भेज रहा हूँ, उसमें जो नंबर आएगा वो मुझे बताइए।"],
   ["victim", "hi", "अच्छा, मैसेज आ गया है।"]]},
 
- {"id": "h_relative_en_grandson", "lang": "en", "category": "relative_in_trouble", "expected_scam_type": "other", "accept_types": ["other", "digital_arrest"], "critical_chunk": 2,
+ {"id": "h_relative_en_grandson", "lang": "en", "category": "relative_in_trouble", "expected_scam_type": "relative_emergency", "accept_types": ["relative_emergency"], "critical_chunk": 2,
   "caller_number": "+91 88840 12093", "chunks": [
   ["caller", "en", "Grandma, it's me. I'm in big trouble, I got into a fight and the police took me to the station."],
   ["caller", "en", "Please don't tell mom, she will get angry. I need 30,000 for the lawyer right now, send it to this UPI ID."],
@@ -39,7 +39,7 @@
   ["caller", "kn", "ಕಾರು ಡೆಲಿವರಿ ಆಗೋಕೆ ಮೊದಲು ರಿಜಿಸ್ಟ್ರೇಷನ್‌ಗೆ ಐದು ಸಾವಿರ ರೂಪಾಯಿ ಈ ನಂಬರ್‌ಗೆ ಕಳಿಸಿ."],
   ["victim", "kn", "ನಿಜವಾಗ್ಲೂ? ನಾನು ಯಾವ ಸ್ಪರ್ಧೆಯಲ್ಲೂ ಭಾಗವಹಿಸಿಲ್ಲ."]]},
 
- {"id": "h_investment_hinglish", "lang": "hinglish", "category": "other", "expected_scam_type": "other", "accept_types": ["other"], "critical_chunk": 2,
+ {"id": "h_investment_hinglish", "lang": "hinglish", "category": "other", "expected_scam_type": "investment_tip", "accept_types": ["investment_tip"], "critical_chunk": 2,
   "caller_number": "+91 93800 71654", "chunks": [
   ["caller", "hi", "Sir main ek SEBI registered advisory se bol raha hoon, humara VIP group har mahine tees percent guaranteed return deta hai."],
   ["caller", "hi", "Bas aaj hi humari app download karke pehle das hazaar invest kijiye, kal se profit dikhne lagega."],

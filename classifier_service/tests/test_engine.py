@@ -6,7 +6,7 @@ from fakes import HangingBackend, RaisingBackend, ScriptedBackend, lv
 
 from callers import CallerRegistry
 from engine import Engine, Settings
-from schemas import ClassifyRequest, Verdict
+from schemas import ClassifyRequest, OtpContext, Verdict
 
 OTP_CHUNK = "Ab verification ke liye apna OTP aur bank PIN batayiye."
 CBI_CHUNK = "Namaste, main CBI officer Rajesh Sharma bol raha hoon, Delhi headquarters se."
@@ -226,6 +226,88 @@ def test_known_scammer_whispers_on_first_chunk():
         assert v.recommended_whisper_clip == "warn_known_scammer" and "scam list" in v.whisper_reason
         v2 = await e.classify(req("Madam one minute please", number="+91 99887 76655"))
         assert v2.recommended_whisper_clip == "none" and v2.known_scammer
+    run(go())
+
+
+def test_listed_number_alone_does_not_trigger_content_whispers():
+    async def go():
+        e = engine()
+        n = "+92 300 1234567"                                     # seeded as digital_arrest
+        vs = [await e.classify(req(t, number=n)) for t in ("Hello", "Okay", "Haan ji")]
+        assert vs[0].scam_type == "digital_arrest" and vs[0].pressure == 2
+        assert [v.recommended_whisper_clip for v in vs] == ["warn_known_scammer", "none", "none"]
+        v = await e.classify(req(ARREST_CHUNK, number=n))         # real evidence still warns
+        assert v.recommended_whisper_clip == "warn_digital_arrest"
+    run(go())
+
+
+def test_trusted_family_otp_is_calm_but_the_model_keeps_a_veto(tmp_path):
+    async def go():
+        reg = CallerRegistry(local=tmp_path / "l.json", trusted=tmp_path / "t.json")
+        reg.trust("+91 98450 12345", "Ravi (son)")
+        son, ask = "+91 98450 12345", "Mummy, Netflix ka OTP aaya hoga, bata do na."
+        # The model sees nothing but an OTP request: capped, no whisper, no alarm.
+        e = Engine(ScriptedBackend([lv(3, "other", otp=True)]), Settings(budget_ms=300), reg)
+        await e.classify(req(ask, number=son))
+        await asyncio.sleep(0.05)
+        v = await e.classify(req("Haan beta, dekhti hoon.", speaker="victim", number=son))
+        assert v.pressure == 1 and v.recommended_whisper_clip == "none"
+        # Same number, but the model recognises a scam story (caller ID can be spoofed): it escalates.
+        e2 = Engine(ScriptedBackend([lv(3, "relative_emergency", otp=True, secrecy=True)]), Settings(budget_ms=300), reg)
+        await e2.classify(req(ask, call_id="c2", number=son))
+        await asyncio.sleep(0.05)
+        v2 = await e2.classify(req("Haan beta.", speaker="victim", call_id="c2", number=son))
+        assert v2.pressure >= 2
+        # The same words from an unknown number alarm on the spot.
+        v3 = await engine().classify(req(ask, call_id="c3"))
+        assert v3.pressure >= 2 and v3.recommended_whisper_clip == "warn_otp"
+    run(go())
+
+
+# ---------------------------------------------------------------- the OTP SMS says what the code unlocks
+def test_payment_otp_sms_warns_before_anyone_asks():
+    async def go():
+        e = engine()
+        await e.classify(req("Haan ji, main aapke account ke baare mein baat kar raha tha.", call_id="s1"))
+        v = await e.note_otp_sms(OtpContext(call_id="s1", purpose="payment", service="HDFC Bank", amount=49999))
+        assert v.pressure >= 2 and v.recommended_whisper_clip == "warn_otp"
+        assert v.summary_for_family.startswith("A ₹49,999 payment OTP from HDFC Bank arrived")
+        v = await e.classify(req("Ab woh OTP bata dijiye.", call_id="s1"))
+        assert v.pressure == 3
+    run(go())
+
+
+def test_payment_otp_sms_overrides_a_trusted_caller(tmp_path):
+    async def go():
+        reg = CallerRegistry(local=tmp_path / "l.json", trusted=tmp_path / "t.json")
+        reg.trust("+91 98450 12345", "Ravi (son)")
+        e = Engine(None, Settings(), reg)
+        ask = "Mummy, ek OTP aaya hoga, bata do na."
+        v = await e.classify(req(ask, call_id="s2", number="+91 98450 12345"))
+        assert v.pressure == 1                                        # family, purpose unknown: calm
+        v = await e.note_otp_sms(OtpContext(call_id="s2", purpose="upi", service="PhonePe"))
+        assert v.pressure == 3 and v.recommended_whisper_clip == "warn_otp"   # but it is a UPI OTP
+    run(go())
+
+
+def test_old_payment_otp_does_not_taint_the_next_call():
+    async def go():
+        e = engine()
+        v = await e.note_otp_sms(OtpContext(call_id="s5", purpose="payment", service="SBI", amount=1200, seconds_before_call=600))
+        assert v.pressure == 0 and v.recommended_whisper_clip == "none"
+        v = await e.note_otp_sms(OtpContext(call_id="s6", purpose="payment", service="SBI", seconds_before_call=60))
+        assert v.pressure >= 2                                        # set off just before the call: counts
+    run(go())
+
+
+def test_delivery_otp_sms_keeps_an_unknown_caller_calm():
+    async def go():
+        e = engine()
+        await e.note_otp_sms(OtpContext(call_id="s3", purpose="everyday", service="Swiggy"))
+        v = await e.classify(req("Madam OTP bata dijiye please.", call_id="s3"))
+        assert v.pressure == 1 and v.recommended_whisper_clip == "none" and v.scam_type == "none"
+        v = await engine().classify(req("Madam OTP bata dijiye please.", call_id="s4"))
+        assert v.pressure >= 2                                        # without the SMS it still alarms
     run(go())
 
 

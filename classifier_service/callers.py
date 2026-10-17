@@ -1,4 +1,5 @@
-"""Caller-number risk: a known-scam number list plus scam-compound country codes."""
+"""Caller-number risk: a known-scam number list plus scam-compound country codes, and the
+victim's trusted (family) numbers, whose plain OTP requests are not treated as an alarm."""
 from __future__ import annotations
 
 import json
@@ -40,13 +41,16 @@ class CallerRisk:
 
 
 class CallerRegistry:
-    def __init__(self, seed: Path | None = None, codes: Path | None = None, local: Path | None = None) -> None:
+    def __init__(self, seed: Path | None = None, codes: Path | None = None, local: Path | None = None,
+                 trusted: Path | None = None) -> None:
         self.seed = Path(seed or os.getenv("SCAM_NUMBERS_FILE", DATA / "scam_numbers.json"))
         self.codes_file = Path(codes or os.getenv("RISKY_CODES_FILE", DATA / "risky_country_codes.json"))
         self.local = Path(local or os.getenv("SCAM_NUMBERS_LOCAL_FILE", DATA / "scam_numbers.local.json"))
+        self.trusted_file = Path(trusted or os.getenv("TRUSTED_NUMBERS_FILE", DATA / "trusted_numbers.json"))
         self._lock = threading.Lock()
         self.numbers: dict[str, dict] = {}
         self.codes: dict[str, str] = {}
+        self.trusted: dict[str, dict] = {}
         self.reload()
 
     def reload(self) -> None:
@@ -66,9 +70,20 @@ class CallerRegistry:
         except Exception as e:
             log.warning("could not load %s: %s", self.codes_file, e)
             codes = {}
+        trusted: dict[str, dict] = {}
+        try:
+            for row in json.loads(self.trusted_file.read_text()).get("numbers", []):
+                n = normalize_number(row.get("number", ""))
+                if n:
+                    trusted[n] = {**row, "number": n}
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            log.warning("could not load %s: %s", self.trusted_file, e)
         with self._lock:
             self.numbers = numbers
             self.codes = {("+" + c.lstrip("+")): name for c, name in codes.items()}
+            self.trusted = trusted
 
     def check(self, raw: str) -> CallerRisk | None:
         n = normalize_number(raw)
@@ -110,4 +125,36 @@ class CallerRegistry:
             found = self.numbers.pop(n, None) is not None
             if found:
                 self._save_local()
+        return found
+
+    # ------------------------------------------------------------------ trusted (family) numbers
+    def trusted_name(self, raw: str) -> str | None:
+        """Who this trusted number belongs to, or None. A number on the scam list is never trusted."""
+        n = normalize_number(raw)
+        if not n or n in self.numbers:
+            return None
+        row = self.trusted.get(n)
+        return (row.get("name") or "a saved family contact") if row else None
+
+    def _save_trusted(self) -> None:
+        try:
+            self.trusted_file.write_text(json.dumps({"numbers": list(self.trusted.values())}, indent=2, ensure_ascii=False))
+        except OSError as e:
+            log.warning("could not persist %s: %s", self.trusted_file, e)
+
+    def trust(self, raw: str, name: str = "", note: str = "") -> str:
+        n = normalize_number(raw)
+        if not n:
+            raise ValueError("empty number")
+        with self._lock:
+            self.trusted[n] = {"number": n, "name": name, "note": note}
+            self._save_trusted()
+        return n
+
+    def untrust(self, raw: str) -> bool:
+        n = normalize_number(raw)
+        with self._lock:
+            found = self.trusted.pop(n, None) is not None
+            if found:
+                self._save_trusted()
         return found

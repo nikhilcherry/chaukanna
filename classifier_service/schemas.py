@@ -2,7 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-ScamType = Literal["digital_arrest", "kyc_update", "bank_impersonation", "prize_lottery", "other", "none"]
+ScamType = Literal["digital_arrest", "kyc_update", "bank_impersonation", "prize_lottery", "pension_scam", "relative_emergency",
+                   "utility_disconnection", "insurance_bonus", "upi_collect", "investment_tip", "sextortion", "other", "none"]
 WhisperClip = Literal["warn_otp", "warn_digital_arrest", "warn_secrecy", "warn_known_scammer", "none"]
 Lang = Literal["hi", "kn", "en"]
 LANGS = ("hi", "kn", "en")
@@ -12,6 +13,22 @@ def norm_lang(code: str | None) -> str:
     """'hi-IN' -> 'hi'; anything outside hi/kn/en -> 'en'."""
     c = (code or "en").split("-")[0].split("_")[0].lower()
     return c if c in LANGS else "en"
+
+
+OtpPurpose = Literal["payment", "upi", "card", "bank_login", "sim", "messaging_account", "government_id", "other_login",
+                     "everyday"]
+# What sharing that OTP would hand over. "high": money or the account itself; nobody on a call needs it.
+OTP_RISK = {"payment": "high", "upi": "high", "card": "high", "bank_login": "high", "sim": "high", "messaging_account": "high",
+            "government_id": "medium", "other_login": "medium", "everyday": "low"}
+
+
+class OtpContext(BaseModel):
+    """An OTP SMS the victim's phone received during the call, as read on the phone. Never the code."""
+    call_id: str
+    purpose: OtpPurpose = "other_login"
+    service: str = ""                 # who sent it, e.g. "HDFC Bank", "Swiggy" (from the SMS sender id)
+    amount: float | None = None       # rupees, for a payment OTP
+    seconds_before_call: float = 0.0  # 0 = arrived during the call; >0 = arrived that long before it started
 
 
 class ClassifyRequest(BaseModel):

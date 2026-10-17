@@ -32,7 +32,10 @@ chunk ─► [per-call lock] append to rolling window (15 chunks), keyword scan 
    claims, arrest/case/warrant threats, "digital arrest", secrecy ("kisi ko mat batana",
    "ಯಾರಿಗೂ ಹೇಳಬೇಡಿ"), isolation ("call disconnect mat karna"), AnyDesk/screen-share, KYC/Aadhaar,
    fee or "safe account" payments, prizes, relative-in-trouble, and a victim who starts complying
-   (reading digits, "bhej diya"). It knows the protective forms: a bank saying "never share your OTP" or
+   (reading digits, "bhej diya"). It also names the scams aimed at the elderly: pension / life
+   certificate, fake family emergency ("pehchana kaun?"), electricity disconnection, insurance
+   maturity bonus, UPI "receive money" traps (PIN / QR / collect request), investment tips and
+   sextortion. Bare pension or premium talk stays calm; only a threat or a request escalates it. It knows the protective forms: a bank saying "never share your OTP" or
    "OTP kisi ko mat bataiye" is not an OTP ask, and "pin code" is not a PIN. Signals are sticky for the
    call and also match across chunk boundaries.
 2. **LLM in the background**, at most **one run in flight per call**. Chunks that arrive during a run
@@ -81,7 +84,9 @@ Response: the original nine fields, unchanged, plus optional additive fields:
 ```jsonc
 {
   "call_id": "room-1a2b3c4d",
-  "scam_type": "digital_arrest",          // digital_arrest|kyc_update|bank_impersonation|prize_lottery|other|none
+  "scam_type": "digital_arrest",          // digital_arrest|kyc_update|bank_impersonation|prize_lottery|pension_scam|
+                                          // relative_emergency|utility_disconnection|insurance_bonus|upi_collect|
+                                          // investment_tip|sextortion|other|none
   "pressure": 3,                          // 0..3, never decreases within a call
   "asks_otp_or_pin": true,
   "demands_secrecy": true,

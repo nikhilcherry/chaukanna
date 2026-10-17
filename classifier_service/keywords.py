@@ -122,12 +122,14 @@ LEGAL = _rx(
 )
 # Account/service threats: block, freeze, disconnect...
 BLOCK = _rx(
-    [r"(account|card|sim|number|connection|khata|upi|wallet|pan|aadhaa?r)( will be| is| has been| ho| hoga| ko)? (block|blocked|freeze|frozen|suspend|suspended|band|deactivat\w*|disconnect\w*|cancel\w*|close\w*)",
-     r"(block|band|freeze|suspend|deactivate|disconnect|cut|kat) (ho )?(jayega|jaega|jayegi|jaegi|jayenge|jaenge|jayengi|kar diya jayega|kar denge|ho jayega|ho jayenge)",
-     r"(will be|get) (blocked|frozen|suspended|deactivated|disconnected|cut)", r"block aagutte", r"block agutte", r"block aagthide",
+    [r"(account|card|sim|number|connection|khata|upi|wallet|pan|aadhaa?r|pension|policy|bijli|light|electricity|power|meter)( will be| is| has been| ho| hoga| ko)? (block|blocked|freeze|frozen|suspend|suspended|band|deactivat\w*|disconnect\w*|cancel\w*|close\w*|stop\w*|lapse\w*)",
+     r"(block|band|freeze|suspend|deactivate|disconnect|cut|kat|ruk|rok di|stop|lapse) (ho )?(jayega|jaega|jayegi|jaegi|jayenge|jaenge|jayengi|kar diya jayega|kar denge|ho jayega|ho jayenge)",
+     r"(will be|get) (blocked|frozen|suspended|deactivated|disconnected|cut|stopped|lapsed)", r"block aagutte", r"block agutte", r"block aagthide",
      r"bandh? ho jayega", r"kat jayega", r"penalty", r"fine of", r"jurmana"],
-    ["ब्लॉक हो", "ब्लॉक कर", "बंद हो जाएगा", "बंद हो जायेगा", "बंद कर दिया जाएगा", "फ्रीज", "फ़्रीज़", "सस्पेंड", "कट जाएगा", "जुर्माना",
-     "ಬ್ಲಾಕ್ ಆಗುತ್ತೆ", "ಬ್ಲಾಕ್ ಆಗುತ್ತದೆ", "ಬ್ಲಾಕ್ ಆಗುತ್ತೆ", "ಬ್ಲಾಕ್ ಮಾಡ", "ಬ್ಲಾಕ್ ಆಗಿದೆ", "ಫ್ರೀಜ್", "ಸ್ಥಗಿತ", "ಕಟ್ ಆಗುತ್ತೆ", "ದಂಡ"],
+    ["ब्लॉक हो", "ब्लॉक कर", "बंद हो जाएगा", "बंद हो जायेगा", "बंद हो जाएगी", "बंद हो जायेगी", "बंद कर दिया जाएगा", "बंद कर दी जाएगी", "फ्रीज", "फ़्रीज़",
+     "सस्पेंड", "कट जाएगा", "कट जाएगी", "रुक जाएगी", "रोक दी जाएगी", "जुर्माना",
+     "ಬ್ಲಾಕ್ ಆಗುತ್ತೆ", "ಬ್ಲಾಕ್ ಆಗುತ್ತದೆ", "ಬ್ಲಾಕ್ ಆಗುತ್ತೆ", "ಬ್ಲಾಕ್ ಮಾಡ", "ಬ್ಲಾಕ್ ಆಗಿದೆ", "ಫ್ರೀಜ್", "ಸ್ಥಗಿತ", "ಕಟ್ ಆಗುತ್ತೆ", "ದಂಡ",
+     "ನಿಲ್ಲುತ್ತೆ", "ನಿಲ್ಲುತ್ತದೆ", "ನಿಲ್ಲಿಸಲಾಗುತ್ತದೆ", "ಬಂದ್ ಆಗುತ್ತೆ"],
 )
 # The threat is aimed at the listener (2nd-person possessive/object forms). Bare "you" and
 # "aapne/tumne" ("did you see the news?") are deliberately absent: gossip is not a threat.
@@ -141,7 +143,8 @@ KYC = _rx([r"e-?kyc", r"re-?kyc", r"kyc", r"k\.y\.c", r"sim (card )?(verificatio
           ["केवाईसी", "के वाई सी", "ಕೆವೈಸಿ", "ಕೆ ವೈ ಸಿ"])
 ID_DOCS = _rx([r"aadhaa?r", r"adhaar", r"aadhar", r"pan (card|number|no|link|details|update)", r"(link|update) (your |apna |aapka )?(pan|aadhaa?r)"],
               ["आधार", "पैन कार्ड", "पैन नंबर", "ಆಧಾರ್", "ಪ್ಯಾನ್ ಕಾರ್ಡ್", "ಪ್ಯಾನ್ ನಂಬರ್"])
-EXPIRY = _rx([r"expire\w*", r"expiry", r"outdated", r"pending", r"not (updated|linked|verified)", r"update (karna|karwana|kijiye|karo|now|today)",
+EXPIRY = _rx([r"expire\w*", r"expiry", r"outdated", r"pending", r"not (updated|linked|verified|submitted)", r"update (karna|karwana|kijiye|karo|now|today)",
+               r"update nahi\w*", r"(jama|submit) nahi (hua|kiya)\w*",
                r"update (maadi|madi|madbeku)"],
              ["एक्सपायर", "अपडेट नहीं", "अपडेट कर", "ಎಕ್ಸ್ಪೈರ್", "ಅಪ್ಡೇಟ್ ಮಾಡಿ", "ಅಪ್ಡೇಟ್ ಆಗಿಲ್ಲ", "ಅಪ್ಡೇಟ್ ಮಾಡಿಲ್ಲ"])
 REMOTE = _rx([r"any ?desk", r"team ?viewer", r"quick ?support", r"rust ?desk", r"air ?droid", r"screen ?shar\w*", r"share (your |the |apna |apni )?screen",
@@ -162,7 +165,9 @@ SCAM_PAYMENT = _rx(
 )
 PAYMENT = _rx(
     [r"transfer", r"send (the )?(money|amount|rs|rupees|\d)", r"(paise|paisa|paisey|rupees?|rupaye|amount|payment|rs\.?|money) (bhej|transfer|daal|jama|pay|send|kar)\w*",
-     r"bhej (do|dijiye|dena|dijie)", r"bhejiye", r"(paise|paisa|rupaye|rupees|rs\.?|amount|\d[\d,]{2,}) .{0,30}(bhej|transfer|chahiye|maang)\w*", r"pay (now|immediately|the|rs|₹|\d|kar\w*|karo)", r"google ?pay", r"phone ?pe", r"paytm (kar|karo|kijiye)",
+     r"bhej (do|dijiye|dena|dijie)", r"bhejiye", r"(paise|paisa|rupaye|rupees|rs\.?|amount|\d[\d,]{2,}) .{0,30}(bhej|transfer|chahiye|maang)\w*", r"pay (now|immediately|the|rs|₹|\d|kar\w*|karo)", r"google ?pay",
+     # PhonePe, but not "phone pe" = "on the phone" ("mere phone pe OTP aaya")
+     r"phonepe", r"phone ?pe (kar|karo|kijiye|kar do|kar dijiye|se (bhej|pay|transfer)\w*|pe (bhej|pay)\w*)", r"paytm (kar|karo|kijiye)",
      r"rtgs", r"neft", r"imps", r"upi (id|se|kar|karo|payment)", r"jama (karo|kijiye|kar do|karna)", r"duddu (kalisi|haaki|haki|kalsi)"],
     ["ट्रांसफर", "पैसे भेज", "पैसा भेज", "पैसे जमा", "पैसे डाल", "भुगतान", "पेमेंट", "रुपये भेज",
      "ಹಣ ಕಳುಹಿಸ", "ಹಣ ಕಳಿಸ", "ಹಣ ಹಾಕಿ", "ಹಣ ವರ್ಗಾಯಿಸ", "ಟ್ರಾನ್ಸ್ಫರ್", "ದುಡ್ಡು ಕಳಿಸ", "ದುಡ್ಡು ಹಾಕಿ", "ಪೇಮೆಂಟ್", "ಪಾವತಿ"],
@@ -176,10 +181,14 @@ BANK = _rx([r"bank", r"sbi", r"hdfc", r"icici", r"axis", r"kotak", r"pnb", r"can
 PRIZE = _rx([r"lottery", r"lucky (draw|winner|customer)", r"prize", r"you('ve| have)? won", r"winner", r"(aapne|aap ne|apne|aap|tumne) (\w+ ){0,3}(jeet|jeeta|jeete|jeeti)\w*", r"jeetne wale", r"inaam", r"inam", r"kbc", r"kaun banega crorepati",
              r"gift (hamper|voucher)", r"cashback", r"reward points?", r"bumper"],
             ["लॉटरी", "इनाम", "आपने जीत", "लकी ड्रा", "कैशबैक", "ಲಾಟರಿ", "ಬಹುಮಾನ", "ಗೆದ್ದಿದ್ದೀರಿ", "ಲಕ್ಕಿ ಡ್ರಾ", "ಕ್ಯಾಶ್ಬ್ಯಾಕ್"])
-RELATIVE = _rx([r"your (son|daughter|husband|wife|father|mother|grandson|granddaughter|nephew|brother)", r"(aapka|aapke|apka|apke) (beta|bete|pati|bhai|pota|nati)",
-                r"(aapki|apki) (beti|patni|poti)", r"papa", r"mummy", r"mumma", r"mom", r"dad", r"beta", r"beti", r"uncle", r"aunty", r"auntie",
-                r"bhaiya", r"didi", r"chacha", r"mama", r"mausi", r"nimma (maga|magalu|ganda)", r"\w+ ka dost"],
-               ["आपका बेटा", "आपके बेटे", "आपकी बेटी", "बेटा", "बेटी", "पापा", "मम्मी", "अंकल", "ನಿಮ್ಮ ಮಗ", "ನಿಮ್ಮ ಮಗಳು", "ಅಪ್ಪ", "ಅಮ್ಮ", "ಅಂಕಲ್"])
+RELATIVE = _rx([r"your (son|daughter|husband|wife|father|mother|grandson|granddaughter|nephew|brother)", r"(aapka|aapke|apka|apke) (beta|bete|pati|bhai|pota|nati|bhatija|bhanja)",
+                r"(aapki|apki) (beti|patni|poti|natin)", r"papa", r"mummy", r"mumma", r"mom", r"dad", r"beta", r"beti", r"uncle", r"aunty", r"auntie",
+                r"bhaiya", r"didi", r"chacha", r"mama", r"mausi", r"dadi", r"dada ?ji", r"nani", r"nana ?ji", r"grand(ma|pa|mother|father)",
+                r"nimma (maga|magalu|ganda|mommaga)", r"\w+ ka dost",
+                # "Pehchana kaun?" / "it's me, new number": the classic opener of the fake-grandchild call.
+                r"pehcha(na|no|naa|nte) (kaun|mujhe|nahi)", r"guess who", r"(mera|my) (naya|new) number", r"number (badal|change) (gaya|ho gaya|kar liya|kiya)"],
+               ["आपका बेटा", "आपके बेटे", "आपकी बेटी", "आपका पोता", "आपकी पोती", "बेटा", "बेटी", "पापा", "मम्मी", "दादी", "नानी", "अंकल", "पहचाना",
+                "ನಿಮ್ಮ ಮಗ", "ನಿಮ್ಮ ಮಗಳು", "ನಿಮ್ಮ ಮೊಮ್ಮಗ", "ಅಪ್ಪ", "ಅಮ್ಮ", "ಅಜ್ಜಿ", "ಅಜ್ಜ", "ಅಂಕಲ್", "ಗುರುತು ಸಿಕ್ತಾ"])
 TROUBLE = _rx([r"accident", r"hospital (mein|me) (admit|bharti|serious)", r"(admit|admitted|icu|serious condition)", r"police station", r"thane mein", r"lock-?up", r"bail", r"zamanat", r"pakda gaya", r"pakad liya", r"(got |been )?arrested",
                r"emergency", r"operation", r"(in|big) trouble", r"musibat", r"phas gaya", r"phans gaya", r"kidnap\w*"],
               ["एक्सीडेंट", "हादसा", "अस्पताल में भर्ती", "थाने में", "जमानत", "पकड़ा गया", "मुसीबत", "फंस गया",
@@ -189,8 +198,23 @@ COURIER = _rx([r"fedex", r"fed ex", r"dhl", r"blue ?dart", r"dtdc", r"courier", 
 DELIVERY = _rx([r"delivery( boy| agent| executive| partner| wala)?", r"swiggy", r"zomato", r"zepto", r"blinkit", r"instamart", r"amazon", r"flipkart", r"myntra",
                 r"meesho", r"dunzo", r"big ?basket", r"porter", r"rider", r"(main|your|front|society) gate", r"gate (pe|par|ke paas|near)", r"building",
                 r"flat( no)?", r"floor", r"landmark", r"cash on delivery", r"cod", r"order", r"rapido", r"ola", r"uber", r"cab", r"driver",
-                r"pick-?up", r"ride( otp)?", r"drop location"],
-               ["डिलीवरी", "ऑर्डर", "गेट", "ड्राइवर", "ಡೆಲಿವರಿ", "ಆರ್ಡರ್", "ಗೇಟ್", "ಅಡ್ರೆಸ್", "ವಿಳಾಸ", "ಲೊಕೇಶನ್", "ಡ್ರೈವರ್"])
+                r"pick-?up", r"ride( otp)?", r"drop location",
+                # Other everyday codes read out over a call: ride start, LPG cylinder DAC, a technician's
+                # job-start code, a return pickup, the society gate.
+                r"auto( wala| driver| rickshaw)?", r"cylinder", r"dac( code| number)?", r"gas (booking|delivery|cylinder|agency)",
+                r"(ride|trip|start|service|job|pickup|pick-?up|return) (otp|code|pin)", r"happy code", r"urban ?company", r"technician",
+                r"(ac|fridge|washing machine|ro|geyser|tv) (service|repair|installation|wala|mechanic)", r"mygate", r"gate ?pass", r"visitor",
+                r"delhivery", r"ekart", r"shadowfax", r"xpressbees"],
+               ["डिलीवरी", "ऑर्डर", "गेट", "ड्राइवर", "सिलेंडर", "गैस बुकिंग", "राइड", "ऑटो", "टेक्नीशियन", "पिकअप",
+                "ಡೆಲಿವರಿ", "ಆರ್ಡರ್", "ಗೇಟ್", "ಅಡ್ರೆಸ್", "ವಿಳಾಸ", "ಲೊಕೇಶನ್", "ಡ್ರೈವರ್", "ಸಿಲಿಂಡರ್", "ಆಟೋ", "ಪಿಕಪ್"])
+# The excuse that makes an OTP request a scam whoever is asking: "it came to you by mistake",
+# "your WhatsApp code", "the OTP for your refund / KYC / SIM upgrade".
+OTP_PRETEXT = _rx(
+    [r"galti se .{0,30}(otp|code)", r"(otp|code) .{0,25}galti se", r"by mistake .{0,30}(otp|code)", r"(otp|code) .{0,25}(by mistake|wrongly|mistakenly)",
+     # (not "phone pe": "mere phone pe OTP aaya" is everyday Hindi for "the OTP came on my phone")
+     r"(whats ?app|telegram|instagram|insta|facebook|gmail|google pay|gpay|phonepe|paytm) (ka |ki |ke |login |verification |account )?(code|otp)",
+     r"(refund|cashback|reward|prize|unblock|reactivate|kyc|aadhaa?r link|sim (activation|upgrade|swap)|5g upgrade|porting) (ke liye|ka|ki|for|ke) (\w+ )?(otp|code)"],
+    ["गलती से ओटीपी", "गलती से कोड", "व्हाट्सएप कोड", "व्हाट्सएप का कोड", "ತಪ್ಪಾಗಿ ಒಟಿಪಿ", "ವಾಟ್ಸಾಪ್ ಕೋಡ್"])
 
 # Talking ABOUT scams/news ("aajkal digital arrest scam bahut ho rahe hain") is awareness, not a threat.
 NEWS = _rx([r"news", r"khabar", r"ghotala", r"aajkal", r"aaj kal", r"(scam|fraud|frauds|scams) (bhi |bahut |ho rahe|chal rahe|se bacho|se savdhan)",
@@ -203,6 +227,45 @@ SELF_ID = _rx([r"(bol|baat kar) (raha|rahi) (hoon|hu|hun|hai)", r"se (bol|baat)"
 UTILITY = _rx([r"bijli", r"electricity", r"power (cut|connection|supply)", r"light bill", r"bescom", r"msedcl", r"gas (connection|agency)",
                r"(electricity|bijli|current) (bill|connection|department|vibhag|office)"],
               ["बिजली", "विद्युत", "ವಿದ್ಯುತ್", "ಕರೆಂಟ್", "ಬೆಸ್ಕಾಂ"])
+# --------------------------------------------------------------------------- scams aimed at the elderly
+# Pension / life certificate (Jeevan Pramaan): "update it today or your pension stops".
+PENSION = _rx([r"pension\w*", r"jeevan pramaa?n", r"life certificate", r"(da|dearness allowance|pension) (arrears?|hike|revision)", r"ppo( number| no)?",
+               r"(district |pension )?treasury", r"(old age|vridha|vriddha|vridhavastha) (pension|bhatta)", r"pay commission"],
+              ["पेंशन", "पेन्शन", "जीवन प्रमाण", "लाइफ सर्टिफिकेट", "ट्रेजरी", "ಪಿಂಚಣಿ", "ಪೆನ್ಷನ್", "ಜೀವನ ಪ್ರಮಾಣ", "ಲೈಫ್ ಸರ್ಟಿಫಿಕೇಟ್"])
+# Insurance: the bare policy/LIC mention is everyday (premium reminders); the bonus/maturity payout pitch is the scam.
+INSURANCE = _rx([r"insurance", r"bima", r"beema", r"lic", r"policy (number|premium|holder)", r"(policy|insurance|lic|bima) (ka |ki |ke )?premium",
+                 r"premium (due|bharna|bhara|bhar do|jama|amount|payment|renewal)"],
+                ["बीमा", "पॉलिसी", "एलआईसी", "ವಿಮೆ", "ಪಾಲಿಸಿ", "ಎಲ್ಐಸಿ"])
+INSURANCE_BONUS = _rx([r"(policy|insurance|bima|lic) (maturity|bonus|refund|surrender|claim amount|paisa|paise|amount release)\w*",
+                       r"maturity (amount|bonus|payment|claim|ka paisa|ke paise)", r"bonus (amount|release|claim|milega|aaya)", r"irdai?",
+                       r"surrender value", r"(lapsed|band) policy (ka|ke) (paisa|paise|refund)", r"(agent|policy) commission (refund|wapas)"],
+                      ["मैच्योरिटी", "पॉलिसी का बोनस", "बोनस की राशि", "ಮೆಚ್ಯೂರಿಟಿ", "ಪಾಲಿಸಿ ಬೋನಸ್"])
+# Receive-money traps: a UPI PIN or a QR scan only ever *sends* money.
+UPI_TRAP = _rx([r"(enter|daal\w*|dal\w*|type)( your| apna| aapka)? (upi )?pin (to|se|aur|and|for|karke|kar ke|karte hi)? ?(receive|get|claim|credit|refund|paise|money|amount|payment)",
+                r"(receive|get|claim) (the )?(money|payment|refund|amount|cashback) .{0,25}(pin|scan|qr|collect)",
+                r"scan (the |this |my )?(qr|code) .{0,20}(receive|get|refund|paise|money|milenge|aayenge)",
+                r"qr (code )?scan (karke|kar ke|karo|kijiye|kariye) .{0,25}(paise|money|refund|milenge|aayenge|receive|wapas)",
+                r"(galti se|by mistake|mistakenly|wrongly) .{0,30}(bhej|sent|transfer|credit)\w*", r"(collect|payment) request (accept|approve|bheja|bhej|aayega|aaya)\w*",
+                r"(accept|approve) (the )?(collect|payment) request", r"collect request"],
+               ["पिन डालकर पैसे", "पैसे पाने के लिए पिन", "गलती से भेज", "क्यूआर स्कैन", "ಪಿನ್ ಹಾಕಿ ಹಣ", "ತಪ್ಪಾಗಿ ಕಳಿಸ", "ಕ್ಯೂಆರ್ ಸ್ಕ್ಯಾನ್"])
+# Investment pitch, not market chit-chat: guaranteed/multiplied returns, tips groups, trading apps.
+INVESTMENT = _rx([r"(stock|share|trading|ipo|f&o|intraday|option) (tips?|group|app|platform|allotment|calls?)", r"guaranteed (returns?|profit|income)",
+                  r"(double|triple|2x|3x|do ?guna|teen ?guna|dugna) (money|paisa|paise|returns?|profit|amount|ho jayega|ho jayenge)",
+                  r"(paisa|paise|money|amount) (double|dugna|do ?guna)", r"\d+ ?(%|percent|pratishat) (returns?|profit|munafa|daily|monthly|guaranteed|har mahine)",
+                  r"(vip|premium|private) (group|channel|membership)", r"(trading|investment) (platform|scheme|plan|opportunity|account khol\w*)",
+                  r"invest (karo|kijiye|kariye|now|today|karna|kar do)", r"nivesh (karo|kijiye|kariye|karein)", r"forex", r"crypto ?(trading|investment)"],
+                 ["गारंटीड रिटर्न", "पैसा डबल", "पैसे डबल", "दोगुना", "निवेश कीजिए", "निवेश करें", "शेयर टिप्स", "ट्रेडिंग ऐप",
+                  "ಹೂಡಿಕೆ ಮಾಡಿ", "ಗ್ಯಾರಂಟಿ ಲಾಭ", "ಡಬಲ್ ಆಗುತ್ತೆ", "ಟ್ರೇಡಿಂಗ್ ಆಪ್"])
+# Sextortion: a recorded "obscene" video call, then pay or it goes to family / goes viral.
+SEXTORTION = _rx([r"(nude|naked|obscene|dirty|objectionable|adult|ashleel|gandi|nanga|nangi) (video|photo|pic|picture|clip|call|recording)\w*",
+                  r"(video|recording|screenshot|clip) (viral|leak)\w*", r"viral (kar|kardenge|kar denge|kar dunga|kar dungi|ho jayega|ho jayegi)\w*",
+                  r"(youtube|facebook|instagram|social media) (par|pe|on) (daal|upload|post)\w*",
+                  r"(send|bhej\w*) .{0,25}(to|ko) (your |aapke |aapki )?(family|relatives?|contacts|rishtedaar\w*|ghar walon|bete|beti|wife|patni)",
+                  r"(your|aapke|aapki) (family|relatives?|rishtedaar\w*|contacts) (ko|to) (bhej|send)\w*", r"(video|recording) delete (karne|karwane|karna)",
+                  r"(video|call) record (kar|ho|kiya|kar li|kar liya)\w*", r"you (were|are|have been) recorded", r"izzat (chali|mitti|kharab|nilaam)\w*",
+                  r"badnaam (kar|ho)\w*", r"blackmail\w*"],
+                 ["अश्लील", "न्यूड", "वायरल कर", "वीडियो वायरल", "बदनाम कर", "ब्लैकमेल", "रिश्तेदारों को भेज",
+                  "ಅಶ್ಲೀಲ", "ವೈರಲ್ ಮಾಡ", "ಮಾನ ಹಾನಿ", "ಬ್ಲ್ಯಾಕ್‌ಮೇಲ್", "ಬ್ಲ್ಯಾಕ್ಮೇಲ್"])
 TASK_JOB = _rx([r"work from home", r"part[- ]time (job|work|opportunity)", r"like (youtube )?videos", r"rate (hotels|products|movies)",
                 r"telegram (group|channel|task)", r"(prepaid|premium|vip) tasks?", r"earn .{0,30}(per|a|every|daily) day", r"ghar baithe"],
                ["घर बैठे", "ವರ್ಕ್ ಫ್ರಮ್ ಹೋಮ್"])
@@ -255,12 +318,13 @@ LABELS = {
     "otp": "asked for an OTP/PIN/card details", "secrecy": "told the victim to keep it secret",
     "isolation": "told the victim not to hang up / to stay on camera", "authority": "claimed to be police/CBI/customs/RBI",
     "digital_arrest": "said the victim is under 'digital arrest'", "legal_threat": "threatened arrest/case/warrant",
-    "block_threat": "threatened to block the account/SIM", "targeted": "aimed the threat at the victim", "kyc": "raised a KYC problem",
+    "block_threat": "threatened to block or stop the account/SIM/pension/connection", "targeted": "aimed the threat at the victim", "kyc": "raised a KYC problem",
     "id_docs": "mentioned Aadhaar/PAN", "expiry": "said documents are expired/not updated", "remote_access": "asked for AnyDesk/screen-share",
     "app_or_link": "asked to install an app / click a link", "scam_payment": "asked for a fee / 'safe account' transfer",
     "payment": "asked for a money transfer", "urgency": "created urgency", "bank": "said they are from the bank",
     "prize": "offered a prize/lottery/cashback", "relative": "mentioned a family member", "trouble": "said someone is in trouble",
-    "courier": "mentioned a parcel/courier", "delivery": "delivery context", "victim_complying": "the victim started complying",
+    "courier": "mentioned a parcel/courier", "delivery": "delivery / ride / service context", "victim_complying": "the victim started complying",
+    "otp_pretext": "gave a scam excuse for the OTP (sent by mistake / WhatsApp code / refund)",
     "otp_protective": "warned the victim not to share the OTP (legit-bank cue)",
     "fin_details": "asked for bank/FD details",
     "bank_problem": "claimed a suspicious transaction / card problem",
@@ -268,6 +332,10 @@ LABELS = {
     "utility": "said they are from the electricity/gas office",
     "self_id": "introduced themselves",
     "news": "talked about scams/news (awareness)",
+    "pension": "talked about pension / life certificate", "insurance": "mentioned an insurance policy",
+    "insurance_bonus": "promised an insurance maturity/bonus payout",
+    "upi_trap": "asked to enter a UPI PIN / scan a QR / accept a request to 'receive' money",
+    "investment": "pitched guaranteed returns / stock tips", "sextortion": "threatened to leak an obscene video",
 }
 
 CALLER_RULES: list[tuple[str, re.Pattern]] = [
@@ -276,7 +344,8 @@ CALLER_RULES: list[tuple[str, re.Pattern]] = [
     ("app_or_link", APP_LINK), ("scam_payment", SCAM_PAYMENT), ("payment", PAYMENT), ("urgency", URGENCY), ("bank", BANK),
     ("prize", PRIZE), ("relative", RELATIVE), ("trouble", TROUBLE), ("courier", COURIER), ("delivery", DELIVERY),
     ("news", NEWS), ("self_id", SELF_ID), ("utility", UTILITY), ("task_job", TASK_JOB), ("bank_problem", BANK_PROBLEM),
-    ("fin_details", FIN_DETAILS),
+    ("fin_details", FIN_DETAILS), ("pension", PENSION), ("insurance", INSURANCE), ("insurance_bonus", INSURANCE_BONUS),
+    ("upi_trap", UPI_TRAP), ("investment", INVESTMENT), ("sextortion", SEXTORTION), ("otp_pretext", OTP_PRETEXT),
 ]
 # Signals that say nothing about a scam on their own (not counted for confidence).
 NEUTRAL = {"delivery", "otp_protective", "targeted", "relative", "urgency", "news", "self_id"}
@@ -302,7 +371,8 @@ class KeywordVerdict:
     demands_secrecy: bool
     confidence: float
     language: str
-    delivery_otp: bool
+    benign_otp: bool  # an everyday code (delivery/ride/gas/...) or a trusted contact's OTP request, nothing scammy around it
+    everyday_code: bool  # benign_otp because of a delivery/ride/service context (not just a trusted caller)
     summary: str
 
 
@@ -385,8 +455,13 @@ def _dominant(votes: dict[str, int]) -> str | None:
     return max(votes, key=votes.get) if votes else None
 
 
-def verdict(st: KeywordState, delivery_otp_policy: str = "caution") -> KeywordVerdict:
-    """Turn the accumulated signals into a verdict. See README "Keyword rules"."""
+def verdict(st: KeywordState, delivery_otp_policy: str = "caution", trusted: str = "", otp_sms: str = "") -> KeywordVerdict:
+    """Turn the accumulated signals into a verdict. See README "Keyword rules".
+
+    trusted: the name of the trusted (family) contact the caller number belongs to, or "".
+    otp_sms: risk of the OTP SMS the victim's phone received during this call ("high" | "medium" |
+    "low" | ""), read from the SMS itself. It says what the OTP unlocks, which beats any guess from
+    the conversation: a payment/UPI/bank/SIM/WhatsApp OTP is never safe to share with a caller."""
     h = st.has
     authority, da = h("authority"), h("digital_arrest")
     legal, block, targeted = h("legal_threat"), h("block_threat"), h("targeted")
@@ -399,77 +474,125 @@ def verdict(st: KeywordState, delivery_otp_policy: str = "caution") -> KeywordVe
     relative_trouble = h("relative") and h("trouble")
     courier, delivery = h("courier"), h("delivery")
     utility, task_job, bank_problem, fin_details = h("utility"), h("task_job"), h("bank_problem"), h("fin_details")
+    pension, insurance, investment, sextortion, upi_trap = h("pension"), h("insurance"), h("investment"), h("sextortion"), h("upi_trap")
     complying = h("victim_complying")
     threat = legal or block or da
     courier_scam = courier and (authority or legal)
+    # Pension and policy talk is everyday for the elderly; it only becomes a scam script with a threat
+    # or a request. On their own these stay at pressure <= 1 (a real bank reminds pensioners too).
+    pension_scam = pension and (threat or h("expiry") or otp or app_link or remote or pay or scam_pay or fin_details)
+    insurance_scam = h("insurance_bonus") or (insurance and (scam_pay or otp or app_link or remote))
+    utility_scam = utility and (threat or h("expiry"))
 
-    context_strong = authority or da or legal or kyc or prize or courier_scam or task_job
-    context_weak = bank or id_docs or courier or block or urgency or relative_trouble or utility
-    critical_hard = otp or remote or secrecy
+    sms_high, sms_low = otp_sms == "high", otp_sms == "low"
+    context_strong = authority or da or legal or kyc or prize or courier_scam or task_job or \
+        pension_scam or insurance_scam or investment or sextortion or utility_scam or h("otp_pretext") or sms_high
+    context_weak = bank or id_docs or courier or block or urgency or relative_trouble or utility or pension or insurance
+    # A UPI PIN or a QR scan never receives money, so the receive-money trap is critical on its own.
+    # An OTP excuse ("your WhatsApp code came to you by mistake") is a code request in itself.
+    otp = otp or h("otp_pretext")
+    critical_hard = otp or remote or secrecy or upi_trap
     critical_soft = scam_pay or (fin_details and (context_strong or bank)) or \
         (app_link and (context_strong or bank or courier or id_docs or utility)) or (isolation and context_strong)
 
-    # Delivery OTP: a rider asking for the parcel OTP is the one OTP request that is usually legit.
-    delivery_otp = delivery and otp and not (
+    # Not every OTP request is a scam. Two are usually fine: an everyday code (delivery, ride, LPG DAC,
+    # technician, pickup, gate) and a saved family contact asking for their own code. Both stay calm
+    # only while nothing else in the call looks like a scam: a bank, a threat, secrecy, a fee, an app
+    # or a "sent to you by mistake" excuse puts the OTP request back to critical.
+    # The OTP SMS itself, when the phone shares it, settles what the code is for: a delivery/ride code
+    # is calm even without delivery words, and a payment/bank code is never calm, whoever asks.
+    benign_otp = (delivery or bool(trusted) or sms_low) and otp and not (
         context_strong or bank or id_docs or block or relative_trouble or remote or secrecy or isolation or scam_pay or app_link)
-    if delivery_otp and delivery_otp_policy == "caution":
+    if benign_otp and delivery_otp_policy == "caution":
         critical_hard = False
 
     p = 0
     if context_strong or relative_trouble or kyc or (bank and (urgency or block or bank_problem)) or isolation or \
             (utility and threat):
         p = 1
-    if (critical_hard or critical_soft or da
+    if (critical_hard or critical_soft or da or sextortion
             or ((authority or kyc or bank or id_docs or prize or courier or utility) and threat and targeted)
             or (relative_trouble and (pay or scam_pay) and (urgency or authority))):
         p = 2
     if ((critical_hard and (context_strong or context_weak)) or (critical_soft and context_strong)
-            or (pay and (authority or da or legal or courier_scam or kyc or task_job)) or (relative_trouble and (secrecy or isolation))):
+            or (pay and (authority or da or legal or courier_scam or kyc or task_job or pension_scam or insurance_scam
+                         or investment or sextortion or utility_scam))
+            or (relative_trouble and (secrecy or isolation))):
         p = 3
     if complying and p >= 2:
         p = 3
-    if delivery_otp:
+    # A payment/bank OTP landing mid-call is a red flag before anyone asks for it: the caller has
+    # probably just started that transaction and is about to ask.
+    if sms_high:
+        p = max(p, 2)
+    if benign_otp:
         p = max(p, 1 if delivery_otp_policy == "caution" else 2)
 
-    if relative_trouble and not (da or courier_scam):
-        stype = "other"
+    # Most specific story first: sextortion often comes with a fake "cyber police" follow-up, and a
+    # pension/insurance/electricity caller asking for a PIN is still a pension/insurance/electricity scam.
+    if sextortion:
+        stype = "sextortion"
+    elif relative_trouble and not (da or courier_scam):
+        stype = "relative_emergency"
     elif authority or da or courier_scam:
         stype = "digital_arrest"
+    elif pension_scam:
+        stype = "pension_scam"
+    elif insurance_scam:
+        stype = "insurance_bonus"
+    elif utility:
+        stype = "utility_disconnection"
+    elif upi_trap:
+        # "You won a prize, approve the collect request" is still the prize story.
+        stype = "prize_lottery" if prize else "upi_collect"
     elif remote or kyc or (id_docs and (threat or app_link or scam_pay or pay)):
         stype = "kyc_update"
     elif bank and (otp or threat or pay or scam_pay or app_link):
         stype = "bank_impersonation"
+    elif investment:
+        stype = "investment_tip"
     elif prize:
         stype = "prize_lottery"
-    elif utility or task_job:
+    elif task_job:
         stype = "other"
     elif p >= 2:
         stype = "other"
     else:
         stype = "none"
-    if p == 0 or (delivery_otp and delivery_otp_policy == "caution"):
+    if p == 0 or (benign_otp and delivery_otp_policy == "caution"):
         stype = "none"
 
     n_signals = sum(1 for k in st.hits if k not in NEUTRAL)
     conf = 0.85 if p == 0 else min(0.95, 0.45 + 0.07 * n_signals + 0.05 * p)
     lang = _dominant(st.lang_votes.get("victim", {})) or _dominant(st.lang_votes.get("caller", {})) or "en"
+    calm = benign_otp and delivery_otp_policy == "caution"
     return KeywordVerdict(
         scam_type=stype, pressure=p, asks_otp_or_pin=otp, demands_secrecy=secrecy or isolation, confidence=round(conf, 2),
-        language=lang, delivery_otp=delivery_otp, summary=summarize(st, stype, p, delivery_otp and delivery_otp_policy == "caution"),
+        language=lang, benign_otp=benign_otp, everyday_code=benign_otp and (delivery or sms_low),
+        summary=summarize(st, stype, p, calm, trusted if calm and not (delivery or sms_low) else ""),
     )
 
 
 _TYPE_PHRASE = {
     "digital_arrest": "posing as police/CBI/customs (digital-arrest script)", "kyc_update": "running a KYC / account-block script",
     "bank_impersonation": "posing as the bank", "prize_lottery": "offering a fake prize/lottery", "other": "running a scam",
+    "pension_scam": "running a pension / life-certificate scam", "relative_emergency": "pretending a relative is in trouble and needs money",
+    "utility_disconnection": "threatening to cut the electricity/gas connection",
+    "insurance_bonus": "offering a fake insurance maturity/bonus payout",
+    "upi_collect": "tricking the victim into entering a UPI PIN or scanning a QR to 'receive' money",
+    "investment_tip": "pitching a fake investment / stock-tips scheme", "sextortion": "threatening to leak an obscene video (sextortion)",
 }
-_SUMMARY_ORDER = ["authority", "digital_arrest", "legal_threat", "block_threat", "kyc", "remote_access", "app_or_link", "otp",
-                  "scam_payment", "payment", "secrecy", "isolation", "prize", "trouble", "victim_complying"]
+_SUMMARY_ORDER = ["sextortion", "authority", "digital_arrest", "legal_threat", "block_threat", "pension", "insurance_bonus", "kyc",
+                  "upi_trap", "remote_access", "app_or_link", "otp", "scam_payment", "payment", "investment", "secrecy", "isolation",
+                  "prize", "trouble", "victim_complying"]
 
 
-def summarize(st: KeywordState, stype: str, p: int, delivery_otp: bool) -> str:
-    if delivery_otp and stype == "none":
-        return "A delivery rider asked for the delivery OTP over the call; share it only in person at the door."
+def summarize(st: KeywordState, stype: str, p: int, benign_otp: bool, trusted: str = "") -> str:
+    if benign_otp and stype == "none":
+        if trusted:
+            return f"{trusted} (a saved family contact) asked for an OTP; check what the OTP is for before sharing it."
+        return ("Asked for an everyday code (delivery, ride, gas cylinder, service visit) over the call; share it only with "
+                "the person who is actually at your door or in your cab.")
     if p == 0:
         return "Ordinary call, nothing suspicious so far."
     parts = [LABELS[k] for k in _SUMMARY_ORDER if k in st.hits][:4]

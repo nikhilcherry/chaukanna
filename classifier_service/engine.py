@@ -20,7 +20,11 @@ from dataclasses import dataclass, field
 import keywords
 from backends.base import Backend, LLMContext
 from callers import CallerRegistry, CallerRisk
-from schemas import ClassifyRequest, LLMVerdict, Verdict, norm_lang
+from schemas import OTP_RISK, ClassifyRequest, LLMVerdict, OtpContext, Verdict, norm_lang
+
+_OTP_PURPOSE_PHRASE = {"payment": "payment", "upi": "UPI", "card": "card", "bank_login": "net-banking login",
+                       "sim": "SIM / number-porting", "messaging_account": "WhatsApp / messaging account",
+                       "government_id": "Aadhaar / government", "other_login": "login", "everyday": "delivery / ride"}
 
 log = logging.getLogger("classifier.engine")
 
@@ -60,6 +64,8 @@ class CallState:
     kw: keywords.KeywordState = field(default_factory=keywords.KeywordState)
     risk: CallerRisk | None = None
     risk_checked_for: str | None = None
+    trusted: str | None = None  # name of the trusted (family) contact this number belongs to
+    otp_sms: dict | None = None  # latest OTP SMS the victim's phone got during the call: purpose, risk, service, amount
     # background LLM
     llm: LLMVerdict | None = None
     llm_backend: str | None = None
@@ -130,6 +136,29 @@ class Engine:
         if self.backend:
             await self.backend.aclose()
 
+    # ------------------------------------------------------------------ OTP SMS
+    async def note_otp_sms(self, ctx: OtpContext) -> Verdict:
+        """The victim's phone received an OTP SMS during the call (its purpose, never the code).
+        Re-merges right away so a payment OTP landing mid-call can warn before the caller asks."""
+        st = self.get(ctx.call_id)
+        risk = OTP_RISK.get(ctx.purpose, "medium")
+        # A delivery code usually arrives before the rider calls, so it counts for 15 minutes. A payment
+        # OTP only counts if it came during the call or just before it (the caller set it off): one
+        # from a purchase made earlier must not make the next family call look like a scam.
+        if ctx.seconds_before_call > 900 or (risk == "high" and ctx.seconds_before_call > 120):
+            risk = "medium"
+        async with st.lock:
+            st.otp_sms = {"purpose": ctx.purpose, "risk": risk, "service": ctx.service.strip()[:40], "amount": ctx.amount}
+            st.n_chunks += 1  # an event in the call, like a chunk (whisper spacing counts it)
+            return self._merge(st, st.n_chunks, st.last.language if st.last else "en")
+
+    @staticmethod
+    def _otp_sms_phrase(sms: dict) -> str:
+        """'A ₹49,999 payment OTP from HDFC Bank'"""
+        amount = f"₹{sms['amount']:,.0f} " if sms.get("amount") else ""
+        sender = f" from {sms['service']}" if sms.get("service") else ""
+        return f"A {amount}{_OTP_PURPOSE_PHRASE.get(sms['purpose'], 'login')} OTP{sender}"
+
     # ------------------------------------------------------------------ classify
     async def classify(self, req: ClassifyRequest) -> Verdict:
         t0 = time.perf_counter()
@@ -148,6 +177,9 @@ class Engine:
                     st.caller_number = req.caller_number
                 if st.caller_number and st.risk_checked_for != st.caller_number:
                     st.risk = self.callers.check(st.caller_number)
+                    st.trusted = self.callers.trusted_name(st.caller_number)
+                    if st.trusted and st.risk and st.risk.kind == "risky_country_code":
+                        st.risk = None  # family working abroad is not a scam-compound signal
                     st.risk_checked_for = st.caller_number
                 new_signals = keywords.scan_chunk(st.kw, req.speaker, text, lang)
                 if self.backend and text and (req.speaker == "caller" or self.s.llm_on_victim):
@@ -245,16 +277,20 @@ class Engine:
         return lv
 
     # ------------------------------------------------------------------ merge
-    def _guard_llm(self, lv: LLMVerdict, kv: keywords.KeywordVerdict) -> LLMVerdict:
-        """Delivery-OTP policy 'caution': when the only scam evidence in the whole call is a
-        delivery rider asking for the OTP, an LLM verdict can't escalate past pressure 1."""
-        if kv.delivery_otp and self.s.delivery_otp_policy == "caution" and lv.pressure > 1:
-            return lv.model_copy(update={"pressure": 1, "scam_type": "none"})
+    def _guard_llm(self, lv: LLMVerdict, kv: keywords.KeywordVerdict, trusted: str | None = None) -> LLMVerdict:
+        """OTP policy 'caution': when the only scam evidence in the whole call is an everyday code
+        (delivery rider, cab, LPG DAC...), an LLM verdict can't escalate past pressure 1. For a trusted
+        contact's OTP request the model keeps a veto: caller ID can be spoofed, so if it recognises an
+        actual scam story or a demand for secrecy, it still escalates."""
+        if kv.benign_otp and self.s.delivery_otp_policy == "caution" and lv.pressure > 1:
+            if not trusted or kv.everyday_code or (lv.scam_type in ("none", "other") and not lv.demands_secrecy):
+                return lv.model_copy(update={"pressure": 1, "scam_type": "none"})
         return lv
 
     def _merge(self, st: CallState, idx: int, req_lang: str) -> Verdict:
-        kv = keywords.verdict(st.kw, self.s.delivery_otp_policy)
-        lv = self._guard_llm(st.llm, kv) if st.llm else None
+        kv = keywords.verdict(st.kw, self.s.delivery_otp_policy, trusted=st.trusted or "",
+                              otp_sms=st.otp_sms["risk"] if st.otp_sms else "")
+        lv = self._guard_llm(st.llm, kv, st.trusted) if st.llm else None
         prev = st.last
         risk = st.risk
 
@@ -308,6 +344,8 @@ class Engine:
                 extra.append("the victim has started complying")
             if extra:
                 summary = summary.rstrip(". ") + ". Since then the caller " + " and ".join(extra) + "."
+        if st.otp_sms and st.otp_sms["risk"] == "high":
+            summary = f"{self._otp_sms_phrase(st.otp_sms)} arrived on the phone during this call; no caller ever needs it. " + summary
         if risk and risk.kind == "listed":
             summary = "This number is on the Chaukanna scam list. " + summary
 
@@ -341,10 +379,15 @@ class Engine:
             if v.asks_otp_or_pin:
                 due["warn_otp"] = f"caller asked for an OTP/PIN: \"{hits['otp']}\"" if "otp" in hits else \
                     f"{v.backend or 'model'} detected a request for an OTP/PIN"
+            elif st.otp_sms and st.otp_sms["risk"] == "high":
+                due["warn_otp"] = f"{self._otp_sms_phrase(st.otp_sms)} arrived during the call"
             if v.scam_type == "digital_arrest":
                 key = next((k for k in ("digital_arrest", "authority", "legal_threat") if k in hits), None)
-                due["warn_digital_arrest"] = f"caller {keywords.LABELS[key]}: \"{hits[key]}\"" if key else \
-                    f"{v.backend or 'model'} recognised a digital-arrest script"
+                # A scam type borrowed from the scam list is not evidence that this call is a
+                # digital-arrest script: a listed caller saying "Hello" only gets warn_known_scammer.
+                if key or (st.llm and st.llm.scam_type == "digital_arrest"):
+                    due["warn_digital_arrest"] = f"caller {keywords.LABELS[key]}: \"{hits[key]}\"" if key else \
+                        f"{v.backend or 'model'} recognised a digital-arrest script"
             if v.demands_secrecy:
                 key = next((k for k in ("secrecy", "isolation") if k in hits), None)
                 due["warn_secrecy"] = f"caller {keywords.LABELS[key]}: \"{hits[key]}\"" if key else \

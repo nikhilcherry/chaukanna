@@ -44,16 +44,33 @@ SCAM_TYPES = {
                           "approve a collect request.",
     "prize_lottery": "The caller says the listener won a lottery, KBC prize, lucky draw, gift or cashback and asks for a "
                      "fee, bank details or a PIN to receive it.",
-    "other": "Clearly a scam of another kind: a relative or friend 'in trouble' needing money urgently (accident, police "
-             "station, bail), electricity disconnection, investment or task scam, job offer, sextortion, tech support.",
-    "none": "An ordinary call: family or friends, a delivery rider asking for the address, gate, floor or the parcel's "
-            "delivery OTP, a real bank confirming a transaction that says it never asks for OTPs, a clinic, a real "
-            "police verification visit, or people discussing the news.",
+    "pension_scam": "The caller claims to be from a treasury, pension office or bank and says the listener's pension or "
+                    "DA arrears will stop or are pending, or the life certificate (Jeevan Pramaan) must be updated now, and "
+                    "asks for Aadhaar, an OTP, a link click or a fee.",
+    "relative_emergency": "The caller says a grandchild, son, nephew or friend of the listener is in an accident, hospital "
+                          "or police station and needs money right now, or poses as that relative from a 'new number'.",
+    "utility_disconnection": "The caller claims to be from the electricity or gas office, says the bill is not updated "
+                             "and the connection will be cut today, and asks for payment on a number or link or an app install.",
+    "insurance_bonus": "The caller says an LIC or insurance policy maturity, bonus, refund or lapsed-policy amount is "
+                       "waiting, but a GST, tax or processing charge must be paid first.",
+    "upi_collect": "A caller who does NOT claim to be a bank, official or prize company (an online buyer paying an "
+                   "advance, someone who 'sent money by mistake') wants the listener to enter a UPI PIN, scan a QR code or "
+                   "approve a collect request to 'receive' money.",
+    "investment_tip": "The caller pitches stock tips, an IPO, a trading app or a VIP investment group with guaranteed or "
+                      "doubled returns and asks the listener to invest or pay.",
+    "sextortion": "The caller says the listener's video call was recorded as an obscene video and threatens to send it to "
+                  "family or make it viral unless paid, possibly posing as 'cyber police' handling a complaint.",
+    "other": "Clearly a scam of another kind: a parcel redelivery, address-update or delivery fee paid through a link (with "
+             "no police or customs story), a task or job offer, tech support, a fake loan.",
+    "none": "An ordinary call: family or friends, a courier or delivery company calling about a parcel, asking for the "
+            "address, gate or floor or the parcel's delivery OTP, a real bank confirming a transaction that says it never "
+            "asks for OTPs, a clinic, a real police verification visit, or people discussing the news.",
 }
 PRESSURE_LEVELS = [
     "An ordinary conversation: greetings, family talk, a delivery rider asking for directions, a bank confirming a "
     "transaction, people discussing the news.",
-    "A stranger makes an unsolicited claim to be an official, police, bank or courier, or mentions a problem with "
+    # Not "courier": a courier calling about a parcel is routine until customs, police or a crime come in.
+    "A stranger makes an unsolicited claim to be an official, police or bank, or mentions a problem with "
     "the listener's account, parcel or documents, but has not threatened or demanded anything yet.",
     "The caller threatens the listener (arrest, legal case, account or SIM block, penalty), pressures them with "
     "authority or urgency, or orders them to stay on the line and follow instructions.",
@@ -90,6 +107,10 @@ QUESTIONS = {
 _TYPE_PHRASE = {
     "digital_arrest": "is posing as police/CBI/customs (digital-arrest script)", "kyc_update": "is running a KYC / account-block script",
     "bank_impersonation": "is posing as the bank", "prize_lottery": "is offering a fake prize/lottery", "other": "appears to be running a scam",
+    "pension_scam": "is running a pension / life-certificate scam", "relative_emergency": "is pretending a relative is in trouble and needs money",
+    "utility_disconnection": "is threatening to cut the electricity/gas connection", "insurance_bonus": "is offering a fake insurance maturity/bonus payout",
+    "upi_collect": "is trying to get a UPI PIN / QR scan to 'send' money", "investment_tip": "is pitching a fake investment / stock-tips scheme",
+    "sextortion": "is threatening to leak an obscene video (sextortion)",
 }
 
 
