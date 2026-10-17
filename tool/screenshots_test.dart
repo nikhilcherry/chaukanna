@@ -28,9 +28,15 @@ Future<void> _load(String family, List<String> paths) async {
 Future<void> _loadFonts() async {
   final root = Platform.environment['FLUTTER_ROOT'] ?? '${Platform.environment['HOME']}/flutter';
   final mf = '$root/bin/cache/artifacts/material_fonts';
-  await _load('Roboto', [for (final w in ['Regular', 'Medium', 'Bold', 'Black', 'Light']) '$mf/Roboto-$w.ttf']);
+  await _load('Roboto', [
+    for (final w in ['Regular', 'Medium', 'Bold', 'Black', 'Light']) '$mf/Roboto-$w.ttf',
+  ]);
   await _load('MaterialIcons', ['$mf/MaterialIcons-Regular.otf']);
-  await _load('NotoSansDevanagari', ['assets/fonts/NotoSansDevanagari-Regular.ttf', 'assets/fonts/NotoSansDevanagari-Bold.ttf']);
+  await _load('Manrope', ['assets/fonts/Manrope-Variable.ttf']);
+  await _load('NotoSansDevanagari', [
+    'assets/fonts/NotoSansDevanagari-Regular.ttf',
+    'assets/fonts/NotoSansDevanagari-Bold.ttf',
+  ]);
   await _load('NotoSansKannada', ['assets/fonts/NotoSansKannada-Regular.ttf', 'assets/fonts/NotoSansKannada-Bold.ttf']);
   await _load('NotoColorEmoji', ['/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf']);
 }
@@ -67,10 +73,10 @@ void main() {
         await shot('1-idle');
         final state = tester.state<ScaffoldState>(find.byType(Scaffold).first);
         state.openEndDrawer();
-        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 500));
         await shot('2-demo-simulator');
         state.closeEndDrawer();
-        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 500));
       }
 
       h.c.setSimLanguage(lang);
@@ -98,8 +104,11 @@ void main() {
       if (lang == 'hi') {
         await shot('7-post-call');
         final list = find.descendant(of: find.byType(PostCallScreen), matching: find.byType(Scrollable)).first;
-        await tester.scrollUntilVisible(find.text('Drafted by Chaukanna AI. Nothing is sent until you confirm.'), 300,
-            scrollable: list);
+        await tester.scrollUntilVisible(
+          find.text('Drafted by Chaukanna AI. Nothing is sent until you confirm.'),
+          300,
+          scrollable: list,
+        );
         await tester.pump();
         await shot('8-post-call-complaint');
       }

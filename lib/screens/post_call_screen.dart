@@ -21,84 +21,93 @@ class PostCallScreen extends StatelessWidget {
         : (done == true ? _Status.done : _Status.unconfirmed);
 
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      child: Column(
         children: [
-          Row(
-            children: [
-              Icon(c.knownScammer ? Icons.block : Icons.shield, size: 46, color: Pal.high),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  c.knownScammer ? 'Scam call blocked.' : 'Call ended. You were protected.',
-                  style: const TextStyle(fontSize: 29, fontWeight: FontWeight.w900, height: 1.15),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+              children: [
+                Row(
+                  children: [
+                    Icon(c.knownScammer ? Icons.block : Icons.verified_user, size: 46, color: Pal.brand),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        c.knownScammer ? 'Scam call blocked.' : 'Call ended. You were protected.',
+                        style: display(32, color: Pal.ink, height: 1.1),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${c.callerDisplay}${c.callerLabel.isNotEmpty ? ' (said: ${c.callerLabel})' : ''} · ${mmss(c.elapsed)}'
-            '${c.endReason.isNotEmpty ? '\n${c.endReason}' : ''}',
-            style: const TextStyle(fontSize: 18, color: Pal.dim, height: 1.35),
-          ),
-          if (c.simulated)
-            const Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: Text(
-                'SIMULATED CALL',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Pal.caution),
-              ),
-            ),
-          const SizedBox(height: 22),
-          const _Header('Already done for you'),
-          if (waiting)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 3)),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text('Waiting for the response team…', style: TextStyle(fontSize: 18, color: Pal.dim)),
+                const SizedBox(height: 8),
+                Text(
+                  '${c.callerDisplay}${c.callerLabel.isNotEmpty ? ' (said: ${c.callerLabel})' : ''} · ${mmss(c.elapsed)}'
+                  '${c.endReason.isNotEmpty ? '\n${c.endReason}' : ''}',
+                  style: const TextStyle(fontSize: 18, color: Pal.dim, height: 1.35),
+                ),
+                if (c.simulated)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'SIMULATED CALL',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Pal.caution),
+                    ),
                   ),
-                ],
-              ),
+                const SizedBox(height: 22),
+                const _Header('Already done for you'),
+                if (waiting)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 3)),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text('Waiting for the response team…', style: TextStyle(fontSize: 18, color: Pal.dim)),
+                        ),
+                      ],
+                    ),
+                  ),
+                _StepRow(st(i?.familyAlerted), 'Family alerted', c.familySummary),
+                _StepRow(
+                  st(i?.evidenceSaved),
+                  'Call evidence and timestamps saved',
+                  '${c.evidence.length} flagged moments recorded.'
+                      '${c.evidence.isEmpty ? '' : '\n${c.evidence.take(3).map((e) => e.format()).join('\n')}'}',
+                ),
+                _StepRow(
+                  st(i?.blocklisted),
+                  'Number added to shared blocklist',
+                  '${c.callerDisplay} will be flagged for everyone using Chaukanna.',
+                ),
+                const SizedBox(height: 22),
+                const _Header('Complaint to 1930 / cybercrime.gov.in'),
+                _Complaint(c: c),
+                const SizedBox(height: 8),
+                Text(
+                  c.complaintFromN8n
+                      ? 'Drafted by Chaukanna AI. Nothing is sent until you confirm.'
+                      : (waiting
+                            ? 'Draft made on this phone. The AI draft will replace it when it arrives.'
+                            : 'Draft made on this phone. Nothing is sent until you confirm.'),
+                  style: const TextStyle(fontSize: 17, color: Pal.dim),
+                ),
+                const SizedBox(height: 16),
+                _SubmitArea(c: c),
+                const SizedBox(height: 24),
+                OutlinedButton(
+                  onPressed: c.finishPostCall,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(64),
+                    side: const BorderSide(color: Pal.line, width: 2),
+                  ),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Pal.ink),
+                  ),
+                ),
+              ],
             ),
-          _StepRow(st(i?.familyAlerted), 'Family alerted', c.familySummary),
-          _StepRow(
-            st(i?.evidenceSaved),
-            'Call evidence and timestamps saved',
-            '${c.evidence.length} flagged moments recorded.'
-                '${c.evidence.isEmpty ? '' : '\n${c.evidence.take(3).map((e) => e.format()).join('\n')}'}',
-          ),
-          _StepRow(
-            st(i?.blocklisted),
-            'Number added to shared blocklist',
-            '${c.callerDisplay} will be flagged for everyone using Chaukanna.',
-          ),
-          const SizedBox(height: 22),
-          const _Header('Complaint to 1930 / cybercrime.gov.in'),
-          _Complaint(c: c),
-          const SizedBox(height: 8),
-          Text(
-            c.complaintFromN8n
-                ? 'Drafted by Chaukanna AI. Nothing is sent until you confirm.'
-                : (waiting
-                      ? 'Draft made on this phone. The AI draft will replace it when it arrives.'
-                      : 'Draft made on this phone. Nothing is sent until you confirm.'),
-            style: const TextStyle(fontSize: 17, color: Pal.dim),
-          ),
-          const SizedBox(height: 16),
-          _SubmitArea(c: c),
-          const SizedBox(height: 24),
-          OutlinedButton(
-            onPressed: c.finishPostCall,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(64),
-              side: const BorderSide(color: Colors.white54, width: 2),
-            ),
-            child: const Text('Done', style: TextStyle(fontSize: 22, color: Colors.white)),
           ),
         ],
       ),
@@ -114,10 +123,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
-    child: Text(
-      text.toUpperCase(),
-      style: const TextStyle(fontSize: 16, letterSpacing: 1.5, fontWeight: FontWeight.w800, color: Pal.dim),
-    ),
+    child: Text(text.toUpperCase(), style: display(14, color: Pal.grey, letterSpacing: 1.4)),
   );
 }
 
@@ -130,18 +136,14 @@ class _StepRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, word, color) = switch (status) {
-      _Status.done => (Icons.check_circle, 'Done', Pal.safe),
+      _Status.done => (Icons.check_circle, 'Done', Pal.brand),
       _Status.waiting => (Icons.hourglass_top, 'Waiting', Pal.caution),
       _Status.unconfirmed => (Icons.help_outline, 'Not confirmed', Pal.caution),
     };
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Pal.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.6), width: 2),
-      ),
+      decoration: BoxDecoration(color: Pal.card, borderRadius: BorderRadius.circular(20), boxShadow: kSoftShadow),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -196,7 +198,7 @@ class _ComplaintState extends State<_Complaint> {
           ),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Pal.card, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: Pal.card, borderRadius: BorderRadius.circular(20), boxShadow: kSoftShadow),
           child: SelectableText(
             showEnglish ? c.complaintEnglish : local,
             style: const TextStyle(fontSize: 18, height: 1.5),
@@ -248,10 +250,11 @@ class _SubmitArea extends StatelessWidget {
           height: 78,
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: done ? Pal.safe : Pal.critical,
-              foregroundColor: done ? Colors.black : Colors.white,
-              disabledBackgroundColor: done ? Pal.safe : Colors.grey.shade800,
-              disabledForegroundColor: done ? Colors.black : Colors.white70,
+              backgroundColor: done ? Pal.brand : Pal.critical,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: done ? Pal.brand : Pal.grey,
+              disabledForegroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(39)),
             ),
             onPressed: s == SubmitState.idle || s == SubmitState.failed ? () => _confirm(context) : null,
             icon: s == SubmitState.submitting

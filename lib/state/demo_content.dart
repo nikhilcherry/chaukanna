@@ -99,6 +99,24 @@ const simKnownLine = {
   'kn': 'ನಮಸ್ಕಾರ, ನಾನು ನಿಮ್ಮ ಬ್ಯಾಂಕ್‌ನಿಂದ ಕರೆ ಮಾಡುತ್ತಿದ್ದೇನೆ, ದಯವಿಟ್ಟು KYC ವಿವರ ನೀಡಿ.',
 };
 
+const simKycLine = {
+  'en': 'Sir, your KYC has expired. Your account will be blocked today unless you give me your Aadhaar and PAN now.',
+  'hi': 'सर, आपकी केवाईसी एक्सपायर हो गई है। आज ही खाता बंद हो जाएगा, अभी अपना आधार और पैन बताइए।',
+  'kn': 'ಸರ್, ನಿಮ್ಮ ಕೆವೈಸಿ ಅವಧಿ ಮುಗಿದಿದೆ. ಇಂದೇ ಖಾತೆ ಬಂದ್ ಆಗುತ್ತದೆ, ಈಗಲೇ ಆಧಾರ್ ಮತ್ತು ಪ್ಯಾನ್ ಹೇಳಿ.',
+};
+const simBankLine = {
+  'en':
+      'I am calling from your bank. A transfer of fifty thousand rupees from your account is on hold. Stay on the line.',
+  'hi': 'मैं आपके बैंक से बोल रहा हूँ। आपके खाते से पचास हज़ार रुपये का ट्रांसफ़र रुका हुआ है, लाइन पर बने रहिए।',
+  'kn':
+      'ನಾನು ನಿಮ್ಮ ಬ್ಯಾಂಕ್‌ನಿಂದ ಮಾತನಾಡುತ್ತಿದ್ದೇನೆ. ನಿಮ್ಮ ಖಾತೆಯಿಂದ ಐವತ್ತು ಸಾವಿರ ರೂಪಾಯಿ ವರ್ಗಾವಣೆ ಬಾಕಿ ಇದೆ, ಲೈನ್‌ನಲ್ಲಿ ಇರಿ.',
+};
+const simPrizeLine = {
+  'en': 'Congratulations! You won a ten lakh lottery. Pay a small fee today to claim your prize.',
+  'hi': 'बधाई हो! आपने दस लाख की लॉटरी जीती है। इनाम पाने के लिए आज ही थोड़ी फ़ीस जमा कीजिए।',
+  'kn': 'ಅಭಿನಂದನೆ! ನೀವು ಹತ್ತು ಲಕ್ಷದ ಲಾಟರಿ ಗೆದ್ದಿದ್ದೀರಿ. ಬಹುಮಾನ ಪಡೆಯಲು ಇಂದೇ ಸ್ವಲ್ಪ ಶುಲ್ಕ ಪಾವತಿಸಿ.',
+};
+
 String pickLine(Map<String, String> m, String lang) => _pick(m, lang);
 
 // ---- simulated n8n incident reply -----------------------------------------

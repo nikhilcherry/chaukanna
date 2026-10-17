@@ -11,7 +11,9 @@ import '../models/messages.dart';
 import '../models/verdict.dart';
 import '../services/approval_client.dart';
 import '../services/clip_catalog.dart';
+import '../services/call_tap.dart';
 import '../services/livekit_service.dart';
+import '../services/phone_layer.dart';
 import '../services/whisper_gate.dart';
 import '../services/whisper_player.dart';
 import '../util/otp_mask.dart';
@@ -103,6 +105,8 @@ class GuardianController extends ChangeNotifier {
     DateTime Function()? clock,
     Haptics? haptics,
     bool useLiveKit = true,
+    PhoneLayer? phoneLayer,
+    CallTap? callTap,
   }) : _engine = whisper ?? JustAudioWhisperEngine(),
        _approval = approval ?? ApprovalClient(webhook: AppConfig.n8nApprovalWebhook),
        catalog = catalog ?? ClipCatalog(),
@@ -119,6 +123,12 @@ class GuardianController extends ChangeNotifier {
       t.state.addListener(_notify);
       _transport = t;
     }
+    // Number blocking needs no server, so the phone layer exists on any Android build.
+    // Listening to the call needs the call server (a caller token URL).
+    _phone = phoneLayer ?? (useLiveKit ? PhoneLayer.platform() : null);
+    if (_phone != null && (callTap != null || (_transport != null && AppConfig.phoneLayerConfigured))) {
+      _tap = callTap ?? CallTap(log: (m, {important = false}) => _log(m, important: important));
+    }
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
@@ -131,6 +141,24 @@ class GuardianController extends ChangeNotifier {
   final Haptics _haptics;
   final bool _catalogInjected;
   LiveKitTransport? _transport;
+
+  // ---- ordinary phone calls (Android) ---------------------------------------
+  PhoneLayer? _phone;
+  CallTap? _tap;
+  StreamSubscription<PhoneEvent>? _phoneSub;
+  PhonePermissions phonePermissions = const PhonePermissions();
+  bool _phoneCallActive = false;
+  bool screeningOn = false;
+  List<ScreenedCall> screenedCalls = const [];
+  String _phoneNumber = '';
+
+  /// The device can protect ordinary calls (Android build with a caller token URL).
+  bool get phoneLayerAvailable => _phone != null;
+
+  /// Listening to calls through the microphone is set up (needs the call server).
+  bool get phoneTapAvailable => _tap != null;
+  bool get phoneProtectionOn => phonePermissions.enabled && phonePermissions.ready;
+  bool get onPhoneCall => _phoneCallActive;
   ClipCatalog catalog;
   Timer? _clockTimer;
   bool _disposed = false;
@@ -223,7 +251,117 @@ class GuardianController extends ChangeNotifier {
       _log(AppConfig.liveKitConfigured ? 'LiveKit disabled' : 'No LiveKit config: offline demo mode');
     }
     await _transport?.start();
+    await _initPhone();
     _notify();
+  }
+
+  Future<void> _initPhone() async {
+    final phone = _phone;
+    if (phone == null) return;
+    try {
+      phonePermissions = await phone.status();
+      await _readScreening();
+      _phoneSub = phone.events.listen(_onPhoneEvent);
+      if (_tap != null && phonePermissions.enabled && phonePermissions.ready) await phone.start();
+    } catch (e) {
+      _log('Phone call layer unavailable: $e', important: true);
+    }
+  }
+
+  /// Switch protection of ordinary phone calls on or off (asks for permissions first).
+  Future<void> setPhoneProtection(bool on) async {
+    final phone = _phone;
+    if (phone == null) return;
+    try {
+      if (!on) {
+        await phone.stop();
+        phonePermissions = await phone.status();
+      } else {
+        phonePermissions = await phone.requestPermissions();
+        if (!phonePermissions.ready) {
+          _emit('Chaukanna needs the microphone and phone permissions to protect your calls.', error: true);
+        } else if (await phone.start()) {
+          phonePermissions = await phone.status();
+          if (!phonePermissions.overlay) {
+            _emit('Also allow "Display over other apps", so warnings can appear on top of a call.');
+          }
+        } else {
+          _emit('Could not start call protection. Open Chaukanna and try again.', error: true);
+        }
+      }
+    } catch (e) {
+      _emit('Call protection failed: $e', error: true);
+    }
+    _notify();
+  }
+
+  Future<void> allowOverDialer() async {
+    await _phone?.openOverlaySettings();
+  }
+
+  /// Re-read permissions, e.g. when the app returns from a settings screen.
+  Future<void> refreshPhonePermissions() async {
+    final phone = _phone;
+    if (phone == null) return;
+    phonePermissions = await phone.status();
+    await _readScreening();
+    _notify();
+  }
+
+  Future<void> _readScreening() async {
+    final phone = _phone;
+    if (phone == null) return;
+    try {
+      screeningOn = await phone.screeningHeld();
+      screenedCalls = await phone.screenedCalls();
+    } catch (e) {
+      _log('Could not read call screening: $e');
+    }
+  }
+
+  /// Ask Android to make Chaukanna the call-screening app: known scam numbers are then
+  /// rejected before they ring, and risky country codes get a warning.
+  Future<void> turnOnScreening() async {
+    final phone = _phone;
+    if (phone == null) return;
+    try {
+      final held = await phone.requestScreening();
+      await _readScreening();
+      if (!held) {
+        _emit('Choose Chaukanna as your "Caller ID & spam app" to block known scam numbers.', error: true);
+      }
+    } catch (e) {
+      _emit('Could not turn on number blocking: $e', error: true);
+    }
+    _notify();
+  }
+
+  void _onPhoneEvent(PhoneEvent e) {
+    if (_disposed) return;
+    switch (e.state) {
+      case PhoneCallState.ringing:
+        _phoneNumber = e.number;
+      case PhoneCallState.offhook:
+        if (_phoneCallActive) return;
+        if (e.number.isNotEmpty) _phoneNumber = e.number;
+        _phoneCallActive = true;
+        _log(
+          'Phone call answered${_phoneNumber.isEmpty ? '' : ' with $_phoneNumber'}: turning on the loudspeaker so Chaukanna can hear',
+        );
+        speaker = true;
+        unawaited(_phone?.setSpeaker(true));
+        unawaited(_tap?.start(_phoneNumber));
+        _applyMic();
+        _notify();
+      case PhoneCallState.idle:
+        if (!_phoneCallActive) return;
+        _phoneCallActive = false;
+        _phoneNumber = '';
+        _log('Phone call ended');
+        if (phase == CallPhase.active && !simulated) unawaited(endCall(reason: 'The call ended'));
+        unawaited(_tap?.stop());
+        _notify();
+    }
   }
 
   void _tick() {
@@ -513,6 +651,10 @@ class GuardianController extends ChangeNotifier {
     if (callStartedAt != null) elapsed = _now().difference(callStartedAt!);
     _whisperToken++;
     if (whisper.playing) whisper = WhisperState(WhisperStatus.stopped, clip: whisper.clip);
+    // Hanging up (or an auto-block) must end the real phone call too.
+    if (_phoneCallActive && (reason == 'You hung up' || reason.startsWith('Blocked'))) {
+      unawaited(_phone?.endCall());
+    }
     _micPausedForWhisper = false;
     _callerDucked = false;
     alarmActive = false;
@@ -550,6 +692,7 @@ class GuardianController extends ChangeNotifier {
   void toggleSpeaker() {
     speaker = !speaker;
     unawaited(_transport?.setSpeaker(speaker));
+    if (_phoneCallActive) unawaited(_phone?.setSpeaker(speaker));
     _notify();
   }
 
@@ -557,7 +700,9 @@ class GuardianController extends ChangeNotifier {
     final on = phase == CallPhase.active && !userMuted && !_micPausedForWhisper;
     if (_micApplied == on) return;
     _micApplied = on;
-    unawaited(_transport?.setMicEnabled(on));
+    // On a phone call the tap owns the microphone; the victim connection stays quiet.
+    unawaited(_transport?.setMicEnabled(on && !_phoneCallActive));
+    if (_phoneCallActive) unawaited(_tap?.setMicEnabled(on));
   }
 
   void _duckCaller(bool duck) {
@@ -582,6 +727,7 @@ class GuardianController extends ChangeNotifier {
     );
     alarmActive = true;
     unawaited(_haptics().catchError((Object _) {}));
+    if (_phoneCallActive) unawaited(_phone?.bringToFront());
     _log('ALARM ${clip == 'none' ? 'generic' : clip} at pressure $p');
   }
 
@@ -988,6 +1134,21 @@ class GuardianController extends ChangeNotifier {
     _scheduleSimIncident();
   }
 
+  void simulateKyc() => _simulateScam('+91 90123 45678', simKycLine, 'kyc_update');
+
+  void simulateBank() => _simulateScam('+91 80 4777 1200', simBankLine, 'bank_impersonation');
+
+  void simulatePrize() => _simulateScam('+91 63000 11223', simPrizeLine, 'prize_lottery');
+
+  /// A scam of [scamType] with no OTP or secrecy ask, so the screen shows that type's own colour.
+  void _simulateScam(String number, Map<String, String> line, String scamType) {
+    final id = _ensureSimCall(number);
+    _inject(
+      _verdictJson(id, 'caller', pickLine(line, simLanguage), {'scam_type': scamType, 'pressure': 2}, simLanguage),
+    );
+    _scheduleSimIncident();
+  }
+
   void simulateKnownScammer() {
     final id = _ensureSimCall('+91 99887 76655', known: true);
     _inject(
@@ -1081,6 +1242,8 @@ class GuardianController extends ChangeNotifier {
     _cancelSim();
     _stopSimHeartbeat();
     _engine.dispose();
+    unawaited(_phoneSub?.cancel());
+    unawaited(_tap?.stop());
     unawaited(_transport?.dispose());
     _notices.close();
     super.dispose();

@@ -14,6 +14,10 @@ class AppConfig {
   /// `{"token": "...", "url": "wss://..."}` back.
   static const livekitTokenUrl = String.fromEnvironment('LIVEKIT_TOKEN_URL');
 
+  /// Where the phone-call layer gets a `caller-*` token for each ordinary phone call:
+  /// the bridge's token_server `/token` endpoint. Empty = the layer is off.
+  static const callerTokenUrl = String.fromEnvironment('CALLER_TOKEN_URL');
+
   /// The bridge sends data messages only to this identity.
   static const victimIdentity = String.fromEnvironment('VICTIM_IDENTITY', defaultValue: 'victim');
 
@@ -45,6 +49,8 @@ class AppConfig {
 
   /// Hang up automatically a few seconds after a known-scammer warning.
   static const autoBlockKnownScammers = bool.fromEnvironment('AUTO_BLOCK_KNOWN', defaultValue: true);
+
+  static bool get phoneLayerConfigured => callerTokenUrl.isNotEmpty && liveKitConfigured;
 
   static bool get liveKitConfigured => livekitTokenUrl.isNotEmpty || (livekitUrl.isNotEmpty && livekitToken.isNotEmpty);
 }

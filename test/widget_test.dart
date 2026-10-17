@@ -58,7 +58,7 @@ void main() {
       await tester.tap(find.text('I understand'));
       await tester.pump();
       expect(find.text('I understand'), findsNothing);
-      expect(find.text('🔒 Isolation attempt'), findsOneWidget);
+      expect(find.text('Told to keep this secret'), findsOneWidget);
 
       await wait(const Duration(seconds: 15)); // t = 28 s: OTP alarm
       expect(find.text(ClipCatalog().warningText('warn_otp', lang).en), findsOneWidget);

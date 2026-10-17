@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:chaukanna_app/models/messages.dart';
 import 'package:chaukanna_app/services/approval_client.dart';
+import 'package:chaukanna_app/services/call_tap.dart';
+import 'package:chaukanna_app/services/phone_layer.dart';
 import 'package:chaukanna_app/services/clip_catalog.dart';
 import 'package:chaukanna_app/services/whisper_player.dart';
 import 'package:chaukanna_app/state/guardian_controller.dart';
@@ -82,8 +84,14 @@ class SentRequest {
 /// Builds a controller with no platform plugins, a controllable clock and a
 /// recording HTTP client.
 class Harness {
-  Harness({DateTime? start, int Function(Uri url)? status, String Function(Uri url)? body, DateTime Function()? clock})
-    : now = start ?? DateTime(2026, 10, 17, 11, 0, 0) {
+  Harness({
+    DateTime? start,
+    int Function(Uri url)? status,
+    String Function(Uri url)? body,
+    DateTime Function()? clock,
+    PhoneLayer? phone,
+    CallTap? tap,
+  }) : now = start ?? DateTime(2026, 10, 17, 11, 0, 0) {
     final client = MockClient((req) async {
       sent.add(SentRequest(req.url, jsonDecode(req.body) as Map<String, dynamic>));
       return http.Response(body?.call(req.url) ?? '{"ok":true}', status?.call(req.url) ?? 200);
@@ -95,6 +103,8 @@ class Harness {
       clock: clock ?? () => now,
       haptics: () async {},
       useLiveKit: false,
+      phoneLayer: phone,
+      callTap: tap,
     );
     c.notices.listen(notices.add);
   }
@@ -169,4 +179,73 @@ class Harness {
   void heartbeat(String id) => send({'type': 'heartbeat', 'call_id': id, 'ts': 4});
 
   void dispose() => c.dispose();
+}
+
+/// Records what the app asked of the phone, and lets a test play out call states.
+class FakePhoneLayer implements PhoneLayer {
+  final _events = StreamController<PhoneEvent>.broadcast();
+  PhonePermissions perms = const PhonePermissions(microphone: true, phone: true, enabled: true);
+  final speakerCalls = <bool>[];
+  int endCalls = 0;
+  int frontCalls = 0;
+  int starts = 0;
+
+  void emit(PhoneCallState s, [String number = '']) => _events.add(PhoneEvent(s, number));
+
+  @override
+  Stream<PhoneEvent> get events => _events.stream;
+  @override
+  Future<PhonePermissions> status() async => perms;
+  @override
+  Future<PhonePermissions> requestPermissions() async => perms;
+  @override
+  Future<void> openOverlaySettings() async {}
+  @override
+  Future<bool> start() async {
+    starts++;
+    return true;
+  }
+
+  @override
+  Future<void> stop() async {}
+  @override
+  Future<bool> endCall() async {
+    endCalls++;
+    return true;
+  }
+
+  @override
+  Future<bool> setSpeaker(bool on) async {
+    speakerCalls.add(on);
+    return true;
+  }
+
+  @override
+  Future<bool> bringToFront() async {
+    frontCalls++;
+    return true;
+  }
+
+  bool screening = false;
+  List<ScreenedCall> screened = const [];
+  @override
+  Future<bool> screeningHeld() async => screening;
+  @override
+  Future<bool> requestScreening() async => screening = true;
+  @override
+  Future<List<ScreenedCall>> screenedCalls() async => screened;
+}
+
+class FakeCallTap extends CallTap {
+  FakeCallTap() : super(log: (m, {important = false}) {});
+  final started = <String>[];
+  final mic = <bool>[];
+  int stops = 0;
+
+  @override
+  Future<void> start(String number) async => started.add(number);
+  @override
+  Future<void> setMicEnabled(bool on) async => mic.add(on);
+  @override
+  Future<void> stop() async => stops++;
 }

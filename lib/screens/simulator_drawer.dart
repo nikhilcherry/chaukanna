@@ -20,7 +20,7 @@ class SimulatorDrawer extends StatelessWidget {
 
     return Drawer(
       width: 340,
-      backgroundColor: const Color(0xFF10151C),
+      backgroundColor: Pal.paper,
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -53,7 +53,7 @@ class SimulatorDrawer extends StatelessWidget {
                 ),
               ),
             const Divider(height: 24),
-            _Sim('Simulate Pressure 0', Pal.safe, () => run(c.simulatePressure0)),
+            _Sim('Simulate Pressure 0', Pal.brand, () => run(c.simulatePressure0)),
             _Sim('Simulate Pressure 2 (OTP Ask)', Pal.high, () => run(c.simulatePressure2Otp)),
             _Sim(
               'Simulate Pressure 3 (Digital Arrest + Whisper)',

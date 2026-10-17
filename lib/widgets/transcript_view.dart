@@ -56,11 +56,9 @@ class _TranscriptViewState extends State<TranscriptView> {
         TextSpan(
           text: m.group(0),
           style: const TextStyle(
-            backgroundColor: Pal.critical,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            decoration: TextDecoration.underline,
-            decorationColor: Colors.white,
+            backgroundColor: Color(0xFFFFE0E0), // soft red marker
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF8A1C20),
           ),
         ),
       );
@@ -92,19 +90,11 @@ class _TranscriptViewState extends State<TranscriptView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              you ? 'YOU' : 'CALLER',
-              style: TextStyle(
-                fontSize: 14,
-                letterSpacing: 1.5,
-                fontWeight: FontWeight.w900,
-                color: you ? Pal.safe : Pal.forPressure(l.pressure),
-              ),
-            ),
+            Text(you ? 'YOU' : 'CALLER', style: display(13, color: you ? Pal.brand : Pal.grey, letterSpacing: 1.4)),
             const SizedBox(height: 2),
             Text.rich(
               TextSpan(children: you ? [TextSpan(text: l.text)] : _spans(l.text)),
-              style: TextStyle(fontSize: 21, height: 1.4, color: last ? Pal.text : Pal.dim),
+              style: TextStyle(fontSize: 21, height: 1.4, color: last ? Pal.ink : Pal.dim),
             ),
           ],
         );

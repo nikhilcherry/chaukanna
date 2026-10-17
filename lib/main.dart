@@ -53,7 +53,7 @@ class _ShellState extends State<Shell> {
         ..showSnackBar(
           SnackBar(
             content: Text(n.text),
-            backgroundColor: n.error ? const Color(0xFF7A4B00) : Pal.cardHi,
+            backgroundColor: n.error ? const Color(0xFF7A4B00) : Pal.ink,
             duration: const Duration(seconds: 5),
           ),
         );
@@ -97,7 +97,7 @@ class _ShellState extends State<Shell> {
                         width: 10,
                         height: 56,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
+                          color: Colors.black.withValues(alpha: 0.28),
                           borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
                         ),
                       ),
