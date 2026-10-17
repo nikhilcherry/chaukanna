@@ -4,10 +4,13 @@ from __future__ import annotations
 import os
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
 SAMPLE_RATE = 16000
 DATA_TOPIC = "chaukanna.verdict"
+OTP_SMS_TOPIC = "chaukanna.otp_sms"   # victim app -> guardian: what an OTP SMS is for (never the code)
 GUARDIAN_IDENTITY = "chaukanna-guardian"
+DEFAULT_CALL_LOG_DIR = str(Path(__file__).resolve().parent / "calls")   # console reads it (calllog.py)
 SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text"
 
 # Higher = more serious. Unknown clip names from a newer classifier rank 1.
@@ -49,6 +52,7 @@ class Config:
     pause_ms: int = 300
     mock_stt: bool = False
     stt_engine: str = "auto"            # auto (Sarvam + whisper fallback) | sarvam | whisper | mock
+    call_log_dir: str = ""              # "" = no call log; the console then shows no calls
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -76,6 +80,7 @@ class Config:
             chunk_max_s=float(e("CHUNK_MAX_SECONDS", "4")),
             pause_ms=int(e("PAUSE_MS", "300")),
             stt_engine=e("STT_ENGINE", "auto"),
+            call_log_dir=e("CALL_LOG_DIR", DEFAULT_CALL_LOG_DIR),
         )
 
     def chunker_kw(self) -> dict:
@@ -87,6 +92,12 @@ class Config:
         """http://host:8010/classify -> http://host:8010/reset"""
         u = self.classifier_url.rstrip("/")
         return (u[: -len("/classify")] if u.endswith("/classify") else u) + "/reset"
+
+    @property
+    def otp_context_url(self) -> str:
+        """http://host:8010/classify -> http://host:8010/otp_context"""
+        u = self.classifier_url.rstrip("/")
+        return (u[: -len("/classify")] if u.endswith("/classify") else u) + "/otp_context"
 
     @property
     def scam_numbers_url(self) -> str:

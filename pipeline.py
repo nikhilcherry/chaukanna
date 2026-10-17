@@ -24,6 +24,7 @@ from typing import Awaitable, Callable
 import httpx
 
 from audio import pcm_to_wav, rms
+from calllog import CallLog
 from config import CLIP_SEVERITY, SAMPLE_RATE, Config
 from stt import SttError, build_stt
 
@@ -110,6 +111,39 @@ def mask_otp(text: str) -> str:
     return "".join(out)
 
 
+# --------------------------------------------------------------------------- OTP SMS context
+OTP_PURPOSES = ("payment", "upi", "card", "bank_login", "sim", "messaging_account", "government_id", "other_login", "everyday")
+
+
+def clean_otp_sms(raw: dict) -> dict | None:
+    """Keep only the fields the contract allows from the victim app's OTP SMS message. The app never
+    sends the code; a service name that carries 4+ digits is dropped anyway, in case it ever did."""
+    if not isinstance(raw, dict) or raw.get("purpose") not in OTP_PURPOSES:
+        return None
+    service = str(raw.get("service") or "")[:40]
+    if re.search(r"\d{4,}", service):
+        service = ""
+    try:
+        amount = float(raw["amount"]) if raw.get("amount") not in (None, "") else None
+    except (TypeError, ValueError):
+        amount = None
+    try:
+        before = max(0.0, float(raw.get("seconds_before_call") or 0.0))
+    except (TypeError, ValueError):
+        before = 0.0
+    return {"purpose": raw["purpose"], "service": service, "amount": amount, "seconds_before_call": round(before, 1)}
+
+
+def describe_otp_sms(sms: dict) -> str:
+    """'OTP SMS: payment, ₹49,999, from HDFC Bank' (for the app's evidence log; no code)."""
+    parts = [sms["purpose"].replace("_", " ")]
+    if sms.get("amount"):
+        parts.append(f"₹{sms['amount']:,.0f}")
+    if sms.get("service"):
+        parts.append(f"from {sms['service']}")
+    return "OTP SMS: " + ", ".join(parts)
+
+
 # --------------------------------------------------------------------------- mock classifier
 _SCAM_WORDS = {
     "digital_arrest": ["cbi", "digital arrest", "arrest", "police", "narcotics", "money laundering", "warrant",
@@ -118,6 +152,13 @@ _SCAM_WORDS = {
     "kyc_update": ["kyc", "pan card", "blocked", "anydesk", "teamviewer", "केवाईसी", "ब्लॉक", "एनीडेस्क"],
     "bank_impersonation": ["bank", "credit card", "debit card", "cvv", "upi", "transaction", "बैंक", "ट्रांजैक्शन"],
     "prize_lottery": ["lottery", "prize", "winner", "lucky", "लॉटरी", "इनाम"],
+    "pension_scam": ["pension", "jeevan pramaan", "life certificate", "treasury", "पेंशन", "जीवन प्रमाण", "ಪಿಂಚಣಿ"],
+    "relative_emergency": ["accident", "hospital", "bail", "pehchana", "एक्सीडेंट", "अस्पताल", "जमानत", "ಆಕ್ಸಿಡೆಂಟ್"],
+    "utility_disconnection": ["electricity", "bijli", "power cut", "बिजली", "ವಿದ್ಯುತ್"],
+    "insurance_bonus": ["maturity", "policy bonus", "lic", "मैच्योरिटी", "बीमा"],
+    "upi_collect": ["collect request", "scan the qr", "qr scan", "by mistake", "galti se", "गलती से"],
+    "investment_tip": ["guaranteed return", "stock tips", "trading app", "double", "निवेश"],
+    "sextortion": ["nude", "obscene", "viral", "अश्लील", "वायरल"],
 }
 _OTP_WORDS = ("otp", "o.t.p", " pin", "cvv", "password", "ओटीपी", "पिन", "सीवीवी", "ಒಟಿಪಿ", "ಓಟಿಪಿ", "******")
 _SECRECY_WORDS = ("don't tell", "do not tell", "tell no one", "secret", "confidential", "kisi ko mat", "किसी को न",
@@ -242,6 +283,7 @@ class Pipeline:
         self.cfg, self.http, self.publish = cfg, http, publish
         self.stt = stt or build_stt(cfg, http, cfg.stt_engine)
         self.classifier = "mock" if cfg.classifier_url == "mock" else classifier   # "http" | "mock"
+        self.calllog = CallLog(cfg.call_log_dir)       # what the console replays (calllog.py)
         self._bg: set[asyncio.Task] = set()
 
     def _spawn(self, coro) -> asyncio.Task:
@@ -432,6 +474,39 @@ class Pipeline:
         clips = [c for c in st.whispered if c not in exclude]
         return max(clips, key=lambda c: CLIP_SEVERITY.get(c, 1)) if clips else "none"
 
+    # ---- OTP SMS context ---------------------------------------------------------------
+    async def note_otp_sms(self, st: CallState, sms: dict) -> dict | None:
+        """The victim's phone read an OTP SMS (what it is for, who sent it, the amount; never the
+        code). The classifier re-merges at once, so a payment OTP that lands mid-call can warn the
+        victim before the caller even asks for it. Published like a chunk verdict, speaker "sms"."""
+        sms = clean_otp_sms(sms)
+        if sms is None or st.ended or self.classifier != "http":
+            return None
+        try:
+            r = await self.http.post(self.cfg.otp_context_url, json={"call_id": st.call_id, **sms}, timeout=4)
+            r.raise_for_status()
+            verdict = self.merge(st, r.json())
+        except (httpx.HTTPError, ValueError, KeyError) as e:
+            log.warning("[%s] OTP SMS context not delivered to the classifier (%s)", st.call_id, e.__class__.__name__)
+            return None
+        text = describe_otp_sms(sms)
+        clip = self.decide_whisper(st, verdict)
+        msg = self.verdict_msg(st, "sms", text, verdict.get("language", "en"), verdict, clip)
+        delivered = await self.publish(msg)
+        if delivered and clip != "none":
+            st.delivered_whispers.add(clip)
+        st.last_message = msg
+        if clip != "none" and st.first_whisper_t is None:
+            st.first_whisper_t = st.rel(time.monotonic())
+        log.info("[%s] %s -> %s p=%d%s", st.call_id, text, verdict["scam_type"], verdict["pressure"],
+                 f" WHISPER {clip}" if clip != "none" else "")
+        ev = self.n8n_event_for(st, verdict)
+        if ev:
+            self.queue_event(st, ev)
+        if ev == "incident":
+            self._spawn(self.report_scammer(st, verdict))
+        return msg
+
     # ---- shared scam list -------------------------------------------------------------
     async def report_scammer(self, st: CallState, verdict: dict) -> bool:
         """n8n adds an incident's caller to Supabase; the classifier keeps its own list. Add the
@@ -449,6 +524,8 @@ class Pipeline:
                         st.caller_number, e.__class__.__name__)
             return False
         log.info("[%s] %s added to the shared scam list", st.call_id, st.caller_number)
+        self.calllog.write({"type": "scam_list", "call_id": st.call_id, "number": st.caller_number,
+                            "scam_type": body["scam_type"], "ts": time.time()})
         return True
 
     async def sync_known_numbers(self) -> int:
@@ -484,6 +561,8 @@ class Pipeline:
         return None
 
     def queue_event(self, st: CallState, event: str) -> None:
+        self.calllog.write({"type": "n8n_event", "call_id": st.call_id, "event": event, "ts": time.time(),
+                            "pressure": (st.last_verdict or {}).get("pressure", 0), "sent": bool(self.cfg.n8n_url)})
         if not self.cfg.n8n_url:
             return
         st.events.append(event)
@@ -526,6 +605,7 @@ class Pipeline:
                 continue
             except httpx.HTTPError as e:                                 # sent, but no reply: don't resend
                 log.warning("n8n %s for %s: no reply within %.0fs (%s)", event, st.call_id, wait, e.__class__.__name__)
+                self._note_n8n(st, event, False, f"no reply within {wait:.0f}s", t0)
                 return
             if r.status_code in (429, 502, 503, 504) and attempt < 3:
                 log.warning("n8n %s attempt %d: HTTP %d", event, attempt, r.status_code)
@@ -533,13 +613,20 @@ class Pipeline:
                 continue
             if r.is_error:
                 log.warning("n8n %s for %s: HTTP %d %s", event, st.call_id, r.status_code, r.text[:200])
+                self._note_n8n(st, event, False, f"HTTP {r.status_code}", t0)
                 return
             log.info("[%s] n8n %s delivered (pressure %d, %.0f ms)", st.call_id, event,
                      body["verdict"].get("pressure", 0), (time.monotonic() - t0) * 1000)
+            self._note_n8n(st, event, True, "delivered", t0)
             if event == "incident":
                 await self._forward_incident(st, r)
             return
         log.error("n8n %s for %s gave up after 3 attempts", event, st.call_id)
+        self._note_n8n(st, event, False, "gave up after 3 attempts", t0)
+
+    def _note_n8n(self, st: CallState, event: str, ok: bool, detail: str, t0: float) -> None:
+        self.calllog.write({"type": "n8n_reply", "call_id": st.call_id, "event": event, "ok": ok, "detail": detail,
+                            "ms": int((time.monotonic() - t0) * 1000), "ts": time.time()})
 
     async def _forward_incident(self, st: CallState, r: httpx.Response) -> None:
         try:

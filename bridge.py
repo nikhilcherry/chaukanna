@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 import replay
 import tokens
 from audio import Chunk, PauseChunker
-from config import DATA_TOPIC, GUARDIAN_IDENTITY, SAMPLE_RATE, Config, new_call_id
+from config import DATA_TOPIC, GUARDIAN_IDENTITY, OTP_SMS_TOPIC, SAMPLE_RATE, Config, new_call_id
 from pipeline import CallState, Pipeline
 from stt import SttRouter
 
@@ -157,6 +157,7 @@ class LiveSession:
         self._tasks: set[asyncio.Task] = set()
         self._end_task: asyncio.Task | None = None
         self._start_after_end = False
+        self.pending_otp_sms: tuple[float, dict] | None = None  # (received, sms) seen while no call was on
 
     def on_audio(self, speaker: str, pcm: bytes) -> None:
         """Every received frame, per leg (the recorder hooks in here)."""
@@ -170,6 +171,7 @@ class LiveSession:
     # ---- fast path ------------------------------------------------------------------------
     async def publish(self, msg: dict) -> bool:
         """Send one message to the victim only. Returns True if it went out."""
+        self.pipe.calllog.write(msg)                          # the console sees it even with no victim
         if self.stdout:
             print(json.dumps(msg, ensure_ascii=False), flush=True)
             return True
@@ -191,6 +193,9 @@ class LiveSession:
             st = self.call
             await self.publish({"type": "heartbeat", "call_id": st.call_id if st else "",
                                 "in_call": st is not None, "ts": time.time()})
+            self.pipe.calllog.status({"room": self.cfg.room, "in_call": st is not None, "call_id": st.call_id if st else "",
+                                      "victim_present": self.victim is not None, "callers": len(self.callers),
+                                      "every_s": self.cfg.heartbeat_seconds})
             await asyncio.sleep(self.cfg.heartbeat_seconds)
 
     async def send_snapshot(self, st: CallState) -> None:
@@ -230,6 +235,31 @@ class LiveSession:
                                             caller_label=caller.get("label", ""))
         st.victim_seen = self.victim is not None
         self.spawn(self.publish(self.pipe.call_started_msg(st)))
+        # An OTP SMS that arrived shortly before the call (a delivery code, or one the caller set off)
+        # still matters; the classifier decides how much by its age.
+        if self.pending_otp_sms is not None:
+            received, sms = self.pending_otp_sms
+            self.pending_otp_sms = None
+            if time.time() - received <= 900:
+                self.spawn(self.pipe.note_otp_sms(st, {**sms, "seconds_before_call": time.time() - received}))
+
+    def on_data(self, packet) -> None:
+        """Victim app -> guardian: what an OTP SMS on the phone is for (CONTRACTS §6). Only the victim
+        may send it; callers cannot publish data at all."""
+        who = packet.participant.identity if packet.participant else ""
+        if packet.topic != OTP_SMS_TOPIC or not who or who != self.victim:
+            return
+        try:
+            sms = json.loads(packet.data.decode())
+        except (ValueError, UnicodeDecodeError):
+            log.warning("unreadable OTP SMS message from %s", who)
+            return
+        if self.call is not None and not self.call.ending:
+            self.spawn(self.pipe.note_otp_sms(self.call, sms))
+        else:
+            self.pending_otp_sms = (time.time(), sms)
+            log.info("OTP SMS (%s) noted before any call; it applies to a call starting within 15 min",
+                     sms.get("purpose") if isinstance(sms, dict) else "?")
 
     def should_end(self, st: CallState) -> bool:
         return not self.callers or (st.victim_seen and self.victim is None)
@@ -375,6 +405,7 @@ class LiveSession:
 
         room.on("participant_connected", self.on_join)
         room.on("participant_disconnected", self.on_leave)
+        room.on("data_received", self.on_data)
         room.on("disconnected", _disc)
         room.on("reconnecting", lambda: log.warning("LiveKit connection lost, reconnecting..."))
         room.on("reconnected", lambda: log.info("LiveKit reconnected"))

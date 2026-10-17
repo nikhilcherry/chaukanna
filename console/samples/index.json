@@ -1,0 +1,10 @@
+[
+  {"id": "sample-courier-to-cbi", "title": "Courier call turns into digital arrest",
+   "note": "demo/scam_call_slow_burn.wav, caller leg only, Sarvam STT"},
+  {"id": "sample-cbi-otp", "title": "CBI officer asks for the OTP, and she starts to comply",
+   "note": "samples/synthetic_scam_call_hinglish.wav, both legs"},
+  {"id": "sample-redial-listed", "title": "The same script from a number already on the scam list",
+   "note": "demo/scam_call_slow_burn.wav, caller +919988776655 (seeded scam list)"},
+  {"id": "sample-amazon-delivery", "title": "A real delivery call: parcel, gate, no alarm",
+   "note": "samples/synthetic_innocent_call_hinglish.wav, both legs"}
+]

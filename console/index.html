@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chaukanna console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 1h8l4 7-4 7H4L0 8z' fill='%232A45C9'/%3E%3C/svg%3E">
+<meta name="description" content="Every scam call Chaukanna heard, replayed chunk by chunk: what was said, which signals fired, when the victim was warned, and what n8n did next.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Noto+Serif+Devanagari:wght@400;600&family=Noto+Serif+Kannada:wght@400;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --ground:#E9ECE8; --panel:#F4F6F2; --ink:#141B22; --ink-2:#44505B; --ink-3:#6F7A85; --rule:#C9CFC9;
+  --trace:#2A45C9; --trace-soft:rgba(42,69,201,.12);
+  --fraud:#B8321F; --legit:#2D7A68; --bank:#A8792A; --unsure:#8A6D14;
+  --node:#9AA4AD; --canvas:#F1F3EF;
+  --display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --serif:"Source Serif 4","Noto Serif Devanagari","Noto Serif Kannada",Georgia,"Times New Roman",serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#0E1317; --panel:#141B21; --ink:#E6EAE6; --ink-2:#A9B3BB; --ink-3:#77838E; --rule:#26313A;
+  --trace:#7D93FF; --trace-soft:rgba(125,147,255,.14);
+  --fraud:#F0674E; --legit:#5BC2A6; --bank:#D7A650; --unsure:#D8B84A; --node:#56626D; --canvas:#11171C;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0E1317; --panel:#141B21; --ink:#E6EAE6; --ink-2:#A9B3BB; --ink-3:#77838E; --rule:#26313A;
+  --trace:#7D93FF; --trace-soft:rgba(125,147,255,.14);
+  --fraud:#F0674E; --legit:#5BC2A6; --bank:#D7A650; --unsure:#D8B84A; --node:#56626D; --canvas:#11171C;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground);color:var(--ink);font:15px/1.5 var(--serif);padding-inline:clamp(16px,3vw,40px);padding-block:0 64px}
+[hidden]{display:none!important}
+.wrap{max-width:1400px;margin:0 auto}
+a{color:var(--trace)}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--trace);outline-offset:2px}
+.eyebrow{font:500 11px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+
+header.mast{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding-block:22px 18px;border-bottom:1px solid var(--rule)}
+.brand{font:700 22px/1 var(--display);letter-spacing:-.01em}
+.brand span{color:var(--ink-3);font-weight:500}
+.mast nav{display:flex;gap:18px;flex-wrap:wrap;font:500 12px/1 var(--mono)}
+.mast nav a{color:var(--ink-2);text-decoration:none}
+.mast nav a:hover{color:var(--trace)}
+
+.thesis{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:clamp(20px,4vw,56px);align-items:end;padding-block:34px 26px}
+.thesis h1{font:700 clamp(30px,4.3vw,58px)/1.02 var(--display);letter-spacing:-.025em;margin:12px 0 0;text-wrap:balance}
+.thesis h1 .b{color:var(--bank)}
+.thesis h1 .f{color:var(--fraud)}
+.thesis h1 .g{color:var(--trace)}
+.thesis p{margin:0;color:var(--ink-2);max-width:62ch;font-size:15.5px}
+.readings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:18px}
+.readings div{background:var(--ground);padding:12px 14px}
+.readings b{display:block;font:600 26px/1.05 var(--display);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.readings span{font:400 11.5px/1.35 var(--mono);color:var(--ink-3)}
+
+.system{display:flex;flex-wrap:wrap;border:1px solid var(--rule);border-bottom:0;background:var(--panel);font:500 11px/1.25 var(--mono)}
+.system div{display:flex;align-items:center;gap:7px;padding:8px 12px;border-right:1px solid var(--rule);flex:1 1 auto;min-width:0}
+.system div:last-child{border-right:0}
+.system i{width:8px;height:8px;border-radius:50%;flex:none}
+.system b{font-weight:600;color:var(--ink);white-space:nowrap}
+.system span{color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bench{display:grid;grid-template-columns:220px minmax(0,1fr) 370px;border:1px solid var(--rule);background:var(--panel);height:min(820px,max(640px,86vh))}
+.rail{border-right:1px solid var(--rule);display:flex;flex-direction:column;min-height:0}
+.rail .tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--rule)}
+.rail .tabs button{background:none;border:0;padding:11px 6px;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);cursor:pointer}
+.rail .tabs button[aria-selected="true"]{color:var(--ink);box-shadow:inset 0 -2px 0 var(--trace)}
+.rail .tabs button:disabled{opacity:.45;cursor:default}
+.follow{display:flex;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--rule);background:var(--trace-soft);font:500 11px/1.3 var(--mono);color:var(--trace)}
+.follow input{accent-color:var(--trace);margin:0}
+.follow span{flex:1}
+.cases{list-style:none;margin:0;padding:6px 0;overflow:auto;flex:1;min-height:0}
+.cases button{width:100%;display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:9px;align-items:center;background:none;border:0;padding:7px 12px;text-align:left;cursor:pointer;font:500 12.5px/1.2 var(--mono)}
+.cases button:hover{background:var(--trace-soft)}
+.cases button[aria-current="true"]{background:var(--ink);color:var(--ground)}
+.cases .dot{width:8px;height:8px;border-radius:50%}
+.cases .dot.live{animation:blink 1.1s ease-in-out infinite}
+@keyframes blink{50%{opacity:.25}}
+.cases .p{font-variant-numeric:tabular-nums;color:var(--ink-3);font-size:11.5px}
+.cases button[aria-current="true"] .p{color:inherit;opacity:.7}
+.cases .sub{display:block;font:400 10.5px/1.3 var(--mono);color:var(--ink-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cases button[aria-current="true"] .sub{color:inherit;opacity:.65}
+.cases .empty{padding:12px;font:400 11.5px/1.45 var(--mono);color:var(--ink-3)}
+
+.stage{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0}
+.stagebar{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--rule)}
+.stagebar h2{font:700 20px/1 var(--display);margin:0;letter-spacing:-.01em}
+.livetag{font:700 10.5px/1 var(--mono);letter-spacing:.12em;padding:4px 6px;background:var(--fraud);color:#fff}
+.trigger{font:400 13.5px/1.45 var(--serif);color:var(--ink-2);padding:9px 14px;margin:0;border-bottom:1px solid var(--rule);min-height:3.4em}
+.ctl{margin-left:auto;display:flex;gap:6px;align-items:center}
+.ctl button{border:1px solid var(--rule);background:var(--ground);padding:6px 11px;font:500 12px/1 var(--mono);cursor:pointer;min-width:34px}
+.ctl button.primary{background:var(--ink);color:var(--ground);border-color:var(--ink);min-width:76px}
+.ctl button:hover{border-color:var(--trace)}
+.ctl select{font:500 12px/1 var(--mono);background:var(--ground);border:1px solid var(--rule);padding:5px 4px}
+.canvaswrap{position:relative;flex:1;min-height:0}
+canvas#g{position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--canvas);cursor:grab;touch-action:none}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;gap:6px 12px;flex-wrap:wrap;font:400 10.5px/1 var(--mono);color:var(--ink-3);pointer-events:none;background:var(--canvas);padding:6px 8px;border:1px solid var(--rule);max-width:calc(100% - 20px)}
+.legend i{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px}
+.hover{position:absolute;pointer-events:none;background:var(--ink);color:var(--ground);font:400 11.5px/1.45 var(--mono);padding:7px 9px;max-width:340px;white-space:pre-line;z-index:2}
+.story-btn{margin-top:16px;display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--ground);border:0;padding:11px 16px;font:600 15px/1 var(--display);cursor:pointer}
+.story-btn:hover{background:var(--trace)}
+.story-btn small{font:400 12px/1 var(--mono);opacity:.7}
+.story{position:absolute;left:12px;right:12px;bottom:12px;z-index:3;background:var(--ink);color:var(--ground);padding:14px 16px;font:500 17px/1.45 var(--display);display:flex;gap:14px;align-items:flex-start;justify-content:space-between;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.story p{margin:0;max-width:70ch;text-wrap:pretty}
+/* the story box is inverted (ink on ground), so its accents come from the other theme */
+.story{--s-fraud:#F0674E;--s-bank:#D7A650;--s-legit:#5BC2A6;--s-trace:#9DAEFF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .story{--s-fraud:#B8321F;--s-bank:#8A5F14;--s-legit:#1F6B58;--s-trace:#2A45C9}}
+:root[data-theme="dark"] .story{--s-fraud:#B8321F;--s-bank:#8A5F14;--s-legit:#1F6B58;--s-trace:#2A45C9}
+.story b{color:var(--s-fraud)} .story i{font-style:normal;color:var(--s-bank)} .story u{text-decoration:none;color:var(--s-legit)} .story em{font-style:normal;color:var(--s-trace)}
+.story .acts2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.story button{font:600 13px/1 var(--mono);padding:8px 12px;border:1px solid var(--ground);background:transparent;color:var(--ground);cursor:pointer}
+.story button.go{background:var(--ground);color:var(--ink)}
+.story .x{border:0;opacity:.7;padding:4px 6px}
+.banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);font:600 13px/1.2 var(--display);letter-spacing:.02em;padding:7px 12px;background:var(--ink);color:var(--ground);white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;transition:opacity .3s}
+
+.readout{border-left:1px solid var(--rule);display:flex;flex-direction:column;min-width:0;min-height:0;overflow-y:auto}
+.readout section{padding:13px 16px;border-bottom:1px solid var(--rule)}
+.readout h3{margin:0 0 8px;font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);display:flex;justify-content:space-between;gap:8px}
+.readout h3 .big{font:700 22px/1 var(--display);letter-spacing:0;color:var(--ink);font-variant-numeric:tabular-nums}
+#gauge,#spark{width:100%;height:auto;display:block}
+#spark{cursor:pointer;margin-top:4px}
+#needle{transition:transform .8s cubic-bezier(.2,.8,.2,1)}
+.moves{list-style:none;margin:6px 0 0;padding:0;font:400 12px/1.35 var(--mono);max-height:11.5em;overflow:auto}
+.moves li{display:grid;grid-template-columns:44px minmax(0,1fr) 26px;gap:8px;padding:4px 0;border-top:1px dashed var(--rule);opacity:.25;transition:opacity .35s;cursor:pointer}
+.moves li.on{opacity:1}
+.moves li:hover span:nth-child(2){text-decoration:underline dotted}
+.moves .tm{color:var(--ink-3);font-variant-numeric:tabular-nums}
+.moves .k-crit{color:var(--fraud)} .moves .k-warn{color:var(--bank)} .moves .k-whisper{color:var(--trace);font-weight:700} .moves .k-n8n{color:var(--ink);font-weight:700}
+.moves .pv{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.claim{margin:0;max-height:15em;overflow:auto}
+.claim .who{display:block;font:500 10.5px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
+.claim .said{display:block;font:400 17px/1.45 var(--serif);color:var(--ink)}
+.claim .why{display:block;font:400 13px/1.45 var(--serif);color:var(--ink-2);margin-top:7px}
+.claim .ws{display:block;margin-top:8px;padding:7px 9px;border-left:3px solid var(--trace);background:var(--trace-soft);font:400 13.5px/1.45 var(--serif)}
+.claim .ws b{display:block;font:600 10.5px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--trace);margin-bottom:2px}
+.claim .src{display:block;font:400 10.5px/1.4 var(--mono);color:var(--ink-3);margin-top:7px;word-break:break-word}
+.logsec{flex:1;display:flex;flex-direction:column;min-height:110px}
+.log{flex:1;overflow:auto;font:400 11.5px/1.45 var(--mono);padding:0;margin:0;list-style:none;min-height:0}
+.log li{padding:4px 0;border-top:1px dashed var(--rule);color:var(--ink-3);opacity:.35;word-break:break-word}
+.log li.on{opacity:1;color:var(--ink-2)}
+.log li.now{color:var(--ink)}
+.log li.now .q{color:var(--trace)}
+.log .q{font-weight:700}
+.verdict{padding:13px 16px}
+.stamp{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.stamp b{font:700 28px/1 var(--display);letter-spacing:-.02em;text-transform:uppercase}
+.stamp .pp{font:500 13px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.verdict.scam .stamp b{color:var(--fraud)}
+.verdict.safe .stamp b{color:var(--legit)}
+.verdict.watch .stamp b{color:var(--unsure)}
+.verdict.pending .stamp b{color:var(--ink-3)}
+.verdict.listening .stamp b{color:var(--trace)}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 12px;margin:9px 0;font:400 12px/1.4 var(--mono)}
+.facts dt{color:var(--ink-3)}
+.facts dd{margin:0}
+.acts{display:flex;flex-wrap:wrap;gap:5px}
+.acts span{font:500 10.5px/1 var(--mono);padding:5px 7px;border:1px solid currentColor;letter-spacing:.04em}
+.acts .blk{color:var(--fraud)} .acts .ok{color:var(--legit)} .acts .nt{color:var(--ink-2)} .acts .gd{color:var(--trace)}
+details.sar{margin-top:9px;font:400 13px/1.5 var(--serif)}
+details.sar summary{cursor:pointer;font:500 11px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--fraud)}
+details.sar p{margin:8px 0 0;color:var(--ink-2);max-height:12em;overflow:auto;white-space:pre-line}
+
+.lower{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:clamp(24px,3.5vw,48px);padding-block:48px 0}
+.lower h2{font:700 25px/1.1 var(--display);margin:8px 0 8px;letter-spacing:-.015em;text-wrap:balance}
+.lower p{color:var(--ink-2);margin:0 0 14px;max-width:62ch}
+.tx{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule);max-height:520px;overflow:auto}
+.tx li{display:grid;grid-template-columns:46px 62px minmax(0,1fr) 34px;gap:10px;align-items:baseline;padding:7px 4px;border-bottom:1px solid var(--rule);cursor:pointer}
+.tx li:hover{background:var(--trace-soft)}
+.tx li.cur{background:var(--ink);color:var(--ground)}
+.tx li.cur .tm,.tx li.cur .sp{color:inherit;opacity:.7}
+.tx .tm{font:400 11.5px/1 var(--mono);color:var(--ink-3);font-variant-numeric:tabular-nums}
+.tx .sp{font:500 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.tx .tt{font:400 15px/1.45 var(--serif)}
+.tx .tt small{display:inline-block;margin-left:6px;font:600 10px/1 var(--mono);letter-spacing:.06em;padding:3px 5px;background:var(--trace);color:#fff;vertical-align:2px}
+.tx .pc{font:700 12px/1 var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+table.rel{width:100%;border-collapse:collapse;font:400 12px/1.3 var(--mono);font-variant-numeric:tabular-nums;margin-top:12px}
+table.rel th,table.rel td{padding:6px 6px;text-align:right;border-bottom:1px solid var(--rule)}
+table.rel th{color:var(--ink-3);font-weight:500}
+table.rel td:first-child,table.rel th:first-child{text-align:left}
+.note{font:400 11.5px/1.5 var(--mono);color:var(--ink-3);margin-top:10px}
+#callout{display:contents}
+.netout{display:flex;flex-direction:column;flex:1;min-height:0}
+.netout .moves li{opacity:1}
+.netout .moves{max-height:9em}
+.netout .claim{font:400 13px/1.5 var(--serif);color:var(--ink-2)}
+.netout .claim b{color:var(--ink);font-weight:600}
+.netout .claim code{font:400 11.5px/1.4 var(--mono);color:var(--ink-2)}
+.netout .log li{opacity:1;color:var(--ink-2);cursor:pointer}
+.netout .log li:hover{color:var(--trace)}
+.sel{font:400 12px/1.45 var(--mono);color:var(--ink-2)}
+.sel b{display:block;font:700 16px/1.2 var(--display);color:var(--ink);margin-bottom:4px}
+.sel button{font:600 11px/1 var(--mono);margin-top:8px;padding:6px 9px;border:0;background:var(--trace);color:#fff;cursor:pointer}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--rule);font:400 12px/1.6 var(--mono);color:var(--ink-3);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+@media (max-width:1180px){
+  .bench{grid-template-columns:minmax(0,1fr);height:auto}
+  .rail{border-right:0;border-bottom:1px solid var(--rule)}
+  .cases{display:flex;overflow-x:auto;padding:6px}
+  .cases li{flex:0 0 auto}
+  .cases button{width:auto}
+  .cases .sub{display:none}
+  .canvaswrap{height:min(560px,70vh);flex:none}
+  .readout{border-left:0;border-top:1px solid var(--rule)}
+  .log{max-height:220px}
+  .thesis,.lower{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  .canvaswrap{height:480px}
+  .story{left:6px;right:6px;bottom:6px;padding:10px 12px;font-size:14.5px;gap:8px}
+  .story .acts2{margin-top:8px}
+  .trigger{font-size:12.5px}
+  .readings b{font-size:20px}
+  .ctl{margin-left:0}
+  .legend{display:none}
+  .tx li{grid-template-columns:40px minmax(0,1fr) 28px}
+  .tx .sp{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="mast">
+  <div class="brand">chaukanna <span>/ console</span></div>
+  <nav><a href="#bench">Calls</a><a href="#transcript">Transcript</a><a href="#speed">Speed</a><a href="/" id="dialer-link" hidden>Scammer dialer</a></nav>
+</header>
+
+<section class="thesis">
+  <div>
+    <div class="eyebrow">Sample call · Hindi · 48 seconds · the real classifier, replayed</div>
+    <h1>It began as a <span class="b">courier call</span>. At second <span id="th-t">27</span> it became a <span class="f">digital arrest</span>, and she was <span class="g">warned</span>.</h1>
+  </div>
+  <div>
+    <p>Chaukanna listens to both sides of a phone call. Every few seconds of speech is transcribed and judged by the classifier (a keyword fast path, then Jev). When the call turns into a scam, it whispers a warning only the victim can hear and hands the incident to n8n, which alerts the family and drafts the 1930 complaint. This console replays every call chunk by chunk, or follows one live as it happens.</p>
+    <button class="story-btn" id="story-btn" type="button">▶ Tell me the story <small>90 seconds, no jargon</small></button>
+    <div class="readings">
+      <div><b>28 / 28</b><span>scam conversations caught<br>keywords + Jev eval</span></div>
+      <div><b>0 / 19</b><span>ordinary calls<br>raised a false alarm</span></div>
+      <div><b>hi · kn · en</b><span>Hindi, Kannada, English<br>and the mix in between</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="system" id="system" hidden aria-label="System status"></div>
+<section class="bench" id="bench" aria-label="Call replay">
+  <aside class="rail">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-live" aria-selected="false" disabled title="Live calls appear when this page is served by the bridge's token server">Live</button>
+      <button role="tab" id="tab-samples" aria-selected="true">Samples</button>
+      <button role="tab" id="tab-net" aria-selected="false" title="Every call, number, incident and scam list, joined">Network</button>
+    </div>
+    <label class="follow" id="follow-row" hidden><input type="checkbox" id="follow" checked><span>Jump to a new call when it starts</span></label>
+    <ul class="cases" id="cases"></ul>
+  </aside>
+
+  <div class="stage">
+    <div class="stagebar">
+      <h2 id="cid">—</h2>
+      <span class="livetag" id="livetag" hidden>LIVE</span>
+      <span class="eyebrow" id="cmeta"></span>
+      <div class="ctl">
+        <button id="b-back" title="Previous step (←)" aria-label="Previous step">◀</button>
+        <button id="b-play" class="primary" title="Play or pause (space)">Replay</button>
+        <button id="b-fwd" title="Next step (→)" aria-label="Next step">▶</button>
+        <select id="speed-sel" aria-label="Replay speed"><option value="0.6">0.6×</option><option value="1" selected>1×</option><option value="1.8">1.8×</option><option value="3">3×</option></select>
+      </div>
+    </div>
+    <p class="trigger" id="trigger"></p>
+    <div class="canvaswrap">
+      <canvas id="g" aria-label="The call so far: who said what, which signals it raised, and what Chaukanna did"></canvas>
+      <div class="banner" id="banner" hidden></div>
+      <div class="story" id="story" hidden role="status" aria-live="polite"><div><p id="story-text"></p><div class="acts2" id="story-acts"></div></div><button class="x" id="story-x" type="button" aria-label="Leave the story">✕</button></div>
+      <div class="legend" id="legend-net" hidden>
+        <span><i style="background:var(--fraud);border-radius:50%"></i>call, high pressure</span>
+        <span><i style="border:1.5px solid var(--ink);border-radius:50%"></i>became an incident</span>
+        <span><i style="border:1.5px solid var(--fraud);border-radius:2px"></i>listed number</span>
+        <span><i style="border:1.5px dashed var(--bank);border-radius:2px"></i>lists disagree</span>
+        <span><i style="background:var(--bank)"></i>scam list</span>
+        <span><i style="background:var(--fraud);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)"></i>scam type</span>
+        <span><i style="border:1.5px solid var(--legit)"></i>victim / family</span>
+      </div>
+      <div class="legend" id="legend-call">
+        <span><i style="background:var(--fraud);border-radius:50%"></i>words, high pressure</span>
+        <span><i style="background:var(--node);border-radius:50%"></i>words, calm</span>
+        <span><i style="border:1.5px solid var(--fraud)"></i>scam signal</span>
+        <span><i style="background:var(--fraud);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)"></i>scam type</span>
+        <span><i style="background:var(--trace);clip-path:polygon(0 0,100% 50%,0 100%)"></i>whisper to victim</span>
+        <span><i style="background:var(--trace);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)"></i>Chaukanna</span>
+      </div>
+      <div class="hover" id="hover" hidden></div>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div class="netout" id="netout" hidden>
+      <section><h3><span>Connected</span><span class="big" id="net-big"></span></h3><dl class="facts" id="net-facts"></dl></section>
+      <section id="net-sel-sec" hidden><h3><span>Selected</span><span id="net-sel-k"></span></h3><div class="sel" id="net-sel"></div></section>
+      <section><h3><span>Repeat callers</span><span id="net-rn"></span></h3><ul class="moves" id="net-repeat"></ul></section>
+      <section><h3><span>Scam lists</span><span id="net-ln"></span></h3><p class="claim" id="net-lists"></p></section>
+      <section class="logsec"><h3><span>Incidents in Supabase</span><span id="net-in"></span></h3><ol class="log" id="net-inc"></ol></section>
+    </div>
+    <div id="callout">
+    <section>
+      <h3><span>Scam pressure</span><span class="big" id="pnow">—</span></h3>
+      <svg id="gauge" viewBox="0 0 340 64" role="img" aria-label="Scam pressure from 0 (calm) to 3 (critical); n8n is called at 2">
+        <g id="gaugestatic"></g>
+        <g id="needle" style="transform:translateX(-40px)"><path id="needle-tip" d="M0 16 L-6 7 L6 7 Z"/><circle id="needle-dot" cx="0" cy="30" r="6.5" stroke-width="2"/></g>
+      </svg>
+      <svg id="spark" viewBox="0 0 340 58" role="img" aria-label="Pressure over the call; click to jump"></svg>
+    </section>
+    <section>
+      <h3><span>What raised it</span><span id="mvn"></span></h3>
+      <ul class="moves" id="moves"></ul>
+    </section>
+    <section>
+      <h3><span>What it just heard</span><span id="stepn"></span></h3>
+      <p class="claim" id="claim"></p>
+    </section>
+    <section class="logsec">
+      <h3><span>Classifier &amp; n8n calls</span><span id="qn"></span></h3>
+      <ol class="log" id="log"></ol>
+    </section>
+    <div class="verdict pending" id="verdict"></div>
+    </div>
+  </div>
+</section>
+
+<section class="lower">
+  <div id="transcript">
+    <div class="eyebrow" id="tx-eyebrow">Transcript</div>
+    <h2>Every chunk, on the clock</h2>
+    <p>What the speech-to-text heard on each side of the call, the pressure the classifier gave the call after it, and the moments a warning was whispered. Victim OTP digits are masked before anything is stored. Click a line to jump there.</p>
+    <ol class="tx" id="tx"></ol>
+  </div>
+  <div id="speed">
+    <div class="eyebrow">This call · per chunk</div>
+    <h2>How fast it answers</h2>
+    <p>A critical keyword (an OTP ask, secrecy, “digital arrest”) answers at once. Otherwise the classifier gives Jev a short budget, and a verdict that lands later is merged into the next chunk. Speech end → phone is measured by the bridge: from the end of the words to the verdict leaving for the victim's phone.</p>
+    <table class="rel" id="lat"></table>
+    <p class="note" id="lat-note"></p>
+  </div>
+</section>
+
+<footer>
+  <span>chaukanna · Hack Sprint 2026 · console built on the assay replay</span>
+  <span>space: play · ← →: step · drag nodes · hover for details</span>
+</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const MONO = '"JetBrains Mono",ui-monospace,monospace';
+const VICTIM = "Kamala Devi";                       // CONTRACTS.md demo victim
+const KEY = new URLSearchParams(location.search).get("key");
+const KQ = KEY ? "?key="+encodeURIComponent(KEY) : "";
+let css = {};
+function readCss(){ const s=getComputedStyle(document.documentElement);
+  for (const k of ["ground","panel","ink","ink-2","ink-3","rule","trace","fraud","legit","bank","unsure","node","canvas"]) css[k]=s.getPropertyValue("--"+k).trim(); }
+readCss();
+
+// classifier signals (classifier_service/keywords.py LABELS): 2 = engine CRITICAL_SIGNALS, 0 = keywords NEUTRAL
+const SIG = {
+  otp:["OTP / PIN ask",2], secrecy:["keep it secret",2], isolation:["don't hang up",2], digital_arrest:["'digital arrest'",2],
+  remote_access:["screen-share app",2], scam_payment:["fee / safe account",2], victim_complying:["she's complying",2], fin_details:["bank / FD details",2],
+  authority:["police / CBI claim",1], legal_threat:["arrest threat",1], block_threat:["block threat",1], kyc:["KYC problem",1],
+  id_docs:["Aadhaar / PAN",1], expiry:["papers 'expired'",1], app_or_link:["app / link",1], payment:["money transfer",1], bank:["bank claim",1],
+  prize:["prize / lottery",1], trouble:["someone in trouble",1], courier:["parcel / courier",1], otp_pretext:["OTP excuse",1],
+  bank_problem:["card problem",1], task_job:["task job",1], utility:["electricity office",1], pension:["pension",1], insurance:["insurance",1],
+  insurance_bonus:["insurance bonus",1], upi_trap:["UPI PIN / QR",1], investment:["stock tips",1], sextortion:["sextortion",1],
+  delivery:["delivery context",0], otp_protective:["'never share an OTP'",0], targeted:["aimed at her",0], relative:["family member",0],
+  urgency:["urgency",0], news:["scam news",0], self_id:["introduction",0],
+};
+const sigName = s => (SIG[s]||[s.replaceAll("_"," ")])[0];
+const sigLevel = s => (SIG[s]||[0,1])[1];
+const TYPE = { digital_arrest:"digital arrest", kyc_update:"KYC update", bank_impersonation:"bank impersonation", prize_lottery:"prize / lottery",
+  pension_scam:"pension scam", relative_emergency:"relative in trouble", utility_disconnection:"power-cut threat", insurance_bonus:"insurance bonus",
+  upi_collect:"UPI collect", investment_tip:"investment tip", sextortion:"sextortion", other:"other scam", none:"none" };
+const typeName = t => TYPE[t] || "other scam";
+// tts_asset_generator manifest, short variants
+const CLIP = {
+  warn_otp:{en:"Don't share your OTP! It's a scam.", hi:"ओटीपी मत बताइए! ये फ्रॉड है।", name:"never share the OTP"},
+  warn_digital_arrest:{en:"Digital arrest is a scam. Hang up!", hi:"डिजिटल अरेस्ट फ्रॉड है! फ़ोन काटिए।", name:"digital arrest is a scam"},
+  warn_secrecy:{en:"Don't keep it secret! We're alerting your family.", hi:"घरवालों से मत छुपाइए! हम उन्हें बता रहे हैं।", name:"don't keep it secret"},
+  warn_known_scammer:{en:"Careful! This number is a known scammer.", hi:"सावधान! ये जाना-माना फ्रॉड नंबर है।", name:"known scam number"},
+};
+const clipName = c => (CLIP[c]||{}).name || c;
+const PNAME = ["calm","watch","incident","critical"];
+
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
+const mmss = t => { t=Math.max(0,Math.round(t||0)); return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"); };
+const short = (s,n) => { s=String(s||""); return s.length>n ? s.slice(0,n-1)+"…" : s; };
+function hex(c){ c=c.replace("#",""); if(c.length===3)c=[...c].map(x=>x+x).join(""); return [0,2,4].map(i=>parseInt(c.substr(i,2),16)); }
+function mix(a,b,t){ const A=hex(a),B=hex(b); return "rgb("+A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(",")+")"; }
+function alpha(c,a){ const h=hex(c); return `rgba(${h[0]},${h[1]},${h[2]},${a})`; }
+const pcol = p => p>=3?css.fraud:p===2?mix(css.bank,css.fraud,.62):p===1?css.bank:css.node;
+const lcol = l => l===2?css.fraud:l===1?css.bank:css["ink-3"];
+
+/* ================= graph (assay's force layout, kept as is) ================= */
+const cv=$("#g"), ctx=cv.getContext("2d");
+let W=600,H=400,DPR=1;
+const G={nodes:[],edges:[],byId:new Map(),pulses:[]};
+const cam={x:0,y:0,s:1,init:false};
+function resize(){ DPR=Math.min(2,devicePixelRatio||1); const r=cv.getBoundingClientRect(); if(!r.width) return;
+  const ox=W, oy=H; W=r.width; H=r.height; cv.width=W*DPR; cv.height=H*DPR;
+  for(const n of G.nodes){ n.x+= (W-ox)/2; n.y+=(H-oy)/2; } }
+new ResizeObserver(resize).observe(cv);
+let seed=7; const rnd=()=>{ seed=(seed*16807)%2147483647; return (seed-1)/2147483646; };
+function clearGraph(){ G.nodes=[];G.edges=[];G.byId.clear();G.pulses=[]; seed=7; }
+function node(id,type,data,near){
+  let n=G.byId.get(id); if(n){ Object.assign(n.data,data||{}); return n; }
+  const a=near||{x:W/2,y:H/2}; const ang=rnd()*6.283, d=18+rnd()*26;
+  n={id,type,data:Object.assign({},data||{}),x:a.x+Math.cos(ang)*d,y:a.y+Math.sin(ang)*d,vx:0,vy:0,born:performance.now()};
+  G.nodes.push(n); G.byId.set(id,n); return n;
+}
+function edge(a,b,kind){ if(!a||!b||a===b) return; const k=a.id+">"+b.id+">"+kind; if(G.edges.some(e=>e.k===k)) return; G.edges.push({k,a,b,kind,born:performance.now()}); }
+function pulse(n){ if(n) G.pulses.push({n,t:performance.now()}); }
+const REST={said:44,hit:58,type:96,whisper:62,n8n:92,about:150,listed:70,act:58,sms:60,
+  dialed:42,to:92,ctype:74,onlist:96,alerts:58,is:26,family:110};
+const BIG = t => t==="caller"||t==="victim"||t==="guardian"||t==="incident";
+const LIGHT = t => t==="utt"||t==="ncall";       // many small nodes: weak repulsion
+function tick(){
+  const N=G.nodes, n=N.length, cx=W/2, cy=H/2;
+  for(let i=0;i<n;i++){ const a=N[i];
+    for(let j=i+1;j<n;j++){ const b=N[j]; let dx=a.x-b.x, dy=a.y-b.y; const d2=dx*dx+dy*dy+.01;
+      if(d2>62500) continue; const big=!LIGHT(a.type)+!LIGHT(b.type); const f=(big===2?1400:big?520:150)/d2;
+      dx*=f;dy*=f; a.vx+=dx;a.vy+=dy;b.vx-=dx;b.vy-=dy; } }
+  for(const e of G.edges){ const L=REST[e.kind]||60; let dx=e.b.x-e.a.x, dy=e.b.y-e.a.y; const d=Math.sqrt(dx*dx+dy*dy)||1;
+    const f=(d-L)*.025/d; dx*=f;dy*=f; e.a.vx+=dx;e.a.vy+=dy;e.b.vx-=dx;e.b.vy-=dy; }
+  const sx=Math.max(.0012, 380/W*.004), sy=Math.max(.0016, 300/H*.005);
+  for(const a of N){ a.vx+=(cx-a.x)*sx; a.vy+=(cy-a.y)*sy;
+    if(a.pin||a.drag){a.vx=a.vy=0;continue;}
+    a.vx*=.8;a.vy*=.8; const sp=Math.hypot(a.vx,a.vy); if(sp>12){a.vx*=12/sp;a.vy*=12/sp;}
+    a.x+=a.vx; a.y+=a.vy; }
+}
+function hexPath(x,y,r){ ctx.beginPath(); for(let k=0;k<6;k++){const a=k*1.0472; ctx.lineTo(x+r*Math.cos(a),y+r*Math.sin(a));} ctx.closePath(); }
+function diamond(x,y,r){ ctx.beginPath(); ctx.moveTo(x,y-r);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r,y);ctx.closePath(); }
+function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect?ctx.roundRect(x-w/2,y-h/2,w,h,r):ctx.rect(x-w/2,y-h/2,w,h); }
+let hoverN=null, nowUtt=null;
+function draw(now){
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
+  if(G.nodes.length){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const n of G.nodes){ if(n.x<x0)x0=n.x; if(n.x>x1)x1=n.x; if(n.y<y0)y0=n.y; if(n.y>y1)y1=n.y; }
+    const pad=56, tx=(x0+x1)/2, ty=(y0+y1)/2, ts=Math.min(1.35,(W-2*pad)/Math.max(60,x1-x0),(H-2*pad-30)/Math.max(60,y1-y0));
+    const k=cam.init&&!dragN?.08:(dragN?0:1); cam.x+=(tx-cam.x)*k; cam.y+=(ty-cam.y)*k; cam.s+=(ts-cam.s)*k; cam.init=true; }
+  const S=cam.s; ctx.setTransform(DPR*S,0,0,DPR*S,DPR*(W/2-S*cam.x),DPR*(H/2-8-S*cam.y));
+  for(const e of G.edges){ const age=Math.min(1,(now-e.born)/900);
+    let col = alpha(css["ink-3"],.42);
+    if(e.kind==="whisper") col=alpha(css.trace,.75);
+    else if(e.kind==="act") col=alpha(e.b.data.ok===false?css["ink-3"]:css.legit,.7);
+    else if(e.kind==="listed") col=alpha(css.fraud,.7);
+    else if(e.kind==="hit"&&e.b.type==="signal") col=alpha(lcol(e.b.data.level),.5);
+    else if(e.kind==="onlist") col=alpha(css.bank,.45);
+    else if(e.kind==="ctype") col=alpha(css.fraud,.28);
+    else if(e.kind==="to") col=alpha(css["ink-3"],.22);
+    else if(e.kind==="alerts"||e.kind==="family"||e.kind==="is") col=alpha(css.legit,.6);
+    else if(e.kind==="dialed") col=alpha(pcol(e.b.data.p||0),.6);
+    if(selN&&mode==="network"&&e.a!==selN&&e.b!==selN) col=alpha(css["ink-3"],.1);
+    ctx.strokeStyle = age<1 ? alpha(css.trace,.9-.55*age) : col;
+    ctx.lineWidth=e.kind==="whisper"||e.kind==="listed"?1.5:(age<1?1.4:.8); ctx.setLineDash(e.kind==="whisper"||e.kind==="about"||e.kind==="family"?[3,4]:[]);
+    ctx.beginPath(); ctx.moveTo(e.a.x,e.a.y); ctx.lineTo(e.b.x,e.b.y); ctx.stroke(); }
+  ctx.setLineDash([]);
+  for(const p of G.pulses){ const t=(now-p.t)/1000; if(t>1) continue; ctx.strokeStyle=alpha(p.c||css.trace,.9*(1-t)); ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(p.n.x,p.n.y,10+t*70,0,6.283); ctx.stroke(); }
+  G.pulses=G.pulses.filter(p=>now-p.t<1000);
+  const nb = selN&&mode==="network" ? new Set([selN,...G.edges.filter(e=>e.a===selN||e.b===selN).flatMap(e=>[e.a,e.b])]) : null;
+  for(const n of G.nodes){ const g=Math.min(1,(now-n.born)/380), s=.35+.65*g; const d=n.data;
+    const dim = nb&&!nb.has(n); ctx.globalAlpha = g*(dim?.22:1);
+    if(n.type==="ncall"){ const r=(4+Math.min(4,(d.p||0)*1.3))*s; ctx.beginPath(); ctx.arc(n.x,n.y,r,0,6.283);
+      if(d.logged){ ctx.fillStyle=pcol(d.p||0); ctx.fill(); } else { ctx.fillStyle=css.canvas; ctx.fill(); ctx.strokeStyle=pcol(d.p||0); ctx.lineWidth=1.8; ctx.stroke(); }
+      if(d.incident){ ctx.strokeStyle=css.ink; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(n.x,n.y,r+3,0,6.283); ctx.stroke(); }
+      if(d.live){ ctx.strokeStyle=css.fraud; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(n.x,n.y,r+6+2*Math.sin(now/180),0,6.283); ctx.stroke(); } }
+    else if(n.type==="num"){ const w=24*s,h=15*s; ctx.fillStyle=css.canvas;
+      ctx.strokeStyle=d.listed?css.fraud:d.trusted?css.legit:css["ink-2"]; ctx.lineWidth=d.listed?2:1.4;
+      rrect(n.x,n.y,w,h,3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=ctx.strokeStyle; for(let k=0;k<3;k++) ctx.fillRect(n.x-w/2+4*s+k*5.5*s,n.y-1.5*s,3*s,3*s);
+      if(d.disagree){ ctx.strokeStyle=css.bank; ctx.lineWidth=1.3; ctx.setLineDash([2,2]); rrect(n.x,n.y,w+8*s,h+8*s,5); ctx.stroke(); ctx.setLineDash([]); } }
+    else if(n.type==="fam"){ const w=26*s,h=17*s; ctx.fillStyle=css.canvas; ctx.strokeStyle=d.ready?css.legit:css["ink-3"]; ctx.lineWidth=1.6;
+      if(!d.ready) ctx.setLineDash([3,2]); rrect(n.x,n.y,w,h,4); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle=ctx.strokeStyle; ctx.beginPath(); ctx.arc(n.x,n.y-1.2*s,2.8*s,0,6.283); ctx.fill(); ctx.beginPath(); ctx.ellipse(n.x,n.y+5.4*s,5*s,2.6*s,0,Math.PI,0); ctx.fill(); }
+    else if(n.type==="utt"){ const r=(2.8+Math.min(5.5,Math.sqrt((d.text||"").length)/1.6))*s;
+      ctx.beginPath(); ctx.arc(n.x,n.y,r,0,6.283);
+      if(d.speaker==="victim"){ ctx.fillStyle=css.canvas; ctx.fill(); ctx.strokeStyle=pcol(d.p); ctx.lineWidth=2; ctx.stroke(); }
+      else { ctx.fillStyle=d.speaker==="sms"?css.trace:pcol(d.p); ctx.fill(); }
+      if(n===nowUtt){ ctx.strokeStyle=css.ink; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(n.x,n.y,r+4.5,0,6.283); ctx.stroke(); } }
+    else if(n.type==="caller"||n.type==="victim"){ const w=34*s,h=22*s; ctx.fillStyle=css.canvas;
+      ctx.strokeStyle=n.type==="caller"?(d.listed?css.fraud:css.ink):css.legit; ctx.lineWidth=2.2;
+      rrect(n.x,n.y,w,h,4); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=ctx.strokeStyle; ctx.beginPath(); ctx.arc(n.x,n.y-1.5*s,3.6*s,0,6.283); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(n.x,n.y+7*s,6.5*s,3.4*s,0,Math.PI,0); ctx.fill(); }
+    else if(n.type==="guardian"){ ctx.fillStyle=css.trace; hexPath(n.x,n.y,13*s); ctx.fill(); }
+    else if(n.type==="signal"){ const r=(d.level===2?7:d.level===1?6:4.5)*s; ctx.fillStyle=css.canvas; ctx.strokeStyle=lcol(d.level); ctx.lineWidth=d.level===2?2:1.4;
+      ctx.fillRect(n.x-r,n.y-r,2*r,2*r); ctx.strokeRect(n.x-r,n.y-r,2*r,2*r); if(d.level===2){ ctx.fillStyle=css.fraud; ctx.fillRect(n.x-r/2.6,n.y-r/2.6,r/1.3,r/1.3); } }
+    else if(n.type==="stype"){ ctx.fillStyle=css.fraud; diamond(n.x,n.y,11*s); ctx.fill(); }
+    else if(n.type==="whisper"){ const r=8*s; ctx.fillStyle=css.trace; ctx.beginPath(); ctx.moveTo(n.x-r*.7,n.y-r);ctx.lineTo(n.x+r,n.y);ctx.lineTo(n.x-r*.7,n.y+r);ctx.closePath(); ctx.fill(); }
+    else if(n.type==="incident"){ const r=13*s; ctx.fillStyle=d.sent===false?css.canvas:css.ink; ctx.strokeStyle=css.ink; ctx.lineWidth=2; diamond(n.x,n.y,r); ctx.fill(); ctx.stroke(); }
+    else if(n.type==="action"){ const r=6.5*s; ctx.fillStyle=d.ok===false?css.canvas:css.legit; ctx.strokeStyle=d.ok===false?css["ink-3"]:css.legit; ctx.lineWidth=1.6;
+      rrect(n.x,n.y,2*r,2*r,3); ctx.fill(); ctx.stroke(); }
+    else if(n.type==="list"){ const r=8*s; ctx.fillStyle=css.bank; ctx.fillRect(n.x-r,n.y-r,2*r,2*r); ctx.fillStyle=css.canvas;
+      for(let k=0;k<3;k++) ctx.fillRect(n.x-r+3*s,n.y-r+(3+k*4.3)*s,2*r-6*s,1.6*s); }
+    ctx.globalAlpha=1;
+    if(n.label && g>=1 && !dim){ const strong=BIG(n.type)||n.type==="stype"||n.type==="whisper"||(n.type==="num"&&n.data.listed);
+      ctx.font=(strong?"700 ":"500 ")+((strong?11:10)/Math.max(.55,S)).toFixed(1)+"px "+MONO;
+      ctx.fillStyle=n.type==="guardian"||n.type==="whisper"?css.trace:n.type==="stype"?css.fraud:n.type==="signal"?lcol(d.level):
+        n.type==="caller"&&d.listed?css.fraud:n.type==="victim"?css.legit:n.type==="action"&&d.ok!==false?css.legit:
+        n.type==="num"?(d.listed?css.fraud:d.trusted?css.legit:css["ink-2"]):n.type==="fam"?(d.ready?css.legit:css["ink-3"]):BIG(n.type)?css.ink:css["ink-2"];
+      const off = n.type==="caller"||n.type==="victim"?19:n.type==="guardian"?15:n.type==="num"||n.type==="fam"?15:11;
+      ctx.fillText(n.label,n.x+off,n.y-(BIG(n.type)?10:8)); }
+  }
+  if(hoverN){ ctx.strokeStyle=css.trace; ctx.lineWidth=1.5/S; ctx.beginPath(); ctx.arc(hoverN.x,hoverN.y,15,0,6.283); ctx.stroke(); }
+}
+function frame(now){ tick(); tick(); draw(now); advance(now); requestAnimationFrame(frame); }
+
+let dragN=null, downAt=null, selN=null, mode="call";
+function pick(x,y){ let best=null,bd=(16/cam.s)**2; for(const n of G.nodes){const d=(n.x-x)**2+(n.y-y)**2; if(d<bd){bd=d;best=n;}} return best; }
+function pos(e){ const r=cv.getBoundingClientRect(); const sx=e.clientX-r.left, sy=e.clientY-r.top;
+  return [(sx-W/2)/cam.s+cam.x,(sy-H/2+8)/cam.s+cam.y,sx,sy]; }
+cv.addEventListener("pointerdown",e=>{ const [x,y]=pos(e); downAt=[e.clientX,e.clientY]; dragN=pick(x,y); if(dragN){dragN.drag=true;cv.setPointerCapture(e.pointerId);cv.style.cursor="grabbing";} });
+cv.addEventListener("pointerup",e=>{ const clicked=downAt&&Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])<5; downAt=null;
+  if(!clicked) return; if(mode==="network") selectNet(dragN||null);
+  else if(dragN?.type==="utt"){ const i=+dragN.id.slice(1), k=beats.findIndex(b=>b.idx.includes(i)); if(k>=0){ pause(); renderTo(k); } } });
+cv.addEventListener("pointermove",e=>{ const [x,y,sx,sy]=pos(e); if(dragN){dragN.x=x;dragN.y=y;return;}
+  hoverN=pick(x,y); const h=$("#hover"); if(!hoverN){h.hidden=true;return;}
+  h.hidden=false; h.textContent=describe(hoverN);
+  h.style.left=Math.min(sx+12,W-h.offsetWidth-6)+"px"; h.style.top=Math.min(sy+12,H-h.offsetHeight-6)+"px"; });
+cv.addEventListener("pointerup",()=>{ if(dragN){dragN.drag=false;dragN=null;cv.style.cursor="";} });
+cv.addEventListener("pointerleave",()=>{ hoverN=null; $("#hover").hidden=true; });
+function describe(n){ const d=n.data;
+  if(n.type==="utt") return `${d.speaker==="sms"?"OTP SMS on her phone":d.speaker} · ${mmss(d.t)} · pressure ${d.p} (${PNAME[d.p]})\n“${short(d.text,140)}”`;
+  if(n.type==="caller") return `Caller ${d.number||""}${d.label&&d.label!==d.number?" · "+d.label:""}${d.listed?"\nOn the shared scam list":""}`;
+  if(n.type==="victim") return mode==="network" ? `${d.name||VICTIM} · victim\n${d.calls} call${d.calls===1?"":"s"} to her` : `${VICTIM} · the victim\nOnly she hears the whispers`;
+  if(n.type==="guardian") return "Chaukanna guardian\nHidden in the call: hears both legs, speaks only to the victim";
+  if(n.type==="signal") return `Signal: ${sigName(d.name)} (${["neutral on its own","suspicious","critical"][d.level]})\nfirst heard at ${mmss(d.t)}`;
+  if(n.type==="stype"&&mode!=="network") return `Scam type: ${typeName(d.name)}\nfrom ${mmss(d.t)}`;
+  if(n.type==="whisper") return `Whisper at ${mmss(d.t)}: ${d.clip}\n“${(CLIP[d.clip]||{}).en||""}”`;
+  if(n.type==="incident") return `n8n incident at ${mmss(d.t)}${d.sent===false?"\nnot sent: n8n was off for this replay":d.ms?`\nanswered in ${(d.ms/1000).toFixed(1)} s`:""}`;
+  if(n.type==="action") return `${n.label}${d.detail?"\n"+d.detail:""}`;
+  if(n.type==="list") return d.which ? `${d.which} scam list · ${d.count} numbers${d.which==="Supabase"?"\n(scam_numbers, written by n8n)":"\n(the classifier's runtime list)"}` : "Shared scam-number list\n(classifier + Supabase scam_numbers)";
+  if(n.type==="ncall") return `Call ${n.id.slice(5)} · ${d.t?new Date(d.t*1000).toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):""}\n${d.number||"unknown number"} · peak p${d.p||0} · ${typeName(d.type||"none")}`+
+    `${d.incident?`\nincident · ${String(d.incident.complaint_status||"").replaceAll("_"," ")}${d.incident.family_response?" · family: "+d.incident.family_response:""}`:""}\n${d.logged?"click to replay":"in Supabase only (before call logging): no replay"}`;
+  if(n.type==="num") return `${d.number}${d.trusted?` · ${d.trusted} (trusted)`:""}\n${d.calls} call${d.calls===1?"":"s"}${d.victims>1?` to ${d.victims} victims`:""}`+
+    `\nclassifier list: ${d.cls?"yes":"no"} · Supabase list: ${d.sb?`yes, reported ${d.sb.report_count}×`:"no"}${d.disagree?"\nthe two scam lists disagree on this number":""}`;
+  if(n.type==="fam") return `${d.name} · alerted for ${d.victim}\nTelegram: ${d.ready?"chat id set":"no real chat id yet, so no alert goes out"}`;
+  if(n.type==="stype"&&mode==="network") return `Scam type: ${typeName(d.name)}\n${d.calls} call${d.calls===1?"":"s"}`;
+  return n.id; }
+
+/* ================= call → beats ================= */
+// A beat is what one press of ▶ shows: a chunk verdict, the call start, the n8n incident, its reply, the end.
+// Smaller records (other n8n events, n8n replies, scam-list adds) ride along with the beat before them.
+let cur=null, beats=[], stageDone=-1, playing=false, nextAt=0, speed=1, applied=new Set();
+const MAJOR = r => r.type==="call_started"||r.type==="verdict"||r.type==="incident"||r.type==="call_ended"||(r.type==="n8n_event"&&r.event==="incident");
+function buildBeats(recs){
+  const B=[];
+  recs.forEach((r,i)=>{ if(MAJOR(r)||!B.length) B.push({kind:r.type==="n8n_event"?"n8n":r.type,rec:r,idx:[i]}); else B[B.length-1].idx.push(i); });
+  B.forEach((b,k)=>{ const nx=B[k+1];
+    const gap = nx ? Math.max(0,(nx.rec.ts||0)-(b.rec.ts||0)) : 1;
+    b.dur = b.kind==="call_started"?2000: b.kind==="n8n"?2300: b.kind==="incident"?2800: b.kind==="call_ended"?2600:
+      Math.min(2600,Math.max(800,gap*620)) + (b.rec.whisper?1600:0); });
+  return B;
+}
+const relT = r => Math.max(0,(r.ts||0)-(cur?.t0||0));
+function caller(){ return G.byId.get("caller"); }
+function victim(){ return G.byId.get("victim"); }
+function guardian(){ return G.byId.get("guardian"); }
+function ensureCast(r){
+  if(caller()) return;
+  const C=node("caller","caller",{number:r?.caller_number||"",label:r?.caller_label||""}); C.x=W/2-170; C.y=H/2+10; C.pin=true;
+  C.label=r?.caller_label&&r.caller_label!==r.caller_number?r.caller_label:(r?.caller_number||"caller");
+  const V=node("victim","victim",{}); V.x=W/2+170; V.y=H/2+10; V.pin=true; V.label=VICTIM;
+  const Gd=node("guardian","guardian",{}); Gd.x=W/2; Gd.y=H/2-120; Gd.pin=true; Gd.label="Chaukanna";
+  edge(Gd,C,"about"); edge(Gd,V,"about");
+}
+function listCaller(t){ const C=caller(); C.data.listed=true; const L=node("list","list",{t},C); L.label="scam list"; edge(C,L,"listed"); pulse(L); }
+let seenSig=new Set(), lastType="none";
+function applyRec(i){
+  if(applied.has(i)) return; applied.add(i);
+  const r=cur.recs[i], t=relT(r);
+  switch(r.type){
+    case "call_started": ensureCast(r); if(r.known_scammer) listCaller(t); pulse(caller()); break;
+    case "verdict":{ ensureCast(null); const v=r.verdict||{}; const sp=r.speaker==="caller"?caller():victim();
+      const U=node("u"+i,"utt",{speaker:r.speaker,text:r.chunk_text,p:r.pressure||0,t},sp); edge(sp,U,r.speaker==="sms"?"sms":"said"); nowUtt=U;
+      for(const s of (v.signals||[])){ if(seenSig.has(s)) continue; seenSig.add(s);
+        const N=node("sig:"+s,"signal",{name:s,level:sigLevel(s),t},U); N.label=sigName(s); edge(U,N,"hit"); }
+      const st=r.scam_type||"none";
+      if(st!=="none"&&st!==lastType){ lastType=st; const T=node("type:"+st,"stype",{name:st,t},caller()); T.label=typeName(st); edge(caller(),T,"type"); edge(U,T,"hit"); pulse(T); }
+      if(r.known_scammer&&!caller().data.listed) listCaller(t);
+      if(r.whisper){ const Wn=node("w"+i,"whisper",{clip:r.whisper_clip,t},victim()); Wn.label=clipName(r.whisper_clip); edge(guardian(),Wn,"whisper"); edge(Wn,victim(),"whisper"); G.pulses.push({n:victim(),t:performance.now(),c:css.trace}); }
+      pulse(U); break; }
+    case "n8n_event":{ ensureCast(null); if(r.event==="incident"){ const N=node("n8n","incident",{t,sent:r.sent},guardian()); N.label="n8n incident"; edge(guardian(),N,"n8n"); edge(N,caller(),"about"); pulse(N); }
+      else if(r.event==="escalation"&&G.byId.get("n8n")) pulse(G.byId.get("n8n")); break; }
+    case "n8n_reply":{ const N=G.byId.get("n8n"); if(N&&r.event==="incident"){ N.data.ok=r.ok; N.data.ms=r.ms; } break; }
+    case "incident":{ ensureCast(null); const N=node("n8n","incident",{t,sent:true},guardian()); N.label="n8n incident"; edge(guardian(),N,"n8n");
+      const act=(id,label,ok,detail)=>{ const A=node("act:"+id,"action",{ok,detail},N); A.label=label; edge(N,A,"act"); pulse(A); return A; };
+      act("family",r.family_alerted?"family alerted":"family not alerted",!!r.family_alerted,r.family_alert?short(r.family_alert.replace(/\s+/g," "),120):"Telegram, trusted contact");
+      act("evidence","evidence saved",!!r.evidence_saved,r.incident_id?"incident "+r.incident_id:"");
+      const B=act("block","caller blocklisted",!!r.blocklisted,r.report_count?`reported ${r.report_count}×`:""); if(r.blocklisted) edge(B,caller(),"listed");
+      if(r.complaint_draft) act("1930","1930 draft ready",true,"waits for her approval in the app");
+      break; }
+    case "scam_list": if(caller()&&!caller().data.listed) listCaller(t); break;
+  }
+}
+function applyBeat(k){ for(const i of beats[k].idx) applyRec(i); }
+function resetCall(){ clearGraph(); applied=new Set(); seenSig=new Set(); lastType="none"; nowUtt=null; }
+// Rebuild to beat k from scratch (step back, load at rest), then settle.
+function renderTo(k){
+  resetCall(); for(let i=0;i<=k&&i<beats.length;i++) applyBeat(i);
+  const old=performance.now()-5000; for(const n of G.nodes) n.born=old; for(const e of G.edges) e.born=old; G.pulses=[];
+  for(let i=0;i<260;i++) tick();
+  cam.init=false; stageDone=k; paintPanels(k);
+}
+function stepTo(k){ if(k<0||k>=beats.length) return; if(k===stageDone+1){ applyBeat(k); stageDone=k; paintPanels(k); } else renderTo(k); }
+function advance(now){ if(!playing||now<nextAt) return;
+  if(stageDone>=beats.length-1){ if(!cur?.live||cur.ended){ playing=false; setPlayLabel(); } return; }
+  stepTo(stageDone+1); const behind=beats.length-1-stageDone;
+  nextAt=now+(cur.live&&behind>1?260:beats[stageDone].dur/speed); }
+function setPlayLabel(){ $("#b-play").textContent = playing?(cur?.live&&!cur.ended&&stageDone>=beats.length-1?"Live":"Pause"):(stageDone>=beats.length-1?"Replay":"Play"); }
+function play(){ if(stageDone>=beats.length-1&&!(cur.live&&!cur.ended)) renderTo(-1); playing=true; nextAt=performance.now()+300; setPlayLabel(); }
+function pause(){ playing=false; setPlayLabel(); }
+
+/* ================= panels ================= */
+let onBeat=null, pShown=null;
+const verdicts = () => cur.recs.filter(r=>r.type==="verdict");
+function banner(text,color){ const b=$("#banner"); if(!text){b.hidden=true;return;} b.hidden=false; b.textContent=text; b.style.background=color||css.ink; }
+function pressureAt(k){ let p=null; for(let i=0;i<=k&&i<beats.length;i++){ const r=beats[i].rec; if(r.type==="verdict") p=r.pressure||0; else if(r.type==="call_started"&&p==null) p=0; } return p; }
+function lastRecIdx(k){ return k<0?-1:Math.max(...beats[Math.min(k,beats.length-1)].idx); }
+function paintPanels(k){
+  if(onBeat) try{ onBeat(beats[k]||{kind:"rest"},k); }catch(e){}
+  const b=beats[k]||{kind:"rest"}, r=b.rec||{};
+  pShown=pressureAt(k); moveNeedle(); paintSpark(k);
+  $("#pnow").textContent = pShown==null?"—":`p${pShown} · ${PNAME[pShown]}`;
+  [...$("#moves").children].forEach(li=>li.classList.toggle("on",+li.dataset.k<=k));
+  const last=lastRecIdx(k), lis=[...$("#log").children];
+  lis.forEach(li=>{ const i=+li.dataset.i; li.classList.toggle("on",i<=last); li.classList.toggle("now",b.idx?.includes(i)&&MAJOR(cur.recs[i])); });
+  const nowLi=lis.find(li=>li.classList.contains("now"));
+  if(nowLi){ const box=$("#log"); box.scrollTop=Math.max(0,nowLi.offsetTop-box.offsetTop-box.clientHeight+nowLi.offsetHeight+8); }
+  $("#qn").textContent=`${lis.filter(li=>+li.dataset.i<=last).length} / ${lis.length}`;
+  $("#stepn").textContent=k>=0?`${k+1} / ${beats.length}`:"";
+  $("#claim").innerHTML=claimFor(b,k);
+  if(b.kind==="verdict"&&r.whisper) banner(`Whisper to ${VICTIM.split(" ")[0]} only · “${(CLIP[r.whisper_clip]||{}).en||r.whisper_clip}”`,css.trace);
+  else if(b.kind==="n8n") banner(r.sent===false?"Pressure 2 → n8n incident (n8n was off for this replay)":"Pressure 2 → incident sent to n8n",css.ink);
+  else if(b.kind==="incident") banner(`n8n: ${[r.family_alerted&&"family alerted",r.evidence_saved&&"evidence saved",r.blocklisted&&"caller blocklisted",r.complaint_draft&&"1930 draft ready"].filter(Boolean).join(" · ")||"incident recorded"}`,css.legit);
+  else if(b.kind==="call_started"&&r.known_scammer) banner(`${r.caller_number} is on the scam list`,css.fraud);
+  else if(b.kind==="call_ended"){ const p=r.peak_pressure||0; banner(p>=2?`Call ended · scam call · peak p${p}`:p===1?"Call ended · watched, no alarm":"Call ended · ordinary call, left alone",p>=2?css.fraud:p===1?css.unsure:css.legit); }
+  else banner(null);
+  paintVerdict(k);
+  [...$("#tx").children].forEach(li=>li.classList.toggle("cur",b.idx?.includes(+li.dataset.i)));
+  setPlayLabel();
+}
+function claimFor(b,k){
+  const r=b.rec||{};
+  if(b.kind==="rest"||k<0) return `<span class="said">Press Play to hear this call again, chunk by chunk.</span>`;
+  if(b.kind==="call_started") return `<span class="who">call starts · ${esc(r.caller_number||"unknown number")}</span><span class="said">${esc(r.caller_label||"Unknown caller")} calls ${VICTIM}.</span>`+
+    `<span class="why">${r.known_scammer?"This number is already on the shared scam list, so Chaukanna is on alert before anyone speaks.":"Not on the scam list. Chaukanna joins the call hidden and listens to both sides."}</span>`;
+  if(b.kind==="verdict"){ const v=r.verdict||{}, c=CLIP[r.whisper_clip];
+    const why = v.whisper_reason || (r.pressure>0 ? v.summary_for_family : "") || (r.pressure===0?"Nothing that looks like a scam yet.":"");
+    const src = `classify(${r.speaker}) · ${v.source||"?"}${v.backend?" / "+v.backend:""} · ${Number(v.latency_ms??0).toFixed(1)} ms in the classifier`+
+      (r.latency_ms!=null?` · speech end → phone ${r.latency_ms} ms`+(r.stt_source==="cache"?" (cached transcript)":""):"");
+    return `<span class="who">${r.speaker==="sms"?"OTP SMS on her phone":esc(r.speaker)} · ${mmss(relT(r))} · pressure ${r.pressure} ${PNAME[r.pressure]||""}</span>`+
+      `<span class="said" lang="${esc((r.language||"hi").slice(0,2))}">${esc(r.chunk_text)}</span>`+
+      (r.whisper&&c?`<span class="ws"><b>Whispered to her only</b>${esc(c.en)}<br><span lang="hi">${esc(c.hi)}</span></span>`:"")+
+      (why?`<span class="why">${esc(why)}</span>`:"")+`<span class="src">${esc(src)}</span>`; }
+  if(b.kind==="n8n") return `<span class="who">n8n · ${mmss(relT(r))}</span><span class="said">Pressure reached 2: the incident goes to n8n.</span>`+
+    `<span class="why">n8n alerts the family on Telegram, saves the evidence, adds the caller to the scam list and drafts the 1930 complaint for her to approve.${r.sent===false?" This replay ran with n8n switched off, so nothing was sent.":""}</span>`;
+  if(b.kind==="incident") return `<span class="who">n8n replied · ${mmss(relT(r))}</span><span class="said">${esc(r.family_alert||"Incident recorded.")}</span>`+
+    `<span class="src">incident ${esc(r.incident_id||"?")} · risk ${esc(r.risk_level||"?")} · reports for this number: ${esc(r.report_count??"?")}</span>`;
+  if(b.kind==="call_ended") return `<span class="who">hang-up · ${mmss(relT(r))}</span><span class="said">Call ended after ${Math.round(r.duration_seconds||relT(r))} seconds. Peak pressure ${r.peak_pressure}.</span>`;
+  return "";
+}
+function paintVerdict(k){
+  const el=$("#verdict"), done=k>=beats.length-1&&cur.ended, vs=verdicts(), lastV=[...vs].reverse().find(r=>cur.recs.indexOf(r)<=lastRecIdx(k));
+  if(!done){ const live=cur.live&&!cur.ended, heard=vs.filter(r=>cur.recs.indexOf(r)<=lastRecIdx(k)).length;
+    el.className="verdict "+(live?"listening":"pending");
+    el.innerHTML=`<div class="stamp"><b>Listening</b><span class="pp">${live?`${heard} chunks · call in progress`:`${heard} of ${vs.length} chunks · replay`}</span></div>`; return; }
+  const peak=Math.max(0,...vs.map(r=>r.pressure||0)), cls=peak>=2?"scam":peak===1?"watch":"safe";
+  const end=cur.recs.find(r=>r.type==="call_ended")||{}, inc=cur.recs.find(r=>r.type==="incident"), ev=cur.recs.find(r=>r.type==="n8n_event"&&r.event==="incident");
+  const ws=vs.filter(r=>r.whisper), lat=vs.map(r=>r.latency_ms).filter(x=>x!=null).sort((a,b)=>a-b);
+  const chips=[...ws.map(r=>`<span class="gd" title="at ${mmss(relT(r))}">WHISPER ${esc(clipName(r.whisper_clip).toUpperCase())}</span>`)];
+  if(ev) chips.push(`<span class="${ev.sent===false?"nt":"blk"}">N8N INCIDENT${ev.sent===false?" (OFF)":""}</span>`);
+  if(inc){ if(inc.family_alerted) chips.push(`<span class="ok">FAMILY ALERTED</span>`); if(inc.evidence_saved) chips.push(`<span class="ok">EVIDENCE SAVED</span>`);
+    if(inc.blocklisted) chips.push(`<span class="blk">BLOCKLISTED</span>`); if(inc.complaint_draft) chips.push(`<span class="nt">1930 DRAFT</span>`); }
+  if(peak===0) chips.push(`<span class="ok">LEFT ALONE</span>`);
+  const draft=inc?.complaint_draft;
+  el.className="verdict "+cls;
+  el.innerHTML=`<div class="stamp"><b>${cls==="scam"?"Scam call":cls==="watch"?"Watched":"Safe call"}</b><span class="pp">peak p${peak} · ${Math.round(end.duration_seconds||0)} s</span></div>
+  <dl class="facts"><dt>type</dt><dd>${esc(typeName(lastV?.scam_type||"none"))}</dd>
+  <dt>first warning</dt><dd>${ws.length?mmss(relT(ws[0]))+" · "+esc(clipName(ws[0].whisper_clip)):"none needed"}</dd>
+  <dt>signals</dt><dd>${(lastV?.verdict?.signals||[]).filter(s=>sigLevel(s)>0).length} suspicious · ${(lastV?.verdict?.signals||[]).filter(s=>sigLevel(s)===2).length} critical</dd>
+  <dt>speed</dt><dd>${lat.length?`median ${lat[Math.floor(lat.length/2)]} ms speech end → phone`:"—"}</dd></dl>
+  <div class="acts">${chips.join("")}</div>
+  ${draft?`<details class="sar"><summary>Read the 1930 complaint draft</summary><p>${esc(draft.local||"")}${draft.local&&draft.en?"\n\n":""}${esc(draft.en||"")}</p></details>`:""}
+  ${inc?.family_alert?`<details class="sar"><summary>What the family got on Telegram</summary><p>${esc(inc.family_alert)}</p></details>`:""}`;
+}
+
+/* gauge: four bands, needle on the band */
+const GL=14, GR=326, GY=30, gx=p=>GL+(p+.5)*(GR-GL)/4;
+function paintGauge(){
+  const t9='font-family="JetBrains Mono,monospace" font-size="8.5"', bw=(GR-GL)/4;
+  const fills=[alpha(css.legit,.16),alpha(css.bank,.18),alpha(css.fraud,.14),alpha(css.fraud,.3)];
+  let s=""; for(let p=0;p<4;p++) s+=`<rect x="${GL+p*bw}" y="${GY-11}" width="${bw-1}" height="22" fill="${fills[p]}"/><text x="${gx(p)}" y="${GY+24}" ${t9} fill="${p===2?css.ink:css["ink-3"]}" text-anchor="middle">${p} ${PNAME[p]}${p===2?" · n8n":""}</text>`;
+  const th=GL+2*bw; s+=`<line x1="${th}" x2="${th}" y1="${GY-13}" y2="${GY+13}" stroke="${css.ink}" stroke-width="1.5" stroke-dasharray="2 2"/>`;
+  $("#gaugestatic").innerHTML=s; moveNeedle();
+}
+function moveNeedle(){ const n=$("#needle"); if(pShown==null){ n.style.opacity=0; return; } n.style.opacity=1;
+  n.style.transform=`translateX(${gx(pShown)}px)`; const c=pcol(pShown);
+  $("#needle-tip").setAttribute("fill",c); $("#needle-dot").setAttribute("fill",c); $("#needle-dot").setAttribute("stroke",css.panel); }
+/* pressure over the call: the whole call faint, what has played so far strong */
+const SL=8, SR=332, ST=6, SB=44;
+function callDur(){ const e=cur.recs.find(r=>r.type==="call_ended"); const last=cur.recs[cur.recs.length-1]; return Math.max(10, e?.duration_seconds||relT(last||{})||10); }
+function paintSpark(k){
+  if(!cur) return; const D=callDur(), x=t=>SL+Math.min(1,t/D)*(SR-SL), y=p=>SB-p/3*(SB-ST);
+  const pts=[[0,0]]; for(const r of verdicts()) pts.push([relT(r),r.pressure||0]);
+  const path=pts.map((p,i)=>(i?`H${x(p[0]).toFixed(1)}V${y(p[1]).toFixed(1)}`:`M${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`)).join("")+`H${x(D).toFixed(1)}`;
+  const tnow = k<0?0:relT(beats[Math.min(k,beats.length-1)].rec);
+  const f9='font-family="JetBrains Mono,monospace" font-size="8"';
+  let s=`<defs><clipPath id="played"><rect x="0" y="0" width="${x(tnow)+.5}" height="58"/></clipPath></defs>`;
+  for(let p=0;p<=3;p++) s+=`<line x1="${SL}" x2="${SR}" y1="${y(p)}" y2="${y(p)}" stroke="${css.rule}" ${p===2?'stroke-dasharray="2 3"':""}/>`;
+  s+=`<path d="${path}" fill="none" stroke="${css["ink-3"]}" stroke-opacity=".45" stroke-width="1.5"/><path d="${path}" fill="none" stroke="${pcol(pShown||0)}" stroke-width="2.2" clip-path="url(#played)"/>`;
+  for(const r of verdicts().filter(r=>r.whisper)) s+=`<path d="M${x(relT(r))-3.5},${SB+3} l7,0 l-3.5,-6 z" fill="${css.trace}" opacity="${relT(r)<=tnow?1:.35}"><title>whisper ${esc(r.whisper_clip)} at ${mmss(relT(r))}</title></path>`;
+  const ev=cur.recs.find(r=>r.type==="n8n_event"&&r.event==="incident"); if(ev) s+=`<line x1="${x(relT(ev))}" x2="${x(relT(ev))}" y1="${ST}" y2="${SB}" stroke="${css.ink}" stroke-dasharray="1 2" opacity="${relT(ev)<=tnow?1:.35}"/>`;
+  s+=`<line x1="${x(tnow)}" x2="${x(tnow)}" y1="${ST-3}" y2="${SB+2}" stroke="${css.trace}"/>`;
+  s+=`<text x="${SL}" y="56" ${f9} fill="${css["ink-3"]}">00:00</text><text x="${SR}" y="56" ${f9} fill="${css["ink-3"]}" text-anchor="end">${mmss(D)}${cur.live&&!cur.ended?" · live":""}</text><text x="${(SL+SR)/2}" y="56" ${f9} fill="${css["ink-3"]}" text-anchor="middle">pressure over the call · ▲ whisper</text>`;
+  $("#spark").innerHTML=s;
+}
+$("#spark").addEventListener("click",e=>{ if(!cur||!beats.length) return; const r=$("#spark").getBoundingClientRect();
+  const t=(e.clientX-r.left)/r.width*340; const D=callDur(), tt=(t-SL)/(SR-SL)*D;
+  let best=0; beats.forEach((b,k)=>{ if(relT(b.rec)<=tt+.3) best=k; }); pause(); renderTo(best); });
+
+function paintLists(){
+  // "what raised it": the moments the call got scarier, or Chaukanna acted
+  const rows=[]; let lastP=0; const seen=new Set();
+  beats.forEach((b,k)=>{ const r=b.rec, t=relT(r);
+    if(b.kind==="call_started"&&r.known_scammer) rows.push({k,t,cls:"k-crit",txt:"number on the scam list",p:""});
+    if(b.kind==="verdict"){ const v=r.verdict||{};
+      const fresh=(v.signals||[]).filter(s=>!seen.has(s)); fresh.forEach(s=>seen.add(s));
+      const sus=fresh.filter(s=>sigLevel(s)>0).sort((a,b)=>sigLevel(b)-sigLevel(a));
+      if(sus.length||(r.pressure||0)>lastP) rows.push({k,t,cls:sus.some(s=>sigLevel(s)===2)?"k-crit":"k-warn",txt:sus.length?sus.map(sigName).join(" + "):`pressure up (${esc(v.source||"model")})`,p:r.pressure});
+      if(r.whisper) rows.push({k,t,cls:"k-whisper",txt:"whisper: "+clipName(r.whisper_clip),p:r.pressure});
+      lastP=Math.max(lastP,r.pressure||0); }
+    if(b.kind==="n8n") rows.push({k,t,cls:"k-n8n",txt:"n8n incident"+(r.sent===false?" (off in replay)":""),p:""});
+    if(b.kind==="incident") rows.push({k,t,cls:"k-n8n",txt:"family alerted, evidence saved",p:""}); });
+  $("#moves").innerHTML=rows.length?rows.map(m=>`<li data-k="${m.k}" tabindex="0" title="Jump here"><span class="tm">${mmss(m.t)}</span><span class="${m.cls}">${esc(m.txt)}</span><span class="pv">${m.p===""?"":"p"+m.p}</span></li>`).join("")
+    :`<li data-k="0" class="on" style="cursor:default"><span class="tm">—</span><span>nothing suspicious so far</span><span></span></li>`;
+  $("#mvn").textContent=rows.length?rows.length+" moments":"";
+  $("#log").innerHTML=cur.recs.map((r,i)=>{ let s="";
+    if(r.type==="call_started") s=`<span class="q">call_started</span>(${esc(r.caller_number)}${r.known_scammer?", known_scammer":""})`;
+    else if(r.type==="verdict") s=`<span class="q">classify</span>(${esc(r.speaker)}, “${esc(short(r.chunk_text,26))}”) → p${r.pressure} ${esc(r.scam_type)}${r.whisper?" · whisper "+esc(r.whisper_clip):""}`;
+    else if(r.type==="n8n_event") s=`<span class="q">n8n</span> ‹${esc(r.event)}›${r.sent===false?" not sent (n8n off)":""}`;
+    else if(r.type==="n8n_reply") s=`<span class="q">n8n</span> ← ${esc(r.event)} ${r.ok?"ok":"failed"} · ${(r.ms/1000).toFixed(1)} s${r.ok?"":" · "+esc(r.detail)}`;
+    else if(r.type==="incident") s=`<span class="q">incident</span> ${esc(short(r.incident_id||"",13))} · family ${r.family_alerted?"✓":"✗"} · evidence ${r.evidence_saved?"✓":"✗"} · blocklist ${r.blocklisted?"✓":"✗"}`;
+    else if(r.type==="scam_list") s=`<span class="q">scam_list</span> += ${esc(r.number)}`;
+    else if(r.type==="call_ended") s=`<span class="q">call_ended</span>(${Math.round(r.duration_seconds||0)} s, peak p${r.peak_pressure})`;
+    else return "";
+    return `<li data-i="${i}">${s}</li>`; }).join("");
+  // transcript (lower section)
+  $("#tx").innerHTML=cur.recs.map((r,i)=>r.type!=="verdict"?"":
+    `<li data-i="${i}"><span class="tm">${mmss(relT(r))}</span><span class="sp">${r.speaker==="sms"?"sms":esc(r.speaker)}</span><span class="tt" lang="${esc((r.language||"hi").slice(0,2))}">${esc(r.chunk_text)}${r.whisper?`<small>WHISPER ${esc(clipName(r.whisper_clip).toUpperCase())}</small>`:""}</span><span class="pc" style="color:${pcol(r.pressure||0)}">p${r.pressure}</span></li>`).join("");
+  $("#tx-eyebrow").textContent=`${cur.title} · ${verdicts().length} chunks`;
+  paintLatency();
+}
+function med(xs){ xs=xs.filter(x=>x!=null&&isFinite(x)).sort((a,b)=>a-b); return xs.length?xs[Math.floor(xs.length/2)]:null; }
+function paintLatency(){
+  const vs=verdicts(), by=src=>vs.filter(r=>((r.verdict||{}).source||"?")===src);
+  const row=(name,rs)=>{ if(!rs.length) return ""; const c=med(rs.map(r=>(r.verdict||{}).latency_ms)), e=med(rs.map(r=>r.latency_ms)), st=med(rs.map(r=>(r.latency||{}).stt_ms));
+    return `<tr><td>${name}</td><td>${rs.length}</td><td>${c==null?"—":c<10?c.toFixed(1):Math.round(c)}</td><td>${st==null?"—":st}</td><td>${e==null?"—":e}</td></tr>`; };
+  const known=["keywords","merged","jev"], other=vs.filter(r=>!known.includes((r.verdict||{}).source));
+  $("#lat").innerHTML=`<tr><th>verdict from</th><th>chunks</th><th>classifier ms</th><th>STT ms</th><th>speech end → phone ms</th></tr>`+
+    row("keywords alone",by("keywords"))+row("keywords + Jev",by("merged"))+row("Jev",by("jev"))+row("other / fallback",other)+row("all chunks",vs);
+  const cached=vs.some(r=>r.stt_source==="cache");
+  $("#lat-note").textContent=(cached?"This replay used cached transcripts, so STT time is 0 here; on a live call Sarvam STT adds roughly 250–400 ms. ":"")+
+    "Medians over this call. Chunks that waited for Jev take longer than ones a critical keyword settled.";
+}
+
+/* ================= loading: samples (static files) and live calls (token server API) ================= */
+let SAMPLES=[], LIVE=null, railKind="samples", liveRows=[], followed=new Set();
+function parseJsonl(text){ return text.split("\n").filter(l=>l.trim()).map(l=>{ try{ return JSON.parse(l); }catch(e){ return {type:"unreadable"}; } }); }
+async function fetchSample(id){ const r=await fetch("samples/"+id+".jsonl",{cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); return parseJsonl(await r.text()); }
+async function fetchLive(id,from=0){ const r=await fetch(`api/calls/${id}${KQ}${KQ?"&":"?"}from=${from}`,{cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); return (await r.json()).records; }
+function setCall(id,recs,{live=false,title=""}={}){
+  const st=recs.find(r=>r.type==="call_started");
+  cur={id,recs,live,title:title||st?.caller_label||id,t0:(st||recs[0]||{}).ts||0,ended:recs.some(r=>r.type==="call_ended"),polling:false};
+  beats=buildBeats(recs);
+  $("#cid").textContent=st?.caller_label&&st.caller_label!==st.caller_number?st.caller_label:(st?.caller_number||id);
+  $("#livetag").hidden=!(live&&!cur.ended);
+  $("#cmeta").textContent=[st?.caller_number,st?.ts?new Date(st.ts*1000).toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"",id].filter(Boolean).join(" · ");
+  const s=SAMPLES.find(x=>x.id===id);
+  $("#trigger").textContent=live?"A call through Chaukanna: LiveKit room → bridge (Sarvam STT) → classifier → victim's phone, and n8n for the family."
+    :s?`${s.title}. Replayed from ${s.note}, through the real classifier, with n8n switched off.`:title;
+  paintLists(); paintGauge();
+  document.querySelectorAll(".cases button").forEach(b=>b.setAttribute("aria-current",String(b.dataset.id===id)));
+}
+async function load(id,{autoplay=false,live=false}={}){
+  leaveNetwork(); pause(); stopFollow();
+  const s=SAMPLES.find(x=>x.id===id);
+  const recs = live ? await fetchLive(id) : await fetchSample(id);
+  setCall(id,recs,{live,title:s?.title||""});
+  history.replaceState(null,"",(live?"#live:":"#")+id+"");
+  if(live&&!cur.ended){ renderTo(-1); play(); followCall(); }
+  else if(autoplay){ renderTo(-1); play(); } else renderTo(beats.length-1);
+}
+// follow a call in progress: poll its log, append, keep playing
+let followTimer=null;
+function stopFollow(){ if(followTimer){ clearTimeout(followTimer); followTimer=null; } }
+function followCall(){
+  const me=cur; stopFollow();
+  const poll=async()=>{ if(cur!==me) return;
+    try{ const add=await fetchLive(me.id,me.recs.length);
+      if(cur!==me) return;
+      if(add.length){ me.recs.push(...add); me.ended=me.recs.some(r=>r.type==="call_ended");
+        const atEnd=stageDone>=beats.length-1; beats=buildBeats(me.recs); paintLists();
+        if(atEnd&&stageDone>=0) applyBeat(stageDone);      // records that joined the beat on screen
+        if(atEnd&&beats.length-1>stageDone&&!playing){ playing=true; nextAt=performance.now()+80; }   // stay on the live edge
+        $("#livetag").hidden=me.ended; paintPanels(stageDone); }
+    }catch(e){}
+    if(!me.ended) followTimer=setTimeout(poll,600); };
+  followTimer=setTimeout(poll,600);
+}
+function paintRail(kind){
+  railKind=kind;
+  $("#tab-live").setAttribute("aria-selected",String(kind==="live")); $("#tab-samples").setAttribute("aria-selected",String(kind==="samples"));
+  $("#tab-net").setAttribute("aria-selected",String(kind==="network"));
+  $("#follow-row").hidden=!(kind==="live"&&LIVE);
+  const dotc=p=>pcol(p||0);
+  if(kind==="network"){
+    const nums=NETM?[...NETM.nums.values()].sort((a,b)=>b.calls-a.calls||(b.listed-a.listed)||a.number.localeCompare(b.number)):[];
+    $("#cases").innerHTML=nums.length?nums.map(n=>`<li><button data-num="${esc(n.number)}" aria-current="${selN?.id==="num:"+n.number}">
+      <span class="dot" style="background:${n.listed?css.fraud:n.trusted?css.legit:css.node}"></span><span>${esc(n.number)}<span class="sub">${n.trusted?esc(n.trusted)+" · ":""}${n.calls} call${n.calls===1?"":"s"}${n.types.size?" · "+esc([...n.types].map(typeName).join(", ")):""}${n.cls&&n.sb?" · both lists":n.cls?" · classifier list":n.sb?" · Supabase list":""}</span></span><span class="p">${n.calls?n.calls+"×":""}</span></button></li>`).join("")
+      : `<li class="empty">Loading the network…</li>`;
+    return;
+  }
+  if(kind==="samples"){
+    $("#cases").innerHTML=SAMPLES.map(s=>`<li><button data-id="${esc(s.id)}" data-src="samples" aria-current="${cur?.id===s.id}" title="${esc(s.note||"")}">
+      <span class="dot" style="background:${dotc(s.peak)}"></span><span>${esc(s.id.replace(/^sample-/,""))}<span class="sub">${esc(s.title)}</span></span><span class="p">${s.peak!=null?"p"+s.peak:""}</span></button></li>`).join("");
+  } else {
+    $("#cases").innerHTML=liveRows.length?liveRows.map(c=>{ const live=!c.ended&&Date.now()/1000-c.updated<90;
+      const when=new Date((c.started||c.updated)*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+      return `<li><button data-id="${esc(c.call_id)}" data-src="live" aria-current="${cur?.id===c.call_id}">
+      <span class="dot${live?" live":""}" style="background:${live?css.fraud:dotc(c.peak_pressure)}"></span><span>${esc(c.caller_label&&c.caller_label!==c.caller_number?short(c.caller_label,16):c.caller_number||c.call_id)}<span class="sub">${when} · ${live?"LIVE":esc(c.peak_pressure>0?typeName(c.scam_type):"ordinary")}${c.incident?" · incident":""}</span></span><span class="p">p${c.peak_pressure}</span></button></li>`; }).join("")
+      : `<li class="empty">No calls yet. Make one from the scammer dialer: it shows up here as it happens.</li>`;
+  }
+}
+async function pollCalls(){
+  try{ const r=await fetch("api/calls"+KQ,{cache:"no-store"}); if(r.ok){ liveRows=(await r.json()).calls||[];
+      if(railKind==="live") paintRail("live");
+      const newest=liveRows[0];   // jump to each new call once; after that, what you click wins
+      if($("#follow").checked&&newest&&!newest.ended&&Date.now()/1000-newest.updated<90&&!followed.has(newest.call_id)&&!storyOn){
+        followed.add(newest.call_id); if(railKind!=="live") paintRail("live"); load(newest.call_id,{live:true}); } } }catch(e){}
+  setTimeout(pollCalls,2000);
+}
+$("#cases").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.num){ selectNet(G.byId.get("num:"+b.dataset.num)); paintRail("network"); return; }
+  endStory(); load(b.dataset.id,{autoplay:true,live:b.dataset.src==="live"}); });
+const toCalls=kind=>{ if(mode==="network"){ leaveNetwork(); restoreCall(); } paintRail(kind); };
+$("#tab-samples").onclick=()=>toCalls("samples"); $("#tab-live").onclick=()=>{ if(LIVE) toCalls("live"); };
+$("#tab-net").onclick=()=>{ if(mode!=="network") enterNetwork(); };
+$("#moves").addEventListener("click",e=>{ const li=e.target.closest("li[data-k]"); if(li&&li.style.cursor!=="default"){ pause(); renderTo(+li.dataset.k); } });
+$("#moves").addEventListener("keydown",e=>{ if(e.key==="Enter"){ const li=e.target.closest("li[data-k]"); if(li){ pause(); renderTo(+li.dataset.k); } } });
+$("#tx").addEventListener("click",e=>{ const li=e.target.closest("li[data-i]"); if(!li) return; const i=+li.dataset.i; const k=beats.findIndex(b=>b.idx.includes(i));
+  if(k>=0){ pause(); renderTo(k); $("#bench").scrollIntoView({behavior:"smooth",block:"start"}); } });
+$("#b-play").onclick=()=>playing?pause():play();
+$("#b-fwd").onclick=()=>{ pause(); stepTo(stageDone+1); };
+$("#b-back").onclick=()=>{ pause(); renderTo(Math.max(-1,stageDone-1)); };
+$("#speed-sel").onchange=e=>{ speed=+e.target.value; };
+addEventListener("keydown",e=>{ if(mode!=="call"||(e.target.closest&&e.target.closest("input,select,textarea,summary,.moves,button"))) return;
+  if(e.code==="Space"){ e.preventDefault(); playing?pause():play(); }
+  else if(e.key==="ArrowRight"){ pause(); stepTo(stageDone+1); }
+  else if(e.key==="ArrowLeft"){ pause(); renderTo(Math.max(-1,stageDone-1)); } });
+const retheme=()=>{ readCss(); paintSystem();
+  if(mode==="network"){ paintNet(NETM); paintRail(railKind); return; }
+  if(cur){ paintGauge(); paintLists(); paintPanels(stageDone); } paintRail(railKind); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",retheme);
+new MutationObserver(retheme).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+/* ================= network: every call, number, incident and scam list, joined ================= */
+// Sources (token server /console/api/network): the bridge's call logs, the classifier's scam + trusted lists,
+// and Supabase (incidents, scam_numbers, trusted_contacts) through the n8n feed. Joined on number, call id, victim.
+let NET=null, NETM=null, netTimer=null, netSig="", HEALTH=null;
+const normNum = s => { s=String(s||"").replace(/[\s\-()]/g,""); return s.startsWith("00")?"+"+s.slice(2):s; };
+function sampleSummary(s){ const recs=s.recs||[], st=recs.find(r=>r.type==="call_started"); if(!st) return null;
+  const vs=recs.filter(r=>r.type==="verdict"), last=vs[vs.length-1]||{};
+  return {call_id:s.id,caller_number:st.caller_number,caller_label:st.caller_label,scam_type:last.scam_type||"none",peak_pressure:s.peak||0,started:st.ts,ended:true,updated:0,sample:true}; }
+function netModel(net){
+  const calls=new Map(), nums=new Map(), victims=new Map(), types=new Map();
+  const V=id=>{ id=id||net.default_victim_id||"demo-victim-1"; if(!victims.has(id)) victims.set(id,{id,name:id==="demo-victim-1"?VICTIM:id,calls:0,family:[]}); return victims.get(id); };
+  const N=num=>{ num=normNum(num); if(!num) return null; if(!nums.has(num)) nums.set(num,{number:num,calls:0,victims:new Set(),cls:null,sb:null,trusted:null,types:new Set(),callIds:[]}); return nums.get(num); };
+  for(const c of net.calls||[]) calls.set(c.call_id,{id:c.call_id,number:normNum(c.caller_number),label:c.caller_label,victim:net.default_victim_id,type:c.scam_type,
+    p:c.peak_pressure||0,t:c.started,logged:true,sample:!!c.sample,live:!c.ended&&Date.now()/1000-(c.updated||0)<90,incident:null});
+  for(const r of net.supabase?.incidents||[]){ const c=calls.get(r.call_id)||{id:r.call_id,logged:false,p:0};
+    c.number=c.number||normNum(r.caller_number); c.victim=r.victim_id||c.victim; if(!c.type||c.type==="none") c.type=r.scam_type||c.type;
+    c.p=Math.max(c.p||0,r.max_pressure||0); c.t=c.t||Date.parse(r.created_at)/1000; c.incident=r; calls.set(r.call_id,c); }
+  for(const c of calls.values()){ const v=V(c.victim); c.victim=v.id; v.calls++; const n=N(c.number);
+    if(n){ n.calls++; n.victims.add(v.id); n.callIds.push(c.id); if(c.type&&c.type!=="none") n.types.add(c.type); }
+    if(c.type&&c.type!=="none") types.set(c.type,(types.get(c.type)||0)+1); }
+  for(const s of net.classifier?.scam_numbers||[]){ const n=N(s.number); if(n) n.cls=s; }
+  for(const s of net.supabase?.scam_numbers||[]){ const n=N(s.phone_number); if(n) n.sb=s; }
+  for(const t of net.classifier?.trusted||[]){ const n=N(t.number); if(n) n.trusted=t.name||"trusted"; }
+  for(const f of net.supabase?.trusted_contacts||[]){ const v=V(f.victim_id); if(f.victim_name) v.name=f.victim_name; v.family.push(f); }
+  const haveCls=!!net.classifier?.ok, haveSb=!!net.supabase?.ok;
+  for(const n of nums.values()){ n.listed=!!(n.cls||n.sb); n.disagree=haveCls&&haveSb&&!!n.cls!==!!n.sb; }
+  return {calls,nums,victims,types,haveCls,haveSb};
+}
+function buildNet(M){
+  let first=true;
+  for(const v of M.victims.values()){ const n=node("victim:"+v.id,"victim",{name:v.name,calls:v.calls}); n.label=v.name;
+    if(first&&!n.pin){ n.x=W/2; n.y=H/2; n.pin=true; } first=false; }
+  const count=k=>[...M.nums.values()].filter(n=>n[k]).length, L={};
+  if(M.haveCls){ L.cls=node("list:classifier","list",{which:"Classifier",count:count("cls")}); L.cls.label=`classifier list (${L.cls.data.count})`; }
+  if(M.haveSb){ L.sb=node("list:supabase","list",{which:"Supabase",count:count("sb")}); L.sb.label=`Supabase list (${L.sb.data.count})`; }
+  const anyVictim=G.byId.get("victim:"+[...M.victims.keys()][0]);
+  for(const n of M.nums.values()){
+    const N=node("num:"+n.number,"num",{number:n.number,listed:n.listed,trusted:n.trusted,disagree:n.disagree,calls:n.calls,victims:n.victims.size,cls:n.cls,sb:n.sb},
+      n.calls?anyVictim:(n.cls?L.cls:L.sb)||anyVictim);
+    N.label=n.number+(n.trusted?" · "+n.trusted:"")+(n.calls>1?` · ${n.calls} calls`:"");
+    if(n.cls&&L.cls) edge(N,L.cls,"onlist"); if(n.sb&&L.sb) edge(N,L.sb,"onlist");
+    if(n.trusted) for(const vid of (n.victims.size?[...n.victims]:[...M.victims.keys()].slice(0,1))) edge(N,G.byId.get("victim:"+vid),"family"); }
+  for(const c of M.calls.values()){ const N=c.number?G.byId.get("num:"+c.number):null;
+    const C=node("call:"+c.id,"ncall",{...c},N||G.byId.get("victim:"+c.victim));
+    if(N) edge(N,C,"dialed"); edge(C,G.byId.get("victim:"+c.victim),"to");
+    if(c.type&&c.type!=="none"){ const T=node("ntype:"+c.type,"stype",{name:c.type,calls:M.types.get(c.type)},C); T.label=`${typeName(c.type)} (${M.types.get(c.type)})`; edge(C,T,"ctype"); } }
+  for(const v of M.victims.values()){ const Vn=G.byId.get("victim:"+v.id);
+    for(const f of v.family){ const F=node("fam:"+v.id+":"+f.contact_name,"fam",{name:f.contact_name,ready:!!f.telegram_ready,victim:v.name},Vn);
+      F.label=f.contact_name+(f.telegram_ready?" · Telegram":" · no Telegram yet"); edge(Vn,F,"alerts");
+      const P=f.phone_number&&G.byId.get("num:"+normNum(f.phone_number)); if(P) edge(F,P,"is"); } }
+}
+function paintNet(M){
+  if(!M) return;
+  const calls=[...M.calls.values()], nums=[...M.nums.values()], inc=calls.filter(c=>c.incident).sort((a,b)=>(b.t||0)-(a.t||0));
+  $("#cid").textContent="Scam network";
+  $("#cmeta").textContent=`${calls.length} calls · ${nums.length} numbers · ${inc.length} incidents · ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}`;
+  $("#trigger").textContent=LIVE?"Every call the bridge logged, every incident n8n saved in Supabase, and both scam-number lists (the classifier's and Supabase's), joined on phone number, call and victim. Click a call to replay it, or a number to see its history."
+    :"Built from the sample calls only. Served by the token server, it joins the live calls, the Supabase incidents and both scam lists.";
+  const ok=b=>b?"✓":"✗", famReplies=inc.filter(c=>c.incident.family_response).length;
+  $("#net-big").textContent=`${inc.length} incident${inc.length===1?"":"s"}`;
+  $("#net-facts").innerHTML=`<dt>calls</dt><dd>${calls.filter(c=>c.logged).length} logged by the bridge · ${calls.filter(c=>!c.logged).length} in Supabase only</dd>
+    <dt>numbers</dt><dd>${nums.filter(n=>n.listed).length} listed · ${nums.filter(n=>n.trusted).length} trusted · ${nums.filter(n=>!n.listed&&!n.trusted).length} unknown</dd>
+    <dt>incidents</dt><dd>${inc.filter(c=>c.incident.complaint_status!=="submitted").length} drafts waiting · ${inc.filter(c=>c.incident.complaint_status==="submitted").length} filed · ${famReplies} family repl${famReplies===1?"y":"ies"}</dd>
+    <dt>victims</dt><dd>${[...M.victims.values()].map(v=>esc(v.name)).join(", ")||"—"}</dd>
+    <dt>sources</dt><dd>bridge log ${ok(LIVE)} · classifier ${ok(M.haveCls)} · Supabase via n8n ${ok(M.haveSb)}</dd>`;
+  const rep=nums.filter(n=>n.calls>1||n.victims.size>1).sort((a,b)=>b.calls-a.calls);
+  $("#net-rn").textContent=rep.length?rep.length+" numbers":"";
+  $("#net-repeat").innerHTML=rep.length?rep.slice(0,12).map(n=>`<li data-num="${esc(n.number)}" tabindex="0"><span class="tm">${n.calls}×</span><span class="${n.listed?"k-crit":"k-warn"}">${esc(n.number)}${n.types.size?" · "+esc([...n.types].map(typeName).join(", ")):""}</span><span class="pv">${n.victims.size>1?n.victims.size+"v":""}</span></li>`).join("")
+    :`<li style="cursor:default"><span class="tm">—</span><span>no number has called twice yet</span><span></span></li>`;
+  const both=nums.filter(n=>n.cls&&n.sb).length, onlyC=nums.filter(n=>n.cls&&!n.sb), onlyS=nums.filter(n=>n.sb&&!n.cls);
+  $("#net-ln").textContent=M.haveCls&&M.haveSb?(onlyC.length+onlyS.length?`${onlyC.length+onlyS.length} disagree`:"in sync"):"";
+  $("#net-lists").innerHTML=!(M.haveCls&&M.haveSb)?"Both lists are compared when the classifier and Supabase (through n8n) are reachable."
+    :`<b>${nums.filter(n=>n.cls).length}</b> on the classifier's list, <b>${nums.filter(n=>n.sb).length}</b> in Supabase, <b>${both}</b> on both. The two should agree (CONTRACTS, shared data).`+
+     (onlyC.length?`<br>Only the classifier: <code>${onlyC.map(n=>esc(n.number)).join(", ")}</code>`:"")+(onlyS.length?`<br>Only Supabase: <code>${onlyS.map(n=>esc(n.number)).join(", ")}</code>`:"");
+  $("#net-in").textContent=inc.length?inc.length:"";
+  $("#net-inc").innerHTML=inc.length?inc.slice(0,60).map(c=>{ const r=c.incident;
+    return `<li data-call="${esc(c.id)}"><span class="q">${c.t?new Date(c.t*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):""}</span> ${esc(c.number||"?")} · ${esc(typeName(c.type||"none"))} · p${c.p} · ${r.complaint_status==="submitted"?"filed":"draft"}${r.family_response?" · family: "+esc(r.family_response):""}${c.logged?" · ▶":""}</li>`; }).join("")
+    :`<li style="cursor:default">${M.haveSb?"No incidents in Supabase yet.":"Supabase is not reachable from here."}</li>`;
+  if(selN) paintSel();
+}
+function selectNet(n){ selN=n&&["ncall","num","victim","fam","stype","list"].includes(n.type)?n:null; paintSel(); if(railKind==="network") paintRail("network"); }
+function paintSel(){
+  const sec=$("#net-sel-sec"), n=selN; if(!n){ sec.hidden=true; return; } sec.hidden=false; const d=n.data;
+  let h="";
+  if(n.type==="ncall"){ const r=d.incident;
+    h=`<b>${esc(d.number||"Unknown number")}</b>${d.t?new Date(d.t*1000).toLocaleString([], {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):""} · peak p${d.p} · ${esc(typeName(d.type||"none"))}<br>`+
+      (r?`incident ${esc(String(r.id||"").slice(0,8))} · ${r.complaint_status==="submitted"?"1930 complaint filed":"1930 draft waiting for her"}${r.family_response?" · family: "+esc(r.family_response):""}${r.asks_otp_or_pin?" · OTP ask":""}${r.demands_secrecy?" · secrecy":""}`:"no incident (pressure stayed under 2)")+
+      (d.logged?`<br><button type="button" data-replay="${esc(d.id)}" data-sample="${d.sample?1:""}">Replay this call</button>`:`<br><span style="color:var(--ink-3)">Before call logging started, so there is no replay; the incident is in Supabase.</span>`); }
+  else if(n.type==="num"){ const m=NETM?.nums.get(d.number); const cs=(m?.callIds||[]).map(id=>NETM.calls.get(id)).filter(Boolean).sort((a,b)=>(b.t||0)-(a.t||0));
+    h=`<b>${esc(d.number)}</b>${d.trusted?esc(d.trusted)+" · on the victim's trusted list<br>":""}classifier list: ${d.cls?"yes ("+esc(typeName(d.cls.scam_type))+")":"no"} · Supabase list: ${d.sb?`yes, reported ${d.sb.report_count}×`:"no"}`+
+      (d.disagree?`<br><span style="color:var(--bank)">The two scam lists disagree on this number.</span>`:"")+
+      (cs.length?`<br>${cs.length} call${cs.length===1?"":"s"}: `+cs.map(c=>c.logged?`<button type="button" data-replay="${esc(c.id)}" data-sample="${c.sample?1:""}">p${c.p} ${c.t?new Date(c.t*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):""}</button>`:`p${c.p} ${c.t?new Date(c.t*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):""}`).join(" "):"<br>No calls from it yet."); }
+  else if(n.type==="fam") h=`<b>${esc(d.name)}</b>Gets the Telegram alert for ${esc(d.victim)}.<br>${d.ready?"Chat id is set.":"No real chat id yet, so the alert lane is skipped."}`;
+  else if(n.type==="victim") h=`<b>${esc(d.name)}</b>${d.calls} call${d.calls===1?"":"s"} to her in this network.`;
+  else if(n.type==="stype") h=`<b>${esc(typeName(d.name))}</b>${d.calls} call${d.calls===1?"":"s"} used this script.`;
+  else if(n.type==="list") h=`<b>${esc(d.which)} scam list</b>${d.count} numbers. ${d.which==="Supabase"?"n8n adds every incident's caller.":"The bridge adds every incident's caller at runtime."}`;
+  $("#net-sel").innerHTML=h; $("#net-sel-k").textContent=n.type==="ncall"?"call":n.type==="num"?"number":n.type;
+}
+$("#net-sel").addEventListener("click",e=>{ const b=e.target.closest("button[data-replay]"); if(!b) return; const sample=!!b.dataset.sample;
+  paintRail(sample?"samples":"live"); load(b.dataset.replay,{autoplay:true,live:!sample}); });
+$("#net-repeat").addEventListener("click",e=>{ const li=e.target.closest("li[data-num]"); if(li) selectNet(G.byId.get("num:"+li.dataset.num)); });
+$("#net-inc").addEventListener("click",e=>{ const li=e.target.closest("li[data-call]"); if(li) selectNet(G.byId.get("call:"+li.dataset.call)); });
+function setMode(m){
+  mode=m; $("#netout").hidden=m!=="network"; $("#callout").hidden=m==="network";
+  $("#legend-net").hidden=m!=="network"; $("#legend-call").hidden=m==="network";
+  document.querySelector(".ctl").style.visibility=m==="network"?"hidden":"";
+  $("#livetag").hidden=m==="network"||!(cur?.live&&!cur.ended); banner(null);
+}
+async function enterNetwork(){ endStory(); pause(); stopFollow(); selN=null; setMode("network"); paintRail("network");
+  resetCall(); netSig=""; history.replaceState(null,"","#network"); await refreshNet(); }
+function leaveNetwork(){ if(mode!=="network") return; clearTimeout(netTimer); selN=null; setMode("call"); }
+function restoreCall(){ if(!cur) return; const c=cur; setCall(c.id,c.recs,{live:c.live,title:c.title}); renderTo(beats.length-1);
+  if(cur.live&&!cur.ended) followCall(); history.replaceState(null,"",(c.live?"#live:":"#")+c.id); }
+async function refreshNet(){
+  clearTimeout(netTimer); if(mode!=="network") return;
+  let net;
+  if(LIVE){ try{ const r=await fetch("api/network"+KQ,{cache:"no-store"}); net=r.ok?await r.json():(NET||{calls:[]}); }catch(e){ net=NET||{calls:[]}; } }
+  else net={calls:SAMPLES.map(sampleSummary).filter(Boolean),classifier:{ok:false},supabase:{ok:false},default_victim_id:"demo-victim-1"};
+  if(mode!=="network") return;
+  NET=net; const M=NETM=netModel(net);
+  const sig=JSON.stringify([[...M.calls.values()].map(c=>[c.id,c.p,!!c.incident,c.live,c.type]),[...M.nums.values()].map(n=>[n.number,n.listed,n.disagree,n.trusted])]);
+  if(sig!==netSig){ const first=!netSig; netSig=sig; buildNet(M);
+    if(first){ const old=performance.now()-5000; for(const n of G.nodes) n.born=old; for(const e of G.edges) e.born=old; for(let i=0;i<320;i++) tick(); cam.init=false; } }
+  paintNet(M); if(railKind==="network") paintRail("network");
+  netTimer=setTimeout(refreshNet,15000);
+}
+/* status strip: is every part of the system up? */
+const SYS=[["livekit","LiveKit room"],["bridge","Bridge"],["victim_phone","Victim phone"],["classifier","Classifier"],["n8n","n8n"],["supabase","Supabase"],["telegram","Telegram"]];
+function paintSystem(){ const h=HEALTH; if(!h) return; $("#system").hidden=false;
+  $("#system").innerHTML=SYS.map(([k,name])=>{ const s=h[k]||{}; const c=s.ok?css.legit:(k==="telegram"||k==="victim_phone")?css.bank:css.fraud;
+    return `<div title="${esc(name+": "+(s.detail||""))}"><i style="background:${c}"></i><b>${name}</b><span>${esc(s.detail||"")}</span></div>`; }).join(""); }
+async function pollHealth(){ try{ const r=await fetch("api/health"+KQ,{cache:"no-store"}); if(r.ok){ HEALTH=await r.json(); paintSystem(); } }catch(e){} setTimeout(pollHealth,10000); }
+
+async function boot(){
+  resize(); requestAnimationFrame(frame);
+  SAMPLES=await (await fetch("samples/index.json",{cache:"no-store"})).json();
+  // peak pressure per sample for the rail dots (small files)
+  await Promise.all(SAMPLES.map(async s=>{ try{ const recs=await fetchSample(s.id); s.recs=recs; s.peak=Math.max(0,...recs.filter(r=>r.type==="verdict").map(r=>r.pressure||0)); }catch(e){} }));
+  try{ const r=await fetch("api/calls"+KQ,{cache:"no-store"}); if(r.ok){ LIVE=true; liveRows=(await r.json()).calls||[]; } }catch(e){}
+  if(LIVE){ $("#tab-live").disabled=false; $("#tab-live").title=""; $("#dialer-link").hidden=false; pollHealth(); }
+  const h=decodeURIComponent(location.hash.slice(1));
+  if(h==="network"){ await load("sample-courier-to-cbi"); await enterNetwork(); }
+  else if(h==="story"){ paintRail("samples"); await load("sample-courier-to-cbi"); setTimeout(()=>story(),600); }
+  else if(h.startsWith("live:")&&LIVE){ paintRail("live"); await load(h.slice(5),{live:true}).catch(()=>load("sample-courier-to-cbi")); }
+  else if(SAMPLES.some(s=>s.id===h)){ paintRail("samples"); await load(h); }
+  else if(LIVE&&liveRows[0]&&!liveRows[0].ended&&Date.now()/1000-liveRows[0].updated<90){   // a call is on right now
+    followed.add(liveRows[0].call_id); paintRail("live"); await load(liveRows[0].call_id,{live:true}); }
+  else { paintRail("samples"); await load("sample-courier-to-cbi"); }
+  const w=SAMPLES.find(s=>s.id==="sample-courier-to-cbi");
+  if(w){ try{ const recs=await fetchSample(w.id); const st=recs.find(r=>r.type==="call_started"), fw=recs.find(r=>r.type==="verdict"&&r.whisper);
+    if(st&&fw) $("#th-t").textContent=Math.round(fw.ts-st.ts); }catch(e){} }
+  if(LIVE) setTimeout(pollCalls,2000);
+}
+
+/* ================= story mode: 90 seconds for people who have never heard of a digital arrest ================= */
+let storyRun=0, storyOn=false;
+function say(html,buttons){ $("#story").hidden=false; $("#story-text").innerHTML=html;
+  const a=$("#story-acts"); a.innerHTML="";
+  return new Promise(res=>{ (buttons||[]).forEach(([label,val,go])=>{ const b=document.createElement("button"); b.type="button"; b.textContent=label; if(go) b.className="go"; b.onclick=()=>res(val); a.appendChild(b); });
+    if(!buttons||!buttons.length) res(); if(buttons&&buttons.length) a.firstChild.focus({preventScroll:true}); }); }
+const nap=ms=>new Promise(r=>setTimeout(r,ms));
+function untilDone(run){ return new Promise(res=>{ const t=setInterval(()=>{ if(run!==storyRun||(!playing&&stageDone>=beats.length-1)){clearInterval(t);res();} },150); }); }
+function endStory(){ storyRun++; storyOn=false; onBeat=null; $("#story").hidden=true; }
+async function story(){
+  const run=++storyRun; storyOn=true; const live=()=>run===storyRun;
+  $("#bench").scrollIntoView({behavior:"smooth",block:"start"});
+  paintRail("samples"); await load("sample-courier-to-cbi"); renderTo(-1); pause();
+  const guess=await say(`${VICTIM} is 68. Her phone rings: <i>“Blue Dart courier, there's a parcel in your name.”</i> <br>Would you worry?`,
+    [["Sounds normal","fine",true],["Sounds off","off"]]); if(!live()) return;
+  await say(guess==="fine"?"So would most people. That's why it works. Listen with Chaukanna.":"Good instinct. Most people don't have it. Listen with Chaukanna."); await nap(2000); if(!live()) return;
+  let said=new Set();
+  onBeat=(b)=>{ if(!live()) return; const r=b.rec||{};
+    const once=(key,html)=>{ if(said.has(key)) return; said.add(key); say(html); };
+    if(b.kind==="call_started") once("start","Chaukanna joins the call <em>hidden</em>. It hears both sides. Only she can hear it.");
+    else if(b.kind==="verdict"&&r.pressure===0) once("calm","Ordinary courier talk. Pressure <u>0</u>: Chaukanna stays silent. No false alarm.");
+    else if(b.kind==="verdict"&&r.pressure===1) once("watch","“Stuck at Mumbai customs, linked to your Aadhaar.” The story is turning. Pressure <i>1</i>: watching.");
+    else if(b.kind==="verdict"&&r.whisper&&r.whisper_clip==="warn_digital_arrest") once("da","Drugs, fake passports, money laundering: the <b>digital-arrest</b> script. Chaukanna <em>whispers into her ear</em>: “Digital arrest is a scam. Hang up!” The caller hears nothing.");
+    else if(b.kind==="n8n") once("n8n","At the same moment n8n takes over: <em>her son gets a Telegram alert</em>, the evidence is saved, and a 1930 complaint is drafted.");
+    else if(b.kind==="verdict"&&r.whisper&&r.whisper_clip==="warn_secrecy") once("sec","“Don't tell anyone. Don't hang up.” Scammers cut victims off from family. Second whisper: <em>“We're alerting your family.”</em>");
+    else if(b.kind==="verdict"&&r.whisper&&r.whisper_clip==="warn_otp") once("otp","And now the real goal: <b>the OTP</b>. Third whisper: <em>“Don't share your OTP! It's a scam.”</em>");
+    else if(b.kind==="call_ended") once("end","<b>Scam call.</b> Three warnings, each one landing while the caller was still talking."); };
+  speed=1.15; play(); await untilDone(run); onBeat=null; if(!live()) return;
+  await nap(3800); if(!live()) return;
+  await say("Now the opposite. A delivery boy: parcel, gate, “come down”. The same words a scammer uses.",[["Watch","go",true]]); if(!live()) return;
+  await load("sample-amazon-delivery"); renderTo(-1);
+  onBeat=(b)=>{ if(!live()) return; if(b.kind==="call_ended") say("<u>Nothing.</u> Pressure stayed at 0, no whisper, no alert. A guardian that cries wolf gets switched off; this one doesn't."); };
+  speed=1.2; play(); await untilDone(run); onBeat=null; if(!live()) return;
+  await nap(4200); if(!live()) return;
+  await say("That's Chaukanna: it hears the scam take shape, warns her while it is happening, and gets her family on it, in Hindi, Kannada or English.",[["Explore the calls","done",true],["Watch again","again"]])
+    .then(v=>{ if(!live()) return; endStory(); speed=+$("#speed-sel").value; if(v==="again") story(); });
+}
+$("#story-btn").onclick=()=>{ endStory(); story(); };
+$("#story-x").onclick=()=>{ endStory(); speed=+$("#speed-sel").value; };
+addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#story").hidden){ endStory(); speed=+$("#speed-sel").value; } });
+
+window.chaukannaConsole={ load, play, pause, setSpeed:v=>{speed=v;}, get done(){ return !playing && stageDone>=beats.length-1; } };
+boot().catch(err=>{ $("#claim").textContent=`The calls did not load (${err.message}). Serve this folder over HTTP: python token_server.py, then open /console/`; });
+})();
+</script>
+</body>
+</html>

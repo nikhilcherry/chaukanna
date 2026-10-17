@@ -23,6 +23,7 @@ fields it does not know.
 | Classifier | `http://localhost:8010` (8000 on the dev laptop is an unrelated container) |
 | n8n | `https://n8n.premortem.tech`, workflow "Chaukanna · Scam-Call Incident Responder" |
 | Token server / scammer dialer | `http://localhost:8787` (`chaukanna-audio-bridge/token_server.py`) |
+| Guardian console | `http://localhost:8787/console/`: replays every call from the bridge's `calls/*.jsonl` log, follows one live, and joins every call, number, incident and scam list in its Network view (§7) |
 | Supabase (local dev) | `http://127.0.0.1:55421`, Studio `:55423` (`chaukanna-incident-responder/supabase/`) |
 | LiveKit room | `chaukanna` |
 | Demo victim | `victim_id` `demo-victim-1`, name `Kamala Devi`, language `hi` |
@@ -44,7 +45,9 @@ is merged into the *next* chunk's answer.
 ```jsonc
 {
   "call_id": "chaukanna-1a2b3c4d",
-  "scam_type": "digital_arrest",   // digital_arrest | kyc_update | bank_impersonation | prize_lottery | other | none
+  "scam_type": "digital_arrest",   // digital_arrest | kyc_update | bank_impersonation | prize_lottery | pension_scam
+                                   // | relative_emergency | utility_disconnection | insurance_bonus | upi_collect
+                                   // | investment_tip | sextortion | other | none  (unknown values: treat as "other")
   "pressure": 3,                   // 0..3, never decreases within a call
   "asks_otp_or_pin": true,         // sticky for the call
   "demands_secrecy": true,         // sticky for the call
@@ -65,6 +68,11 @@ is merged into the *next* chunk's answer.
 - `POST /scam_numbers` `{"number", "scam_type", "note"}` adds a number. The bridge sends one for every
   call that becomes an incident (`REPORT_SCAMMERS=1`), so a redial is flagged on its first chunk.
 - `DELETE /scam_numbers/{number}` removes one (use it to reset the demo).
+- `GET|POST|DELETE /trusted_numbers` (`{"number", "name", "note"}`): the victim's family / saved contacts
+  (demo: `+91 98450 12345`, "Ravi (son)", same as the Supabase `trusted_contacts` seed). A plain OTP
+  request from one of them stays at pressure 1 with no whisper; a bank OTP, a threat, secrecy, a fee, an
+  app/link or an excuse ("sent to you by mistake", "WhatsApp code") still escalates. Everyday codes
+  (delivery, ride, LPG DAC, technician, pickup, gate) are calm from any number. A listed number is never trusted.
 - `GET /health`.
 
 The classifier never returns 5xx mid-call. If it is down, the bridge uses its own keyword verdict.
@@ -192,6 +200,54 @@ Who decides: the classifier recommends a clip once per call; the bridge sets `wh
 time a clip is recommended, and again only if pressure rose and `WHISPER_COOLDOWN_SECONDS` (20 s) passed;
 the app plays only on `whisper: true`, at most once per clip per 20 s, and mutes the victim's mic while
 it plays so the caller can't hear it.
+
+## §6 OTP SMS context (victim app → bridge → classifier)
+
+Not every OTP request is a scam: the SMS itself says what the code unlocks. The app reads incoming
+SMS (`RECEIVE_SMS`, Android), and for an OTP SMS sends **only** its purpose, the sender and the amount.
+**The code never leaves the phone** (the bridge also drops any `service` with 4+ digits).
+
+App → guardian: LiveKit data, topic `chaukanna.otp_sms`, destination `chaukanna-guardian`, from the
+victim identity only (callers can't publish data):
+
+```json
+{"purpose": "payment", "service": "HDFC Bank", "amount": 49999.0}
+```
+
+`purpose`: `payment | upi | card | bank_login | sim | messaging_account` (risk **high**: money or the
+account itself), `government_id | other_login` (**medium**), `everyday` (**low**: delivery, ride, LPG DAC,
+pickup, technician, gate). The classifier owns the purpose → risk mapping.
+
+Bridge → classifier: `POST /otp_context` `{"call_id", "purpose", "service", "amount", "seconds_before_call"}`,
+returns a re-merged §1 verdict that the bridge publishes like a chunk verdict with `speaker: "sms"` and
+`chunk_text: "OTP SMS: payment, ₹49,999, from HDFC Bank"`. An SMS seen while no call is on is held and
+applied when the next call starts (`seconds_before_call` = its age; dropped after 15 min).
+
+Effect: a **high** OTP during the call (or ≤2 min before it) raises pressure to 2 with `warn_otp` before
+anyone asks, makes any OTP request critical (even from a trusted contact) and leads the family summary
+("A ₹49,999 payment OTP from HDFC Bank arrived on the phone during this call…"). A **low** one keeps an
+OTP request calm (pressure 1) from any number, as long as nothing else in the call looks like a scam.
+
+## §7 Console network feed (n8n → token server)
+
+`GET https://n8n.premortem.tech/webhook/chaukanna-network` with header `X-Chaukanna-Key: <CONSOLE_FEED_KEY>`
+(workflow "Chaukanna · Console network feed", `incident_responder/console_feed_workflow.json`; a wrong or missing
+key gets 403). Read-only. The bridge's token server calls it (cached 30 s) for the console's network view and
+status strip, so the console sees Supabase without holding a Supabase key:
+
+```jsonc
+{"ok": true, "at": "2026-10-17T15:10:27.911Z",
+ "incidents": [{"id", "call_id", "victim_id", "caller_number", "scam_type", "max_pressure", "complaint_status",
+                "family_response", "known_scammer", "asks_otp_or_pin", "demands_secrecy", "last_event", "has_draft",
+                "created_at", "updated_at", "submitted_at"}],          // newest first, at most 300
+ "scam_numbers": [{"phone_number", "scam_type", "report_count", "risk_level", "first_seen", "last_seen", "last_call_id"}],
+ "trusted_contacts": [{"victim_id", "victim_name", "contact_name", "phone_number", "preferred_language",
+                       "telegram_ready"}]}                              // true only for a real numeric chat id
+```
+
+Transcripts, complaint text and Telegram chat ids never leave n8n. The bridge also rewrites
+`calls/_bridge.json` on every heartbeat (`room`, `in_call`, `victim_present`); its age tells the console whether
+the bridge is in the LiveKit room.
 
 ## Shared data
 

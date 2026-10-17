@@ -281,6 +281,64 @@ class Flow(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(await p.process_chunk(p.new_call("c"), "caller", b"\x00\x00" * 64000))
 
 
+class OtpSms(unittest.IsolatedAsyncioTestCase):
+    def test_clean_keeps_only_contract_fields(self):
+        self.assertIsNone(pipeline.clean_otp_sms({"purpose": "lottery"}))
+        self.assertIsNone(pipeline.clean_otp_sms("payment"))
+        self.assertEqual(pipeline.clean_otp_sms({"purpose": "upi", "service": "OTP 482913", "amount": "abc",
+                                                 "seconds_before_call": -5, "code": "482913"}),
+                         {"purpose": "upi", "service": "", "amount": None, "seconds_before_call": 0.0})
+
+    async def test_payment_sms_warns_at_once_and_never_carries_the_code(self):
+        svc = FakeServices([verdict(2, "warn_otp", scam="other")])
+        sent = []
+
+        async def publish(m):
+            sent.append(m)
+            return True
+
+        async with svc.client() as http:
+            p = pipeline.Pipeline(cfg(), http, publish)
+            st = p.new_call("call-1", "+91 98765 43210")
+            msg = await p.note_otp_sms(st, {"purpose": "payment", "service": "HDFC Bank", "amount": "49999",
+                                            "code": "482913", "body": "Your OTP is 482913"})
+            await p.drain()
+        self.assertEqual(svc.classify_bodies[-1], {"call_id": "call-1", "purpose": "payment", "service": "HDFC Bank",
+                                                   "amount": 49999.0, "seconds_before_call": 0.0})
+        self.assertEqual((msg["speaker"], msg["whisper_clip"]), ("sms", "warn_otp"))
+        self.assertEqual(msg["chunk_text"], "OTP SMS: payment, ₹49,999, from HDFC Bank")
+        self.assertNotIn("482913", json.dumps(sent + svc.n8n + svc.classify_bodies))
+        self.assertIn("incident", [b["event"] for b in svc.n8n])
+
+    async def test_only_the_victim_sends_and_an_early_sms_waits_for_the_call(self):
+        svc = FakeServices()
+        async with svc.client() as http:
+            s = bridge.LiveSession(cfg(), http)
+            s.victim = "victim"
+            noted = []
+
+            async def fake_note(st, sms):
+                noted.append((st.call_id, sms))
+            s.pipe.note_otp_sms = fake_note
+
+            def pkt(who, topic="chaukanna.otp_sms", data=b'{"purpose": "everyday", "service": "Swiggy"}'):
+                return SimpleNamespace(participant=SimpleNamespace(identity=who) if who else None, topic=topic, data=data)
+
+            for bad in (pkt("caller-x"), pkt(None), pkt("victim", topic="chaukanna.verdict"), pkt("victim", data=b"{oops")):
+                s.on_data(bad)
+            self.assertIsNone(s.pending_otp_sms)
+            s.on_data(pkt("victim"))                           # no call yet: held for the next one
+            self.assertIsNotNone(s.pending_otp_sms)
+            s.callers["caller-1"] = {"phone": "+911234567890"}
+            s.start_call()
+            s.on_data(pkt("victim", data=b'{"purpose": "payment"}'))   # during the call: straight through
+            await asyncio.gather(*list(s._tasks))
+            self.assertIsNone(s.pending_otp_sms)
+            self.assertEqual([n[1]["purpose"] for n in noted], ["everyday", "payment"])
+            self.assertTrue(all(cid == s.call.call_id for cid, _ in noted))
+            self.assertIn("seconds_before_call", noted[0][1])
+
+
 class Masking(unittest.TestCase):
     def test_otp_masked_in_all_forms(self):
         m = pipeline.mask_otp
@@ -536,3 +594,191 @@ class VictimTokenEndpoint(unittest.TestCase):
                         urllib.request.urlopen(base + "?key=")      # off when no key is configured
             finally:
                 srv.shutdown()
+
+
+class ConsoleCallLog(unittest.IsolatedAsyncioTestCase):
+    """What the console (console/index.html) replays: calllog.py files written by the bridge."""
+
+    def tearDown(self):
+        pipeline._learned_numbers.clear()
+
+    async def test_every_call_message_and_n8n_outcome_is_logged(self):
+        import calllog
+        reply = {"ok": True, "incident_id": "inc-1", "complaint_draft": {"en": "draft"}, "family_alerted": True}
+        svc = FakeServices([verdict(1), verdict(2, "warn_digital_arrest"), verdict(3, "warn_otp", otp=True)], n8n_reply=reply)
+        with tempfile.TemporaryDirectory() as d:
+            async with svc.client() as http:
+                s = bridge.LiveSession(cfg(call_log_dir=d), http)        # no room, no victim: logged anyway
+                st = s.pipe.new_call("call-1", "+91 98765 43210", caller_label="CBI")
+                s.call = st
+                await s.publish(s.pipe.call_started_msg(st))
+                for _ in range(3):
+                    await s.pipe.process_chunk(st, "caller", LOUD)
+                await s.publish({"type": "heartbeat", "call_id": "call-1", "in_call": True, "ts": 1.0})
+                await s.publish({**st.last_message, "snapshot": True})
+                await s.pipe.end_call(st)
+                await s.pipe.drain()
+            recs = calllog.read_call(d, "call-1")
+            kinds = [(r["type"], r.get("event")) for r in recs]
+            self.assertEqual(kinds[0], ("call_started", None))
+            self.assertEqual([k for k in kinds if k[0] == "verdict"], [("verdict", None)] * 3)   # no snapshot copy
+            self.assertNotIn(("heartbeat", None), kinds)
+            for k in [("n8n_event", "telemetry"), ("n8n_event", "incident"), ("n8n_reply", "incident"),
+                      ("incident", None), ("scam_list", None), ("call_ended", None), ("n8n_event", "call_ended")]:
+                self.assertIn(k, kinds)
+            self.assertTrue(all(r["call_id"] == "call-1" and "logged" in r for r in recs))
+            self.assertTrue(next(r for r in recs if r["type"] == "n8n_reply")["ok"])
+            row = calllog.summarize(d)[0]
+            self.assertEqual((row["call_id"], row["caller_label"], row["peak_pressure"], row["chunks"]), ("call-1", "CBI", 3, 3))
+            self.assertTrue(row["incident"] and row["ended"])
+
+    async def test_n8n_event_logged_as_not_sent_when_n8n_is_off(self):
+        import calllog
+        svc = FakeServices([verdict(2, "warn_digital_arrest")])
+        with tempfile.TemporaryDirectory() as d:
+            async with svc.client() as http:
+                p = pipeline.Pipeline(cfg(n8n_url="", call_log_dir=d), http, lambda m: asyncio.sleep(0, True))
+                st = p.new_call("call-2", "+91 90000 12345")
+                await p.process_chunk(st, "caller", LOUD)
+                await p.drain()
+            ev = [r for r in calllog.read_call(d, "call-2") if r["type"] == "n8n_event"]
+            self.assertEqual([(r["event"], r["sent"]) for r in ev], [("incident", False)])
+            self.assertEqual(svc.n8n, [])
+
+    def test_read_call_skips_half_written_lines_and_bad_ids(self):
+        import calllog
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "c1.jsonl").write_text('{"type": "call_started", "call_id": "c1"}\n{"type": "verdict"}\n{"type": "ver')
+            self.assertEqual(len(calllog.read_call(d, "c1")), 2)
+            self.assertEqual(calllog.read_call(d, "c1", start=1), [{"type": "verdict"}])
+            self.assertIsNone(calllog.read_call(d, "../c1"))
+            self.assertIsNone(calllog.read_call(d, "nope"))
+            calllog.CallLog(d).write({"type": "verdict", "call_id": "../../etc/x"})        # unsafe id: not written
+            calllog.CallLog(None).write({"type": "verdict", "call_id": "c2"})               # logging off
+            self.assertEqual(sorted(p.name for p in Path(d).iterdir()), ["c1.jsonl"])
+        self.assertEqual(Config().call_log_dir, "")                                         # tests never write logs
+
+
+class ConsoleEndpoint(unittest.TestCase):
+    def test_console_page_and_call_api(self):
+        import os
+        import threading
+        import urllib.error
+        import urllib.request
+        from unittest import mock
+        import token_server
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "chaukanna-abc12345.jsonl").write_text(
+                '{"type": "call_started", "call_id": "chaukanna-abc12345", "caller_number": "+911", "ts": 1}\n'
+                '{"type": "verdict", "call_id": "chaukanna-abc12345", "pressure": 2, "scam_type": "digital_arrest", "ts": 2}\n')
+            with mock.patch.dict(os.environ, {"CALL_LOG_DIR": d, "CONSOLE_KEY": ""}):
+                srv = token_server.ThreadingHTTPServer(("127.0.0.1", 0), token_server.H)
+                threading.Thread(target=srv.serve_forever, daemon=True).start()
+                base = f"http://127.0.0.1:{srv.server_address[1]}"
+                try:
+                    page = urllib.request.urlopen(base + "/console/").read().decode()
+                    self.assertIn("<title>Chaukanna console</title>", page)
+                    r = urllib.request.urlopen(base + "/console/api/calls")
+                    self.assertIsNone(r.headers.get("Access-Control-Allow-Origin"))      # other sites can't read transcripts
+                    calls = json.loads(r.read())["calls"]
+                    self.assertEqual((calls[0]["call_id"], calls[0]["peak_pressure"], calls[0]["ended"]),
+                                     ("chaukanna-abc12345", 2, False))
+                    recs = json.loads(urllib.request.urlopen(base + "/console/api/calls/chaukanna-abc12345?from=1").read())
+                    self.assertEqual([x["type"] for x in recs["records"]], ["verdict"])
+                    self.assertIn("sample-courier-to-cbi", urllib.request.urlopen(base + "/console/samples/index.json").read().decode())
+                    for bad in ("/console/api/calls/nope", "/console/../token_server.py", "/console/..%2f.env", "/console/samples/x.py"):
+                        with self.assertRaises(urllib.error.HTTPError) as e:
+                            urllib.request.urlopen(base + bad)
+                        self.assertEqual(e.exception.code, 404, bad)
+                finally:
+                    srv.shutdown()
+
+    def test_call_api_is_loopback_only_unless_keyed(self):
+        import os
+        from unittest import mock
+        import token_server
+        remote, local = SimpleNamespace(client_address=("10.0.0.5", 4000)), SimpleNamespace(client_address=("127.0.0.1", 4000))
+        with mock.patch.dict(os.environ, {"CONSOLE_KEY": ""}):
+            self.assertFalse(token_server.H._console_allowed(remote, {}))
+            self.assertTrue(token_server.H._console_allowed(local, {}))
+        with mock.patch.dict(os.environ, {"CONSOLE_KEY": "sesame"}):
+            self.assertFalse(token_server.H._console_allowed(remote, {"key": "wrong"}))
+            self.assertTrue(token_server.H._console_allowed(remote, {"key": "sesame"}))
+
+
+class ConsoleNetwork(unittest.TestCase):
+    """/console/api/health and /console/api/network: every part of the system, joined."""
+
+    def serve(self, routes):
+        """A fake classifier + n8n on one port: path -> (status, json)."""
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        seen = []
+
+        class Fake(BaseHTTPRequestHandler):
+            def do_GET(self):
+                seen.append((self.path, self.headers.get("X-Chaukanna-Key"), self.headers.get("User-Agent")))
+                code, body = routes.get(self.path.split("?")[0], (404, {}))
+                self.send_response(code)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(body).encode())
+
+            def log_message(self, *a):
+                pass
+
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), Fake)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.shutdown)
+        return f"http://127.0.0.1:{srv.server_address[1]}", seen
+
+    def test_health_and_network_join_every_source(self):
+        import os
+        import time as _t
+        from unittest import mock
+        import calllog
+        import token_server
+        feed = {"ok": True, "incidents": [{"call_id": "c-old", "caller_number": "+911", "max_pressure": 3}],
+                "scam_numbers": [{"phone_number": "+911", "report_count": 2}],
+                "trusted_contacts": [{"victim_id": "v1", "contact_name": "Ravi", "telegram_ready": False}]}
+        base, seen = self.serve({"/health": (200, {"ok": True, "backend": "jev", "known_numbers": 3, "circuit_open": False}),
+                                 "/healthz": (200, {"status": "ok"}),
+                                 "/scam_numbers": (200, {"numbers": [{"number": "+922"}]}),
+                                 "/trusted_numbers": (200, {"numbers": [{"number": "+913", "name": "Ravi"}]}),
+                                 "/webhook/chaukanna-network": (200, feed)})
+        with tempfile.TemporaryDirectory() as d:
+            calllog.CallLog(d).status({"room": "chaukanna", "in_call": False, "victim_present": True, "every_s": 5})
+            Path(d, "c-new.jsonl").write_text('{"type": "call_started", "call_id": "c-new", "caller_number": "+911", "ts": 1}\n')
+            env = {"CALL_LOG_DIR": d, "CLASSIFIER_URL": base + "/classify", "N8N_WEBHOOK_URL": base + "/webhook/chaukanna-verdict",
+                   "CONSOLE_FEED_KEY": "k1", "CONSOLE_FEED_URL": "", "VICTIM_ID": "v1"}
+            with mock.patch.dict(os.environ, env):
+                token_server._cache.clear()
+                h = token_server.system_health()
+                for part in ("livekit", "bridge", "victim_phone", "classifier", "n8n", "supabase"):
+                    self.assertTrue(h[part]["ok"], (part, h[part]))
+                self.assertFalse(h["telegram"]["ok"])                       # placeholder chat id: shown, not hidden
+                self.assertIn(("/webhook/chaukanna-network", "k1", token_server.UA), seen)   # keyed, not urllib's UA
+                net = token_server.network()
+                self.assertEqual([c["call_id"] for c in net["calls"]], ["c-new"])
+                self.assertEqual(net["supabase"]["incidents"][0]["call_id"], "c-old")
+                self.assertEqual(net["classifier"]["scam_numbers"], [{"number": "+922"}])
+                self.assertEqual(net["classifier"]["trusted"][0]["name"], "Ravi")
+                # a stale heartbeat means the bridge left the room
+                Path(d, calllog.STATUS_FILE).write_text(json.dumps({"ts": _t.time() - 60, "every_s": 5}))
+                token_server._cache.clear()
+                self.assertFalse(token_server.system_health()["bridge"]["ok"])
+
+    def test_feed_down_or_unconfigured_is_reported_not_raised(self):
+        import os
+        from unittest import mock
+        import token_server
+        base, _ = self.serve({"/webhook/chaukanna-network": (403, {"message": "Authorization data is wrong!"})})
+        with mock.patch.dict(os.environ, {"N8N_WEBHOOK_URL": base + "/webhook/x", "CONSOLE_FEED_KEY": "bad",
+                                          "CONSOLE_FEED_URL": "", "CLASSIFIER_URL": base + "/classify"}):
+            token_server._cache.clear()
+            self.assertEqual(token_server.supabase_feed()["error"], "HTTP 403")
+            net = token_server.network()
+            self.assertFalse(net["supabase"]["ok"] or net["classifier"]["ok"])
+        with mock.patch.dict(os.environ, {"N8N_WEBHOOK_URL": "", "CONSOLE_FEED_KEY": "", "CONSOLE_FEED_URL": ""}):
+            token_server._cache.clear()
+            self.assertIn("not set", token_server.supabase_feed()["error"])

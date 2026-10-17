@@ -54,7 +54,40 @@ Set `VICTIM_TOKEN_KEY` to also serve `GET /victim-token?key=<key>` → `{"token"
 default because a victim token can read the guardian's data messages. `python tokens.py victim --ttl 48h` still works.
 Expose it with `hoist` for teammates on other laptops (mic access needs HTTPS). Without the server, paste a LiveKit URL + JWT under "Advanced".
 
+## Guardian console
+
+```bash
+.venv/bin/python token_server.py     # open http://localhost:8787/console/
+```
+
+![guardian console replaying a scam call](docs/screenshots/console.png)
+![network view: every call, number, incident and scam list](docs/screenshots/console-network.png)
+
+The assay replay UI (TigerGraph fraud investigator) re-cast for calls: a force graph that grows chunk by chunk
+(caller, victim, the hidden guardian, every utterance coloured by pressure, the classifier signals it raised, the
+scam type, each whisper, the n8n incident and what n8n did), a pressure needle (0 calm → 3 critical, n8n at 2),
+the transcript, the classifier and n8n calls in order, and the final stamp with the 1930 draft. "Tell me the story"
+is a 90-second narrated walkthrough for judges.
+
+- **Live:** the bridge appends every message it sends the victim, plus each n8n event and reply, to
+  `calls/<call_id>.jsonl` (`calllog.py`; `CALL_LOG_DIR` moves it, `CALL_LOG_DIR=` turns it off). The console polls
+  that folder through the token server and jumps to a new call as it starts, then follows it as it happens.
+  Heartbeats and late-joiner snapshots are not logged; victim OTP digits are already masked.
+- **Samples:** `console/samples/` holds four calls replayed through the real classifier (Jev) with n8n off
+  (`N8N_WEBHOOK_URL= REPORT_SCAMMERS=0 CALL_LOG_DIR=console/samples bridge.py --no-livekit --replay-file ... --call-id sample-...`),
+  so the page works with no bridge running; it is also a static folder you can host anywhere.
+- **Network** (third rail tab): every call joined into one graph, the way assay joined cards through a shared
+  device. Caller numbers → calls → victim, calls → scam type, numbers → the classifier's scam list and Supabase's
+  `scam_numbers` (a dashed ring where the two lists disagree), and the family contact who gets the Telegram alert.
+  Calls come from the bridge's log and from Supabase `incident_evidence` (so incidents from before logging show up
+  too); click a call to replay it, or a number to see its history. Supabase is read through the n8n feed workflow
+  (CONTRACTS §7): set `CONSOLE_FEED_KEY` in `.env` (the same value as the workflow's header-auth credential).
+- **Status strip** above the bench: LiveKit room, bridge, victim phone, classifier, n8n, Supabase, Telegram, checked
+  every 10 s (`/console/api/health`). The bridge's heartbeat file `calls/_bridge.json` says whether it is in the room.
+- The call API (`/console/api/...`) carries transcripts, so it answers only on this machine (loopback, which includes
+  `adb reverse`) unless `?key=<CONSOLE_KEY>` matches, and it sends no CORS header. The page and samples are public.
+
 ## Tests
 
-`python -m unittest discover -s tests` covers chunking, WAV encoding, resampling, the fast/slow paths with cooldown, and the classifier fallback.
+`python -m unittest discover -s tests` covers chunking, WAV encoding, resampling, the fast/slow paths with cooldown, the classifier fallback, and the console's call log and endpoints.
 The live LiveKit path (track subscribe -> AudioStream) has not been run against a real server here.
