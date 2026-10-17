@@ -13,9 +13,9 @@ import '../widgets/verdict_chips.dart';
 
 /// Screen 1: Active Call Guardian (also the idle "ready" view).
 ///
-/// The top panel and the watch ring take the colour of the call type once a scam
-/// is recognised; the ring fills as the risk climbs. Everything below stays calm
-/// and white so the one coloured thing is the thing to worry about.
+/// The top panel and the watch ring take the colour of the call type once the call is
+/// clearly a scam (pressure 2, or a known scam number); the ring fills as the risk climbs.
+/// Everything below stays calm and white so the one coloured thing is the thing to worry about.
 class CallScreen extends StatelessWidget {
   const CallScreen({super.key});
 
@@ -23,7 +23,7 @@ class CallScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<GuardianController>();
     if (c.phase == CallPhase.idle) return const _IdleView();
-    final alert = (c.scamType != 'none' && c.scamType.isNotEmpty) || c.knownScammer
+    final alert = (c.scamType != 'none' && c.scamType.isNotEmpty && c.peakPressure >= 2) || c.knownScammer
         ? ScamProfile.resolve(scamType: c.scamType, knownScammer: c.knownScammer)
         : null;
     final accent = alert?.field ?? Pal.brand;
@@ -150,6 +150,7 @@ class CallScreen extends StatelessWidget {
                                 asksOtp: c.sawOtpAsk,
                                 secrecy: c.sawSecrecy,
                                 knownScammer: c.knownScammer,
+                                pressure: c.peakPressure,
                               ),
                               ...banners,
                             ],

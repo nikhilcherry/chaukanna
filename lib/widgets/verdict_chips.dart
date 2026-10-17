@@ -4,9 +4,11 @@ import '../models/scam_profile.dart';
 import '../theme.dart';
 
 /// The live "what kind of call is this" block. With no scam it is one calm line.
-/// Once a scam type is recognised it becomes a card in that type's colour and icon
-/// that says what the scam is and what to do, followed by a small pill for each
-/// specific danger (OTP, secrecy, known number) as it shows up.
+/// Once the call is clearly a scam (pressure 2, when the warnings start) or the number is a
+/// known scammer, it becomes a card in that type's colour and icon that says what the scam
+/// is and what to do, followed by a small pill for each specific danger (OTP, secrecy, known
+/// number). Below pressure 2 the classifier's early guess at a type stays off the screen: a
+/// courier saying hello must not be called a scam.
 class VerdictChips extends StatelessWidget {
   const VerdictChips({
     super.key,
@@ -14,6 +16,7 @@ class VerdictChips extends StatelessWidget {
     required this.asksOtp,
     required this.secrecy,
     required this.knownScammer,
+    required this.pressure,
   });
 
   final String scamType;
@@ -21,10 +24,17 @@ class VerdictChips extends StatelessWidget {
   final bool secrecy;
   final bool knownScammer;
 
+  /// The call's peak pressure, 0..3.
+  final int pressure;
+
   @override
   Widget build(BuildContext context) {
-    final scam = scamType != 'none' && scamType.isNotEmpty;
+    final clear = pressure >= 2 || knownScammer;
+    final scam = scamType != 'none' && scamType.isNotEmpty && clear;
     final main = scam || knownScammer ? ScamProfile.resolve(scamType: scamType, knownScammer: knownScammer) : null;
+    final asksOtp = this.asksOtp && clear;
+    final secrecy = this.secrecy && clear;
+    final watching = pressure >= 1;
     return AnimatedSize(
       duration: const Duration(milliseconds: 250),
       alignment: Alignment.topCenter,
@@ -35,17 +45,21 @@ class VerdictChips extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (main == null && !asksOtp && !secrecy)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.check_circle, size: 22, color: Pal.brand),
-                    SizedBox(width: 8),
+                    Icon(
+                      watching ? Icons.visibility : Icons.check_circle,
+                      size: 22,
+                      color: watching ? Pal.amber : Pal.brand,
+                    ),
+                    const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'No scam signs so far',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Pal.dim),
+                        watching ? 'Listening closely. No scam so far' : 'No scam signs so far',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Pal.dim),
                       ),
                     ),
                   ],
