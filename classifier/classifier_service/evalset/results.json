@@ -1,0 +1,4929 @@
+{
+ "policy": "caution",
+ "summaries": [
+  {
+   "label": "keywords only",
+   "n_scam": 28,
+   "n_legit": 19,
+   "detected": 24,
+   "on_time": 24,
+   "median_first_p2": 2.0,
+   "mean_delay_vs_critical": 0,
+   "type_acc": 26,
+   "false_alarms": 0,
+   "soft_alarms": 5,
+   "legit_whispers": 0,
+   "classify_p50_ms": 0.26,
+   "classify_p95_ms": 0.47,
+   "model_p50_ms": null,
+   "model_p95_ms": null,
+   "model_calls_measured": 0,
+   "degraded_convs": 0,
+   "split": "all"
+  },
+  {
+   "label": "keywords only",
+   "n_scam": 20,
+   "n_legit": 13,
+   "detected": 20,
+   "on_time": 20,
+   "median_first_p2": 2.0,
+   "mean_delay_vs_critical": 0,
+   "type_acc": 20,
+   "false_alarms": 0,
+   "soft_alarms": 4,
+   "legit_whispers": 0,
+   "classify_p50_ms": 0.25,
+   "classify_p95_ms": 0.45,
+   "model_p50_ms": null,
+   "model_p95_ms": null,
+   "model_calls_measured": 0,
+   "degraded_convs": 0,
+   "split": "tune"
+  },
+  {
+   "label": "keywords only",
+   "n_scam": 8,
+   "n_legit": 6,
+   "detected": 4,
+   "on_time": 4,
+   "median_first_p2": 2.0,
+   "mean_delay_vs_critical": 0,
+   "type_acc": 6,
+   "false_alarms": 0,
+   "soft_alarms": 1,
+   "legit_whispers": 0,
+   "classify_p50_ms": 0.28,
+   "classify_p95_ms": 0.47,
+   "model_p50_ms": null,
+   "model_p95_ms": null,
+   "model_calls_measured": 0,
+   "degraded_convs": 0,
+   "split": "holdout"
+  },
+  {
+   "label": "keywords + jev_only",
+   "n_scam": 28,
+   "n_legit": 19,
+   "detected": 28,
+   "on_time": 28,
+   "median_first_p2": 2.0,
+   "mean_delay_vs_critical": -0.04,
+   "type_acc": 28,
+   "false_alarms": 0,
+   "soft_alarms": 5,
+   "legit_whispers": 0,
+   "classify_p50_ms": 283.69,
+   "classify_p95_ms": 336.07,
+   "model_p50_ms": null,
+   "model_p95_ms": null,
+   "model_calls_measured": 0,
+   "degraded_convs": 0,
+   "model_alone": {
+    "detected": 27,
+    "on_time": 24,
+    "median_first_p2": 2,
+    "false_alarms": 0,
+    "type_acc": 28
+   },
+   "split": "all"
+  },
+  {
+   "label": "keywords + jev_only",
+   "n_scam": 20,
+   "n_legit": 13,
+   "detected": 20,
+   "on_time": 20,
+   "median_first_p2": 2.0,
+   "mean_delay_vs_critical": -0.05,
+   "type_acc": 20,
+   "false_alarms": 0,
+   "soft_alarms": 4,
+   "legit_whispers": 0,
+   "classify_p50_ms": 282.74,
+   "classify_p95_ms": 330.87,
+   "model_p50_ms": null,
+   "model_p95_ms": null,
+   "model_calls_measured": 0,
+   "degraded_convs": 0,
+   "model_alone": {
+    "detected": 19,
+    "on_time": 16,
+    "median_first_p2": 2,
+    "false_alarms": 0,
+    "type_acc": 20
+   },
+   "split": "tune"
+  },
+  {
+   "label": "keywords + jev_only",
+   "n_scam": 8,
+   "n_legit": 6,
+   "detected": 8,
+   "on_time": 8,
+   "median_first_p2": 2.0,
+   "mean_delay_vs_critical": 0,
+   "type_acc": 8,
+   "false_alarms": 0,
+   "soft_alarms": 1,
+   "legit_whispers": 0,
+   "classify_p50_ms": 289.41,
+   "classify_p95_ms": 376.86,
+   "model_p50_ms": null,
+   "model_p95_ms": null,
+   "model_calls_measured": 0,
+   "degraded_convs": 0,
+   "model_alone": {
+    "detected": 8,
+    "on_time": 8,
+    "median_first_p2": 2.0,
+    "false_alarms": 0,
+    "type_acc": 8
+   },
+   "split": "holdout"
+  },
+  {
+   "label": "keywords + gemini-2.5-flash",
+   "n_scam": 28,
+   "n_legit": 19,
+   "detected": 28,
+   "on_time": 24,
+   "median_first_p2": 2.0,
+   "mean_delay_vs_critical": 0.14,
+   "type_acc": 28,
+   "false_alarms": 0,
+   "soft_alarms": 6,
+   "legit_whispers": 0,
+   "classify_p50_ms": 0.58,
+   "classify_p95_ms": 1.62,
+   "model_p50_ms": null,
+   "model_p95_ms": null,
+   "model_calls_measured": 0,
+   "degraded_convs": 0,
+   "model_alone": {
+    "detected": 27,
+    "on_time": 27,
+    "median_first_p2": 2,
+    "false_alarms": 0,
+    "type_acc": 28
+   },
+   "split": "all"
+  },
+  {
+   "label": "keywords + gemini-2.5-flash",
+   "n_scam": 20,
+   "n_legit": 13,
+   "detected": 20,
+   "on_time": 20,
+   "median_first_p2": 2.0,
+   "mean_delay_vs_critical": 0,
+   "type_acc": 20,
+   "false_alarms": 0,
+   "soft_alarms": 4,
+   "legit_whispers": 0,
+   "classify_p50_ms": 0.48,
+   "classify_p95_ms": 1.55,
+   "model_p50_ms": null,
+   "model_p95_ms": null,
+   "model_calls_measured": 0,
+   "degraded_convs": 0,
+   "model_alone": {
+    "detected": 19,
+    "on_time": 19,
+    "median_first_p2": 2,
+    "false_alarms": 0,
+    "type_acc": 20
+   },
+   "split": "tune"
+  },
+  {
+   "label": "keywords + gemini-2.5-flash",
+   "n_scam": 8,
+   "n_legit": 6,
+   "detected": 8,
+   "on_time": 4,
+   "median_first_p2": 2.5,
+   "mean_delay_vs_critical": 0.5,
+   "type_acc": 8,
+   "false_alarms": 0,
+   "soft_alarms": 2,
+   "legit_whispers": 0,
+   "classify_p50_ms": 0.93,
+   "classify_p95_ms": 380.43,
+   "model_p50_ms": null,
+   "model_p95_ms": null,
+   "model_calls_measured": 0,
+   "degraded_convs": 0,
+   "model_alone": {
+    "detected": 8,
+    "on_time": 8,
+    "median_first_p2": 2.0,
+    "false_alarms": 0,
+    "type_acc": 8
+   },
+   "split": "holdout"
+  }
+ ],
+ "results": {
+  "keywords only": [
+   {
+    "id": "h_da_hinglish_ed_video",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest"
+    ],
+    "ms": [
+     0.37,
+     0.33,
+     0.05,
+     0.27,
+     0.27
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "h_da_kannada_aadhaar_sims",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest"
+    ],
+    "ms": [
+     0.37,
+     0.44,
+     0.05,
+     0.47
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "h_bank_en_upi_refund",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation",
+     "prize_lottery"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.4,
+     0.41,
+     0.05,
+     0.26
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_kyc_devanagari_sim",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "digital_arrest",
+    "accept": [
+     "kyc_update"
+    ],
+    "type_ok": false,
+    "whispers": [],
+    "ms": [
+     0.34,
+     0.5,
+     0.03
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "h_relative_en_grandson",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "relative_in_trouble",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.25,
+     0.36,
+     0.05
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_prize_kannada_car",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "prize_lottery",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "prize_lottery",
+    "accept": [
+     "prize_lottery"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.32,
+     0.5,
+     0.03
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "h_investment_hinglish",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "other",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "other"
+    ],
+    "type_ok": false,
+    "whispers": [],
+    "ms": [
+     0.28,
+     0.32,
+     0.04
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_courier_devanagari_customs_duty",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest",
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.35,
+     0.47,
+     0.03
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "h_legit_en_cheque_bounce",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_bank",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.19,
+     0.32,
+     0.03,
+     0.33
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_devanagari_lab_report",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "hi",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.35,
+     0.03,
+     0.47
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_kannada_gas_dac",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_delivery_otp",
+    "lang": "kn",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.28,
+     0.03,
+     0.41
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     1
+    ]
+   },
+   {
+    "id": "h_legit_hinglish_dinner_split",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.18,
+     0.03,
+     0.32
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_en_courier_pickup",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_delivery",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.24,
+     0.03,
+     0.23
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_hinglish_school_fees",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.23,
+     0.03,
+     0.28
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_delivery_swiggy_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.21,
+     0.03,
+     0.25,
+     0.03
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_delivery_amazon_otp_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery_otp",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.18,
+     0.03,
+     0.29,
+     0.04
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "legit_delivery_zomato_kannada",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery",
+    "lang": "kn",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.29,
+     0.04,
+     0.49,
+     0.04
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_bank_hdfc_fraud_check_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_bank",
+    "lang": "en",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.19,
+     0.32,
+     0.03,
+     0.38
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "legit_bank_sbi_emi_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_bank",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.26,
+     0.04,
+     0.35,
+     0.03
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_family_devanagari_mother",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hi",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.2,
+     0.03,
+     0.45,
+     0.04
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_family_kannada_festival",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "kn",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.22,
+     0.03,
+     0.39,
+     0.02
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_clinic_aadhaar_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.26,
+     0.03,
+     0.3,
+     0.03
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_police_verification_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "digital_arrest",
+    "accept": [
+     "none"
+    ],
+    "type_ok": false,
+    "whispers": [],
+    "ms": [
+     0.27,
+     0.05,
+     0.32,
+     0.04
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "legit_news_gossip_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.24,
+     0.04,
+     0.29,
+     0.37
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_insurance_renewal_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.25,
+     0.04,
+     0.33,
+     0.03
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_family_hospital_bill_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.18,
+     0.03,
+     0.35,
+     0.04
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_cab_otp_kannada",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery_otp",
+    "lang": "kn",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.48,
+     0.04,
+     0.32,
+     0.03
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "da_hinglish_cbi_fedex",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hinglish",
+    "critical": 3,
+    "peak": 3,
+    "first_p2": 3,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy",
+     "warn_otp"
+    ],
+    "ms": [
+     0.2,
+     0.03,
+     0.3,
+     0.04,
+     0.32,
+     0.3
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     2,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "da_devanagari_mumbai_police",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.33,
+     0.45,
+     0.03,
+     0.45,
+     0.43,
+     0.05
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "da_kannada_customs",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.28,
+     0.49,
+     0.03,
+     0.42,
+     0.36
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "da_english_trai_sim",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest",
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.24,
+     0.3,
+     0.04,
+     0.27,
+     0.27
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "da_hinglish_keyword_light",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.22,
+     0.31,
+     0.04,
+     0.31,
+     0.26
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "kyc_kannada_anydesk",
+    "split": "tune",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.26,
+     0.39,
+     0.04,
+     0.32,
+     0.04
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "kyc_hinglish_link",
+    "split": "tune",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update",
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.21,
+     0.3,
+     0.03,
+     0.29
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "kyc_english_pan_apk",
+    "split": "tune",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "en",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update",
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.19,
+     0.31,
+     0.03,
+     0.29
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "bank_english_card_reversal",
+    "split": "tune",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "en",
+    "critical": 4,
+    "peak": 3,
+    "first_p2": 4,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.18,
+     0.32,
+     0.03,
+     0.37,
+     0.04
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     1,
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "bank_devanagari_cvv",
+    "split": "tune",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "bank_impersonation",
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.23,
+     0.42,
+     0.03,
+     0.48
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "bank_hinglish_reward_points",
+    "split": "tune",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "hinglish",
+    "critical": 4,
+    "peak": 3,
+    "first_p2": 4,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.28,
+     0.05,
+     0.36,
+     0.3
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1,
+     3
+    ]
+   },
+   {
+    "id": "courier_otp_fee_en",
+    "split": "tune",
+    "is_scam": true,
+    "category": "other",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "bank_impersonation",
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.24,
+     0.3,
+     0.05,
+     0.31
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "relative_hinglish_accident",
+    "split": "tune",
+    "is_scam": true,
+    "category": "relative_in_trouble",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.21,
+     0.34,
+     0.04,
+     0.33
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "relative_kannada_police_station",
+    "split": "tune",
+    "is_scam": true,
+    "category": "relative_in_trouble",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.32,
+     0.49,
+     0.04,
+     0.37
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "lottery_hinglish_kbc",
+    "split": "tune",
+    "is_scam": true,
+    "category": "prize_lottery",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "prize_lottery",
+    "accept": [
+     "prize_lottery"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.28,
+     0.31,
+     0.05,
+     0.3
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "prize_english_upi_collect",
+    "split": "tune",
+    "is_scam": true,
+    "category": "prize_lottery",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "prize_lottery",
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.24,
+     0.39,
+     0.05,
+     0.24
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "electricity_devanagari",
+    "split": "tune",
+    "is_scam": true,
+    "category": "other",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.34,
+     0.47,
+     0.04,
+     0.47
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     0,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "known_listed_number",
+    "split": "tune",
+    "is_scam": true,
+    "category": "known_scammer",
+    "lang": "en",
+    "critical": 1,
+    "peak": 2,
+    "first_p2": 1,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation",
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_known_scammer"
+    ],
+    "ms": [
+     0.17,
+     0.31,
+     0.03,
+     0.28
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     2,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "intl_855_fedex",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.24,
+     0.32,
+     0.03,
+     0.26
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "task_job_scam_en",
+    "split": "tune",
+    "is_scam": true,
+    "category": "other",
+    "lang": "en",
+    "critical": 4,
+    "peak": 3,
+    "first_p2": 4,
+    "final_type": "other",
+    "accept": [
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.23,
+     0.35,
+     0.04,
+     0.41
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": null,
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1,
+     3
+    ]
+   }
+  ],
+  "keywords + jev_only": [
+   {
+    "id": "h_da_hinglish_ed_video",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     378.77,
+     1.37,
+     0.22,
+     0.8,
+     315.43
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "h_da_kannada_aadhaar_sims",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest"
+    ],
+    "ms": [
+     376.86,
+     1.38,
+     0.27,
+     1.86
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "h_bank_en_upi_refund",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation",
+     "prize_lottery"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     346.64,
+     1.57,
+     0.17,
+     0.5
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_kyc_devanagari_sim",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     298.95,
+     289.41,
+     0.28
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "kyc_update",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_relative_en_grandson",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "relative_in_trouble",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     302.13,
+     312.32,
+     0.18
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_prize_kannada_car",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "prize_lottery",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "prize_lottery",
+    "accept": [
+     "prize_lottery"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     313.96,
+     325.24,
+     0.1
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "prize_lottery",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_investment_hinglish",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "other",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     297.62,
+     283.69,
+     0.24
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_courier_devanagari_customs_duty",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest",
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest"
+    ],
+    "ms": [
+     305.79,
+     306.16,
+     0.32
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_legit_en_cheque_bounce",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_bank",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     325.3,
+     339.79,
+     0.13,
+     325.5
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_devanagari_lab_report",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "hi",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     315.44,
+     0.08,
+     292.88
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_kannada_gas_dac",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_delivery_otp",
+    "lang": "kn",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     294.63,
+     0.15,
+     299.65
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     1
+    ]
+   },
+   {
+    "id": "h_legit_hinglish_dinner_split",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     285.73,
+     0.14,
+     298.15
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_en_courier_pickup",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_delivery",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     310.1,
+     0.13,
+     300.04
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_hinglish_school_fees",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     380.6,
+     0.29,
+     1.76
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_delivery_swiggy_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     308.23,
+     0.11,
+     0.5,
+     0.2
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_delivery_amazon_otp_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery_otp",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     330.87,
+     0.09,
+     0.6,
+     0.11
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "legit_delivery_zomato_kannada",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery",
+    "lang": "kn",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.75,
+     0.35,
+     324.87,
+     0.15
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_bank_hdfc_fraud_check_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_bank",
+    "lang": "en",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.46,
+     281.14,
+     0.06,
+     295.4
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "legit_bank_sbi_emi_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_bank",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     305.0,
+     0.15,
+     307.07,
+     0.06
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_family_devanagari_mother",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hi",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     319.17,
+     0.09,
+     279.53,
+     0.33
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_family_kannada_festival",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "kn",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     308.86,
+     0.23,
+     302.78,
+     0.1
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_clinic_aadhaar_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     380.77,
+     0.25,
+     1.08,
+     0.26
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_police_verification_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     316.03,
+     0.25,
+     1.0,
+     0.28
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "legit_news_gossip_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.31,
+     0.3,
+     1.4,
+     380.35
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_insurance_renewal_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.92,
+     0.17,
+     314.24,
+     0.06
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_family_hospital_bill_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.71,
+     0.09,
+     380.78,
+     0.23
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_cab_otp_kannada",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery_otp",
+    "lang": "kn",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     306.81,
+     0.25,
+     1.32,
+     0.24
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "da_hinglish_cbi_fedex",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hinglish",
+    "critical": 3,
+    "peak": 3,
+    "first_p2": 3,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy",
+     "warn_otp"
+    ],
+    "ms": [
+     1.06,
+     0.18,
+     0.63,
+     0.25,
+     1.17,
+     317.85
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 5,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     2,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "da_devanagari_mumbai_police",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     1.1,
+     2.01,
+     0.48,
+     318.97,
+     295.44,
+     0.2
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 4,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "da_kannada_customs",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     1.0,
+     314.4,
+     0.14,
+     332.47,
+     333.11
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "da_english_trai_sim",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest",
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     304.5,
+     325.03,
+     0.15,
+     0.8,
+     303.64
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "da_hinglish_keyword_light",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     311.24,
+     293.83,
+     0.1,
+     290.59,
+     336.07
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 4,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "kyc_kannada_anydesk",
+    "split": "tune",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.94,
+     276.75,
+     0.11,
+     282.74,
+     0.17
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "kyc_update",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "kyc_hinglish_link",
+    "split": "tune",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update",
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     312.55,
+     320.36,
+     0.09,
+     321.22
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "kyc_update",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "kyc_english_pan_apk",
+    "split": "tune",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update",
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     288.85,
+     297.97,
+     0.06,
+     282.82
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "kyc_update",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "bank_english_card_reversal",
+    "split": "tune",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "en",
+    "critical": 4,
+    "peak": 3,
+    "first_p2": 4,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     289.31,
+     301.28,
+     0.18,
+     285.07,
+     0.23
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 4,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "bank_devanagari_cvv",
+    "split": "tune",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation",
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     285.99,
+     317.75,
+     0.18,
+     294.38
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "bank_hinglish_reward_points",
+    "split": "tune",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "hinglish",
+    "critical": 4,
+    "peak": 3,
+    "first_p2": 3,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     309.31,
+     0.17,
+     315.48,
+     320.1
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 3,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "courier_otp_fee_en",
+    "split": "tune",
+    "is_scam": true,
+    "category": "other",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "bank_impersonation",
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     288.47,
+     290.93,
+     0.09,
+     295.39
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     0,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "relative_hinglish_accident",
+    "split": "tune",
+    "is_scam": true,
+    "category": "relative_in_trouble",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     285.23,
+     337.04,
+     0.15,
+     287.43
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "relative_kannada_police_station",
+    "split": "tune",
+    "is_scam": true,
+    "category": "relative_in_trouble",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     285.69,
+     305.62,
+     0.16,
+     293.48
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "lottery_hinglish_kbc",
+    "split": "tune",
+    "is_scam": true,
+    "category": "prize_lottery",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "prize_lottery",
+    "accept": [
+     "prize_lottery"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     315.79,
+     292.14,
+     0.16,
+     316.39
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "prize_lottery",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "prize_english_upi_collect",
+    "split": "tune",
+    "is_scam": true,
+    "category": "prize_lottery",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "prize_lottery",
+    "accept": [
+     "prize_lottery",
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     311.29,
+     318.42,
+     0.18,
+     316.61
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "prize_lottery",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "electricity_devanagari",
+    "split": "tune",
+    "is_scam": true,
+    "category": "other",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     290.39,
+     326.19,
+     0.13,
+     283.63
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "known_listed_number",
+    "split": "tune",
+    "is_scam": true,
+    "category": "known_scammer",
+    "lang": "en",
+    "critical": 1,
+    "peak": 2,
+    "first_p2": 1,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation",
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_known_scammer"
+    ],
+    "ms": [
+     292.37,
+     305.13,
+     0.14,
+     295.95
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     2,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "intl_855_fedex",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     315.16,
+     313.7,
+     0.12,
+     311.63
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "task_job_scam_en",
+    "split": "tune",
+    "is_scam": true,
+    "category": "other",
+    "lang": "en",
+    "critical": 4,
+    "peak": 3,
+    "first_p2": 4,
+    "final_type": "other",
+    "accept": [
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     289.34,
+     330.61,
+     0.1,
+     329.66
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 4,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1,
+     3
+    ]
+   }
+  ],
+  "keywords + gemini-2.5-flash": [
+   {
+    "id": "h_da_hinglish_ed_video",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     380.83,
+     0.77,
+     0.1,
+     0.35,
+     1.03
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "h_da_kannada_aadhaar_sims",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest"
+    ],
+    "ms": [
+     380.65,
+     1.59,
+     0.46,
+     2.46
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "h_bank_en_upi_refund",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation",
+     "prize_lottery"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     380.43,
+     0.61,
+     0.18,
+     0.59
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_kyc_devanagari_sim",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 3,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     1.16,
+     1.04,
+     0.11
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "kyc_update",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     2
+    ]
+   },
+   {
+    "id": "h_relative_en_grandson",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "relative_in_trouble",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     1.1,
+     0.52,
+     0.27
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 1,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "h_prize_kannada_car",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "prize_lottery",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 3,
+    "final_type": "prize_lottery",
+    "accept": [
+     "prize_lottery"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     1.61,
+     1.45,
+     0.21
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "prize_lottery",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     3
+    ]
+   },
+   {
+    "id": "h_investment_hinglish",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "other",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 3,
+    "final_type": "other",
+    "accept": [
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.42,
+     0.63,
+     0.17
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     0,
+     1,
+     2
+    ]
+   },
+   {
+    "id": "h_courier_devanagari_customs_duty",
+    "split": "holdout",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 3,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest",
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest"
+    ],
+    "ms": [
+     1.01,
+     2.35,
+     0.35
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     0,
+     1,
+     2
+    ]
+   },
+   {
+    "id": "h_legit_en_cheque_bounce",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_bank",
+    "lang": "en",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "none"
+    ],
+    "type_ok": false,
+    "whispers": [],
+    "ms": [
+     0.63,
+     1.36,
+     0.2,
+     0.96
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "h_legit_devanagari_lab_report",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "hi",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.72,
+     0.12,
+     0.93
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_kannada_gas_dac",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_delivery_otp",
+    "lang": "kn",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     1.48,
+     0.3,
+     1.61
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     1
+    ]
+   },
+   {
+    "id": "h_legit_hinglish_dinner_split",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     1.16,
+     0.38,
+     1.59
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_en_courier_pickup",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_delivery",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     1.37,
+     0.41,
+     1.02
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "h_legit_hinglish_school_fees",
+    "split": "holdout",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     1.88,
+     0.27,
+     1.08
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_delivery_swiggy_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.94,
+     0.37,
+     1.39,
+     0.23
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_delivery_amazon_otp_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery_otp",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.89,
+     0.26,
+     1.11,
+     0.43
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "legit_delivery_zomato_kannada",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery",
+    "lang": "kn",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.81,
+     0.21,
+     1.57,
+     0.14
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_bank_hdfc_fraud_check_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_bank",
+    "lang": "en",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "none"
+    ],
+    "type_ok": false,
+    "whispers": [],
+    "ms": [
+     0.63,
+     1.13,
+     0.38,
+     1.37
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "legit_bank_sbi_emi_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_bank",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     1.02,
+     0.11,
+     0.49,
+     0.24
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_family_devanagari_mother",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hi",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.4,
+     0.14,
+     0.97,
+     0.23
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_family_kannada_festival",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "kn",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.88,
+     0.22,
+     1.72,
+     0.27
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_clinic_aadhaar_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.78,
+     0.29,
+     1.29,
+     0.17
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_police_verification_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.9,
+     0.48,
+     1.02,
+     0.21
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "legit_news_gossip_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.89,
+     0.38,
+     1.42,
+     1.55
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_insurance_renewal_en",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_service",
+    "lang": "en",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.7,
+     0.13,
+     0.47,
+     0.11
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_family_hospital_bill_hinglish",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_family",
+    "lang": "hinglish",
+    "critical": null,
+    "peak": 0,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.52,
+     0.29,
+     1.46,
+     0.12
+    ],
+    "llm_peak": 0,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "legit_cab_otp_kannada",
+    "split": "tune",
+    "is_scam": false,
+    "category": "legit_delivery_otp",
+    "lang": "kn",
+    "critical": null,
+    "peak": 1,
+    "first_p2": null,
+    "final_type": "none",
+    "accept": [
+     "none"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.38,
+     0.25,
+     1.36,
+     0.11
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "none",
+    "degraded": false,
+    "trace": [
+     0,
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "id": "da_hinglish_cbi_fedex",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hinglish",
+    "critical": 3,
+    "peak": 3,
+    "first_p2": 3,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy",
+     "warn_otp"
+    ],
+    "ms": [
+     0.33,
+     0.1,
+     0.36,
+     0.14,
+     0.47,
+     0.4
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 3,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     2,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "da_devanagari_mumbai_police",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.4,
+     1.67,
+     0.11,
+     0.61,
+     0.58,
+     0.16
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "da_kannada_customs",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.4,
+     0.7,
+     0.1,
+     0.51,
+     0.48
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "da_english_trai_sim",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest",
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.39,
+     1.14,
+     0.45,
+     1.4,
+     0.99
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "da_hinglish_keyword_light",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.48,
+     1.49,
+     0.37,
+     1.61,
+     1.25
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "kyc_kannada_anydesk",
+    "split": "tune",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.43,
+     1.55,
+     0.13,
+     0.4,
+     0.39
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "kyc_update",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "kyc_hinglish_link",
+    "split": "tune",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update",
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.34,
+     0.51,
+     0.27,
+     1.19
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "kyc_update",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "kyc_english_pan_apk",
+    "split": "tune",
+    "is_scam": true,
+    "category": "kyc_update",
+    "lang": "en",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "kyc_update",
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.93,
+     1.07,
+     0.17,
+     0.83
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "kyc_update",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "bank_english_card_reversal",
+    "split": "tune",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "en",
+    "critical": 4,
+    "peak": 3,
+    "first_p2": 4,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.98,
+     1.59,
+     0.2,
+     0.96,
+     0.18
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 4,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     0,
+     1,
+     1,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "bank_devanagari_cvv",
+    "split": "tune",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "kyc_update",
+    "accept": [
+     "bank_impersonation",
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.58,
+     1.47,
+     0.17,
+     1.15
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     0,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "bank_hinglish_reward_points",
+    "split": "tune",
+    "is_scam": true,
+    "category": "bank_impersonation",
+    "lang": "hinglish",
+    "critical": 4,
+    "peak": 3,
+    "first_p2": 4,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.61,
+     0.34,
+     0.99,
+     0.47
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 3,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1,
+     3
+    ]
+   },
+   {
+    "id": "courier_otp_fee_en",
+    "split": "tune",
+    "is_scam": true,
+    "category": "other",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "bank_impersonation",
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.67,
+     1.62,
+     0.18,
+     0.63
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     0,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "relative_hinglish_accident",
+    "split": "tune",
+    "is_scam": true,
+    "category": "relative_in_trouble",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.48,
+     1.43,
+     0.41,
+     1.55
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 1,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "relative_kannada_police_station",
+    "split": "tune",
+    "is_scam": true,
+    "category": "relative_in_trouble",
+    "lang": "kn",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.65,
+     0.7,
+     0.15,
+     0.67
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 1,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "lottery_hinglish_kbc",
+    "split": "tune",
+    "is_scam": true,
+    "category": "prize_lottery",
+    "lang": "hinglish",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "prize_lottery",
+    "accept": [
+     "prize_lottery"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_secrecy"
+    ],
+    "ms": [
+     1.51,
+     1.23,
+     0.12,
+     0.4
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 1,
+    "llm_type": "prize_lottery",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "prize_english_upi_collect",
+    "split": "tune",
+    "is_scam": true,
+    "category": "prize_lottery",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "prize_lottery",
+    "accept": [
+     "prize_lottery",
+     "bank_impersonation"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_otp"
+    ],
+    "ms": [
+     0.33,
+     0.74,
+     0.16,
+     0.33
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "prize_lottery",
+    "degraded": false,
+    "trace": [
+     1,
+     3,
+     3,
+     3
+    ]
+   },
+   {
+    "id": "electricity_devanagari",
+    "split": "tune",
+    "is_scam": true,
+    "category": "other",
+    "lang": "hi",
+    "critical": 2,
+    "peak": 2,
+    "first_p2": 2,
+    "final_type": "other",
+    "accept": [
+     "other",
+     "kyc_update"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     0.78,
+     1.06,
+     0.11,
+     0.52
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 2,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     0,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "known_listed_number",
+    "split": "tune",
+    "is_scam": true,
+    "category": "known_scammer",
+    "lang": "en",
+    "critical": 1,
+    "peak": 2,
+    "first_p2": 1,
+    "final_type": "bank_impersonation",
+    "accept": [
+     "bank_impersonation",
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_known_scammer"
+    ],
+    "ms": [
+     0.4,
+     0.59,
+     0.09,
+     0.34
+    ],
+    "llm_peak": 1,
+    "llm_first_p2": null,
+    "llm_type": "bank_impersonation",
+    "degraded": false,
+    "trace": [
+     2,
+     2,
+     2,
+     2
+    ]
+   },
+   {
+    "id": "intl_855_fedex",
+    "split": "tune",
+    "is_scam": true,
+    "category": "digital_arrest",
+    "lang": "en",
+    "critical": 2,
+    "peak": 3,
+    "first_p2": 2,
+    "final_type": "digital_arrest",
+    "accept": [
+     "digital_arrest"
+    ],
+    "type_ok": true,
+    "whispers": [
+     "warn_digital_arrest",
+     "warn_secrecy"
+    ],
+    "ms": [
+     0.35,
+     1.49,
+     0.25,
+     0.82
+    ],
+    "llm_peak": 2,
+    "llm_first_p2": 2,
+    "llm_type": "digital_arrest",
+    "degraded": false,
+    "trace": [
+     1,
+     2,
+     2,
+     3
+    ]
+   },
+   {
+    "id": "task_job_scam_en",
+    "split": "tune",
+    "is_scam": true,
+    "category": "other",
+    "lang": "en",
+    "critical": 4,
+    "peak": 3,
+    "first_p2": 4,
+    "final_type": "other",
+    "accept": [
+     "other"
+    ],
+    "type_ok": true,
+    "whispers": [],
+    "ms": [
+     1.24,
+     0.55,
+     0.39,
+     1.71
+    ],
+    "llm_peak": 3,
+    "llm_first_p2": 4,
+    "llm_type": "other",
+    "degraded": false,
+    "trace": [
+     1,
+     1,
+     1,
+     3
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,7 @@
+.env
+__pycache__/
+uv.log
+*.log
+classifier_service/data/scam_numbers.local.json
+.pytest_cache/
+classifier_service/evalset/.cache/

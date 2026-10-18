@@ -1,0 +1,85 @@
+[
+ {"id": "h_da_hinglish_ed_video", "lang": "hinglish", "category": "digital_arrest", "expected_scam_type": "digital_arrest", "accept_types": ["digital_arrest"], "critical_chunk": 2,
+  "caller_number": "+91 91670 22841", "chunks": [
+  ["caller", "hi", "Good morning madam, main Enforcement Directorate Mumbai se Additional Director Verma bol raha hoon."],
+  ["caller", "hi", "Aapke SBI account se terror funding ke liye transaction hua hai, aapka naam FIR mein aa gaya hai."],
+  ["victim", "hi", "Mera naam? Main toh housewife hoon, mujhe kuch nahi pata."],
+  ["caller", "hi", "Skype pe video on rakhiye, jab tak statement poora nahi hota ghar walon se baat nahi karni hai."],
+  ["caller", "hi", "Case close karne ke liye do lakh ka security amount government account mein dalna padega."]]},
+
+ {"id": "h_da_kannada_aadhaar_sims", "lang": "kn", "category": "digital_arrest", "expected_scam_type": "digital_arrest", "accept_types": ["digital_arrest"], "critical_chunk": 2,
+  "caller_number": "+91 82170 66410", "chunks": [
+  ["caller", "kn", "ನಮಸ್ಕಾರ, ನಾನು ಬೆಂಗಳೂರು ಸೈಬರ್ ಕ್ರೈಂ ಪೊಲೀಸ್ ಸ್ಟೇಷನ್‌ನಿಂದ ಸಬ್ ಇನ್ಸ್‌ಪೆಕ್ಟರ್ ಮಾತಾಡ್ತಾ ಇದೀನಿ."],
+  ["caller", "kn", "ನಿಮ್ಮ ಆಧಾರ್ ನಂಬರ್ ಬಳಸಿ ಹದಿನೈದು ಸಿಮ್ ತೆಗೆದಿದ್ದಾರೆ, ನಿಮ್ಮ ವಿರುದ್ಧ ವಾರಂಟ್ ಬಂದಿದೆ."],
+  ["victim", "kn", "ನಾನು ಯಾವ ಸಿಮ್ ಕೂಡ ತೆಗೆದುಕೊಂಡಿಲ್ಲ ಸಾರ್."],
+  ["caller", "kn", "ಅದನ್ನು ಚೆಕ್ ಮಾಡಬೇಕು. ನಿಮ್ಮ ಬ್ಯಾಂಕ್ ಖಾತೆಯಲ್ಲಿ ಎಷ್ಟು ಹಣ ಇದೆ, ಯಾವ ಯಾವ ಬ್ಯಾಂಕ್‌ನಲ್ಲಿ ಖಾತೆ ಇದೆ ಎಲ್ಲಾ ಹೇಳಿ."]]},
+
+ {"id": "h_bank_en_upi_refund", "lang": "en", "category": "bank_impersonation", "expected_scam_type": "bank_impersonation", "accept_types": ["bank_impersonation", "prize_lottery"], "critical_chunk": 2,
+  "caller_number": "+91 99620 81307", "chunks": [
+  ["caller", "en", "Hello sir, I am calling from your bank's UPI support team. A payment of 9,800 from your account failed yesterday."],
+  ["caller", "en", "The refund is stuck. I will send you a request on PhonePe, approve it with your UPI PIN and the money comes back."],
+  ["victim", "en", "Okay, the request has come. Should I put my PIN?"],
+  ["caller", "en", "Yes sir, enter the PIN, it is only for receiving the refund."]]},
+
+ {"id": "h_kyc_devanagari_sim", "lang": "hi", "category": "kyc_update", "expected_scam_type": "kyc_update", "accept_types": ["kyc_update"], "critical_chunk": 2,
+  "caller_number": "+91 70110 34519", "chunks": [
+  ["caller", "hi", "नमस्ते, मैं जियो कस्टमर केयर से बोल रहा हूँ, आपकी सिम की केवाईसी वेरिफिकेशन बाकी है।"],
+  ["caller", "hi", "दो घंटे में आपकी सिम बंद हो जाएगी। मैं एक मैसेज भेज रहा हूँ, उसमें जो नंबर आएगा वो मुझे बताइए।"],
+  ["victim", "hi", "अच्छा, मैसेज आ गया है।"]]},
+
+ {"id": "h_relative_en_grandson", "lang": "en", "category": "relative_in_trouble", "expected_scam_type": "relative_emergency", "accept_types": ["relative_emergency"], "critical_chunk": 2,
+  "caller_number": "+91 88840 12093", "chunks": [
+  ["caller", "en", "Grandma, it's me. I'm in big trouble, I got into a fight and the police took me to the station."],
+  ["caller", "en", "Please don't tell mom, she will get angry. I need 30,000 for the lawyer right now, send it to this UPI ID."],
+  ["victim", "en", "Oh my god, are you hurt? I will send it."]]},
+
+ {"id": "h_prize_kannada_car", "lang": "kn", "category": "prize_lottery", "expected_scam_type": "prize_lottery", "accept_types": ["prize_lottery"], "critical_chunk": 2,
+  "caller_number": "+91 76190 45528", "chunks": [
+  ["caller", "kn", "ಅಭಿನಂದನೆಗಳು ಸಾರ್, ನೀವು ನಮ್ಮ ಕಂಪನಿಯ ಲಕ್ಕಿ ಡ್ರಾದಲ್ಲಿ ಒಂದು ಕಾರು ಗೆದ್ದಿದ್ದೀರಿ."],
+  ["caller", "kn", "ಕಾರು ಡೆಲಿವರಿ ಆಗೋಕೆ ಮೊದಲು ರಿಜಿಸ್ಟ್ರೇಷನ್‌ಗೆ ಐದು ಸಾವಿರ ರೂಪಾಯಿ ಈ ನಂಬರ್‌ಗೆ ಕಳಿಸಿ."],
+  ["victim", "kn", "ನಿಜವಾಗ್ಲೂ? ನಾನು ಯಾವ ಸ್ಪರ್ಧೆಯಲ್ಲೂ ಭಾಗವಹಿಸಿಲ್ಲ."]]},
+
+ {"id": "h_investment_hinglish", "lang": "hinglish", "category": "other", "expected_scam_type": "investment_tip", "accept_types": ["investment_tip"], "critical_chunk": 2,
+  "caller_number": "+91 93800 71654", "chunks": [
+  ["caller", "hi", "Sir main ek SEBI registered advisory se bol raha hoon, humara VIP group har mahine tees percent guaranteed return deta hai."],
+  ["caller", "hi", "Bas aaj hi humari app download karke pehle das hazaar invest kijiye, kal se profit dikhne lagega."],
+  ["victim", "hi", "Tees percent har mahine? Itna kaise?"]]},
+
+ {"id": "h_courier_devanagari_customs_duty", "lang": "hi", "category": "digital_arrest", "expected_scam_type": "digital_arrest", "accept_types": ["digital_arrest", "other"], "critical_chunk": 2,
+  "caller_number": "+91 84470 92266", "chunks": [
+  ["caller", "hi", "नमस्ते, मैं दिल्ली एयरपोर्ट कार्गो से बोल रहा हूँ, आपका एक इंटरनेशनल पार्सल रुका हुआ है।"],
+  ["caller", "hi", "उसकी कस्टम ड्यूटी साढ़े आठ हज़ार रुपये भरनी होगी, नहीं तो आपके ऊपर पुलिस केस बनेगा।"],
+  ["victim", "hi", "किसने भेजा है पार्सल? मुझे तो कुछ नहीं पता।"]]},
+
+ {"id": "h_legit_en_cheque_bounce", "lang": "en", "category": "legit_bank", "caller_number": "+91 80 2658 1100", "chunks": [
+  ["caller", "en", "Good afternoon, this is the branch manager from Canara Bank, Malleshwaram."],
+  ["caller", "en", "The cheque of 25,000 you deposited on Monday was returned because of a signature mismatch."],
+  ["victim", "en", "Oh, I see. What should I do?"],
+  ["caller", "en", "Please ask the issuer for a fresh cheque, or visit the branch with your passbook and we will explain."]]},
+
+ {"id": "h_legit_devanagari_lab_report", "lang": "hi", "category": "legit_service", "caller_number": "+91 80 4092 3311", "chunks": [
+  ["caller", "hi", "नमस्ते, मैं डॉक्टर शर्मा के क्लिनिक से बोल रही हूँ। आपकी खून की जाँच की रिपोर्ट आ गई है।"],
+  ["victim", "hi", "अच्छा, सब ठीक है ना?"],
+  ["caller", "hi", "डॉक्टर साहब कल शाम आपसे मिलना चाहते हैं, आधार कार्ड और पुरानी पर्ची साथ ले आइए।"]]},
+
+ {"id": "h_legit_kannada_gas_dac", "lang": "kn", "category": "legit_delivery_otp", "caller_number": "+91 80 2335 7710",
+  "notes": "LPG delivery authentication code (DAC) is a real, legit OTP-like code", "chunks": [
+  ["caller", "kn", "ನಮಸ್ಕಾರ ಮೇಡಂ, ಇಂಡೇನ್ ಗ್ಯಾಸ್ ಸಿಲಿಂಡರ್ ಡೆಲಿವರಿ, ನಿಮ್ಮ ಮನೆ ಹತ್ರ ಇದೀನಿ."],
+  ["victim", "kn", "ಬನ್ನಿ, ಮೂರನೇ ಮಹಡಿ."],
+  ["caller", "kn", "ಸರಿ. ಸಿಲಿಂಡರ್ ಕೊಡೋವಾಗ ಮೆಸೇಜ್‌ನಲ್ಲಿ ಬಂದಿರೋ ಡೆಲಿವರಿ ಕೋಡ್ ಹೇಳಿ."]]},
+
+ {"id": "h_legit_hinglish_dinner_split", "lang": "hinglish", "category": "legit_family", "caller_number": "+91 99012 34567", "chunks": [
+  ["caller", "hi", "Bhai kal ka dinner 2,400 ka hua, tera share 800 aata hai."],
+  ["victim", "hi", "Haan yaar, bhool gaya tha."],
+  ["caller", "hi", "Koi jaldi nahi, jab time mile GPay kar dena. Aur Sunday cricket aa raha hai na?"]]},
+
+ {"id": "h_legit_en_courier_pickup", "lang": "en", "category": "legit_delivery", "caller_number": "+91 80 6719 2200", "chunks": [
+  ["caller", "en", "Hello sir, this is Blue Dart, I am here to pick up the return package for your Myntra order."],
+  ["victim", "en", "Yes, give me five minutes, I'm coming down."],
+  ["caller", "en", "No problem, I'm waiting at the lobby near the lift."]]},
+
+ {"id": "h_legit_hinglish_school_fees", "lang": "hinglish", "category": "legit_service", "caller_number": "+91 80 2671 4400", "chunks": [
+  ["caller", "hi", "Namaste, main Vidya Niketan school se class teacher bol rahi hoon, aapke bete ki PTM kal hai."],
+  ["victim", "hi", "Ji, kitne baje aana hai?"],
+  ["caller", "hi", "Das baje aa jaiye. Aur term ki fees bhi pending hai, office mein jama kar dijiye."]]}
+]
