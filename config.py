@@ -10,6 +10,7 @@ SAMPLE_RATE = 16000
 DATA_TOPIC = "chaukanna.verdict"
 OTP_SMS_TOPIC = "chaukanna.otp_sms"   # victim app -> guardian: what an OTP SMS is for (never the code)
 GUARDIAN_IDENTITY = "chaukanna-guardian"
+AGENT_PREFIX = "agent-"                 # interception agents (tools/interceptor.py): never a caller
 DEFAULT_CALL_LOG_DIR = str(Path(__file__).resolve().parent / "calls")   # console reads it (calllog.py)
 SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text"
 

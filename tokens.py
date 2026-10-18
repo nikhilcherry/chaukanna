@@ -46,6 +46,13 @@ def mint(role: str, room: str, identity: str = "", phone: str = "", label: str =
                                  can_publish_data=True)
         meta = {"role": "victim"}
         name = label or "Victim"
+    elif role == "agent":                                    # tools/interceptor.py: speaks to the victim only
+        ident = re.sub(r"[^a-zA-Z0-9_-]", "", identity)[:40] or "agent"
+        identity = ident if ident.startswith("agent-") else "agent-" + ident
+        grants = api.VideoGrants(room_join=True, room=room, can_publish=True, can_subscribe=True,
+                                 can_publish_data=False)
+        meta = {"role": "agent", "label": label}
+        name = label or identity
     elif role == "caller":
         ident = re.sub(r"[^a-zA-Z0-9_-]", "", identity)[:40] or "dialer"
         identity = ident if ident.startswith("caller-") else "caller-" + ident
@@ -63,7 +70,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
     ap = argparse.ArgumentParser(description="Mint a LiveKit token for a Chaukanna role")
-    ap.add_argument("role", choices=["victim", "caller", "guardian"])
+    ap.add_argument("role", choices=["victim", "caller", "guardian", "agent"])
     ap.add_argument("--room", default=os.getenv("LIVEKIT_ROOM", "chaukanna"))
     ap.add_argument("--identity", default="")
     ap.add_argument("--phone", default="")

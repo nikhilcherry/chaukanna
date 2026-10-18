@@ -73,6 +73,31 @@ iframe{border:0;flex:1;width:100%;min-height:0;display:block;background:var(--pa
 .steps li.bad .n{color:var(--fraud)}
 .steps li.wait .n{color:var(--bank)}
 .more{font:400 11px/1.3 var(--mono);color:var(--ink-3);padding:0 9px 7px}
+.agentbar{display:flex;align-items:center;gap:6px;font:500 12px/1 var(--mono)}
+.agentbar select,.agentbar button{font:500 12px/1 var(--mono);padding:6px 8px;border:1px solid var(--rule);background:var(--panel);color:var(--ink)}
+.agentbar button.go{background:var(--legit);border-color:var(--legit);color:#fff;font-weight:700}
+.agentbar button:disabled{opacity:.5}
+#agent-st{color:var(--ink-3);white-space:nowrap}
+.livebar{display:flex;align-items:center;gap:6px;font:500 12px/1 var(--mono)}
+.livebar select{font:500 12px/1 var(--mono);padding:6px 8px;border:1px solid var(--rule);background:var(--panel);color:var(--ink)}
+.livebar button{font:700 13px/1 var(--mono);padding:7px 12px;border:1px solid var(--trace);background:var(--trace);color:#fff;cursor:pointer;white-space:nowrap}
+.livebar button.end{background:var(--fraud);border-color:var(--fraud)}
+.livebar button:disabled{opacity:.6;cursor:wait}
+#live-st{color:var(--ink-3);white-space:nowrap}
+#live-st.on{color:var(--fraud);font-weight:700}
+#agent-st.on{color:var(--legit);font-weight:700}
+dialog{border:1px solid var(--rule);background:var(--panel);color:var(--ink);padding:16px 18px;max-width:min(520px,94vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{font:700 18px/1.2 var(--display);margin:0 0 4px}
+dialog p{margin:0 0 12px;color:var(--ink-2);font-size:13px}
+dialog label{display:block;font:500 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:10px 0 4px}
+dialog input,dialog select,dialog textarea{width:100%;font:400 14px/1.4 var(--serif);padding:7px 8px;border:1px solid var(--rule);background:var(--ground);color:var(--ink)}
+dialog textarea{min-height:110px;resize:vertical}
+dialog .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+dialog button{font:600 13px/1 var(--mono);padding:8px 12px;border:1px solid var(--rule);background:var(--ground);color:var(--ink);cursor:pointer}
+dialog button.save{background:var(--legit);border-color:var(--legit);color:#fff}
+dialog .err{color:var(--fraud);font:400 12px/1.4 var(--mono);min-height:1.4em;margin-top:8px}
 @media (max-width:1000px){
   body{overflow:auto}
   .grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto}
@@ -85,8 +110,35 @@ iframe{border:0;flex:1;width:100%;min-height:0;display:block;background:var(--pa
 <header>
   <div class="brand">chaukanna <span>/ stage</span></div>
   <div class="livechip" id="livechip">No call yet</div>
+  <div class="livebar" aria-label="Live AI call">
+    <select id="live-lang" aria-label="The scammer's language"><option value="hi">Hindi</option><option value="en">English</option></select>
+    <button id="live-go" type="button" title="The AI scammer calls Kamala now: answer on her phone and talk back. The agent steps in at pressure 3">▶ Start live call</button>
+    <span id="live-st"></span>
+  </div>
+  <div class="agentbar" aria-label="Agent interception">
+    <select id="agent-sel" aria-label="Agent to send in"></select>
+    <button id="agent-go" class="go" type="button" title="Send this agent into the call now: only the victim hears it, and the caller can no longer hear her">Intercept now</button>
+    <button id="agent-add" type="button" title="Add your own agent">+ agent</button>
+    <span id="agent-st">interceptor offline</span>
+  </div>
   <div class="strip" id="strip"></div>
 </header>
+<dialog id="agent-dlg">
+  <form id="agent-form" method="dialog">
+    <h2>Add an agent</h2>
+    <p>Your agent joins a scam call, talks only to the victim and cuts the caller off from her. It knows what the guardian heard so far.</p>
+    <label for="a-name">Name</label><input id="a-name" maxlength="40" placeholder="e.g. Ravi's helper, SBI fraud desk" required>
+    <div class="row">
+      <div><label for="a-voice">Voice</label><select id="a-voice"></select></div>
+      <div><label for="a-lang">Language</label><select id="a-lang"></select></div>
+      <div><label for="a-auto">Joins on its own at</label><select id="a-auto"><option value="3">pressure 3</option><option value="2">pressure 2</option></select></div>
+    </div>
+    <label for="a-ins">What the agent is and says</label>
+    <textarea id="a-ins" maxlength="800" required placeholder="You are … Tell her … Answer her questions simply."></textarea>
+    <div class="err" id="a-err"></div>
+    <div class="acts"><button type="button" id="a-cancel">Cancel</button><button type="submit" class="save">Save agent</button></div>
+  </form>
+</dialog>
 <main class="grid">
   <section class="pane call"><iframe id="f-call" title="The live call"></iframe></section>
   <section class="pane net"><div class="hd"><span>Scam network · every call, number and incident</span><b id="net-note"></b></div><iframe id="f-net" title="The scam network"></iframe></section>
@@ -131,8 +183,10 @@ function paintRuns(runs, call) {
     const items = steps.map((s, i) => {
       const key = r.id + ":" + i, fresh = !seen.has(key); seen.add(key);
       const ms = s.ms == null ? "" : s.ms >= 1000 ? (s.ms / 1000).toFixed(1) + " s" : s.ms + " ms";
+      if (s.waiting)   // n8n's Wait node: parked until Kamala approves the complaint, not a failure
+        return `<li class="${fresh ? "new" : ""} wait"><span class="k wait">WAIT</span><span class="n" title="${esc(s.node)}">waiting for Kamala to approve the 1930 complaint</span><span class="ms">⏸</span></li>`;
       return `<li class="${fresh ? "new" : ""} ${s.ok ? "" : "bad"}"><span class="k ${esc(s.kind)}">${KIND[s.kind] || "··"}</span><span class="n" title="${esc(s.node)}">${s.ok ? "" : "✗ "}${esc(s.node)}</span><span class="ms">${ms}</span></li>`;
-    }).join("") + (open && r.status === "waiting" ? `<li class="wait"><span class="k wait">WAIT</span><span class="n">waiting for Kamala to approve the 1930 complaint</span><span class="ms">⏸</span></li>` : "");
+    }).join("") + (open && r.status === "waiting" && !r.steps.some(s => s.waiting) ? `<li class="wait"><span class="k wait">WAIT</span><span class="n">waiting for Kamala to approve the 1930 complaint</span><span class="ms">⏸</span></li>` : "");
     return `<div class="run ${esc(r.event)} ${open ? "open" : "shut"}" data-id="${esc(r.id)}"><div class="top"><span class="ev">${esc(label)}</span>${open ? `<span class="why">${esc(why)}</span>` : `<span class="why">${r.steps.length} steps</span>`}
       <span class="st ${esc(r.status)}">${esc(STATUS[r.status] || r.status)} · ${mmss(start - t0)}${r.status === "running" ? "" : " · " + Math.max(0, end - start).toFixed(1) + " s"}</span></div>
       ${open ? `<ul class="steps">${items}</ul>` : ""}</div>`;
@@ -177,7 +231,78 @@ async function health() {
   } catch (e) {}
   setTimeout(health, 10000);
 }
-poll(); health();
+/* agent interception: pick an agent, send it in, or add your own */
+let AGENTS = null;
+async function agents() {
+  try {
+    const d = await (await fetch("api/agents" + KQ, { cache: "no-store" })).json();
+    const sel = $("#agent-sel"), keep = sel.value;
+    if (!AGENTS || JSON.stringify(AGENTS.agents.map(a => a.id)) !== JSON.stringify(d.agents.map(a => a.id))) {
+      sel.innerHTML = d.agents.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join("");
+      if (keep && d.agents.some(a => a.id === keep)) sel.value = keep;
+      else if (d.interceptor?.agent_id) sel.value = d.interceptor.agent_id;
+    }
+    if (!AGENTS) {
+      $("#a-voice").innerHTML = d.voices.map(v => `<option>${esc(v)}</option>`).join("");
+      $("#a-lang").innerHTML = d.languages.map(l => `<option value="${l}">${l === "auto" ? "her language" : l}</option>`).join("");
+    }
+    AGENTS = d;
+    const s = d.interceptor || {}, st = $("#agent-st"), fresh = s.age_s != null && s.age_s < 6;
+    st.className = fresh && s.state === "on_call" ? "on" : "";
+    st.textContent = !fresh ? "agent offline (demo/stage.sh up)"
+      : s.state === "on_call" ? `● ${s.agent} is on the call`
+      : `standby · ${s.auto_pressure ? "joins at pressure " + s.auto_pressure : "manual only"}`;
+    $("#agent-go").disabled = !fresh || s.state === "on_call";
+    paintLive(d.live);
+  } catch (e) {}
+  setTimeout(agents, 2500);
+}
+async function post(path, body) {
+  const r = await fetch(path + KQ, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return [r.ok, await r.json().catch(() => ({}))];
+}
+/* one-click live call: stage.sh live-bg starts whatever is down, then the AI scammer calls Kamala */
+let LIVE = "off", liveMsg = "", liveMsgUntil = 0;
+function paintLive(l) {
+  if (!l) return;
+  LIVE = l.state;
+  const b = $("#live-go"), st = $("#live-st");
+  b.classList.toggle("end", LIVE !== "off");
+  b.textContent = LIVE === "off" ? "▶ Start live call" : LIVE === "starting" ? "■ Cancel" : "■ End call";
+  $("#live-lang").disabled = LIVE !== "off";
+  st.className = LIVE === "on" ? "on" : "";
+  st.textContent = Date.now() < liveMsgUntil ? liveMsg
+    : LIVE === "on" ? `● AI scammer on the line · ${l.phone}`
+    : LIVE === "starting" ? "starting the system…" : "";
+}
+$("#live-go").onclick = async () => {
+  const b = $("#live-go"), ending = LIVE !== "off";
+  b.disabled = true;
+  try {
+    const [ok, j] = await post(ending ? "api/live/stop" : "api/live", { lang: $("#live-lang").value });
+    liveMsg = !ok ? (j.error || "could not start the call")
+      : ending ? "hanging up…" : j.victim_present ? "calling Kamala…" : "calling… open the app on Kamala's phone";
+    liveMsgUntil = Date.now() + 6000;
+    paintLive({ state: ok ? (ending ? "off" : "starting") : LIVE, phone: "" });
+  } catch (e) {
+    liveMsg = "token server unreachable"; liveMsgUntil = Date.now() + 6000; paintLive({ state: LIVE, phone: "" });
+  }
+  setTimeout(() => { b.disabled = false; }, 1500);
+};
+$("#agent-go").onclick = async () => {
+  const [ok, j] = await post("api/intercept", { agent: $("#agent-sel").value });
+  $("#agent-st").textContent = ok ? "sending the agent in…" : (j.error || "could not intercept");
+};
+$("#agent-add").onclick = () => { $("#a-err").textContent = ""; $("#agent-dlg").showModal(); $("#a-name").focus(); };
+$("#a-cancel").onclick = () => $("#agent-dlg").close();
+$("#agent-form").onsubmit = async e => {
+  e.preventDefault();
+  const [ok, j] = await post("api/agents", { name: $("#a-name").value, voice: $("#a-voice").value, language: $("#a-lang").value,
+    auto_pressure: +$("#a-auto").value, instructions: $("#a-ins").value });
+  if (!ok) { $("#a-err").textContent = j.error || "could not save"; return; }
+  $("#agent-dlg").close(); $("#agent-form").reset(); AGENTS = null; await agents(); $("#agent-sel").value = j.agent.id;
+};
+poll(); health(); agents();
 })();
 </script>
 </body>

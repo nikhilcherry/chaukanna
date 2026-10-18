@@ -492,6 +492,22 @@ class Lifecycle(unittest.IsolatedAsyncioTestCase):
         await self.s.pipe.drain(2)
         self.assertIn(first, self.svc.resets)
 
+    async def test_interception_agent_is_neither_caller_nor_victim(self):
+        from livekit import rtc
+        s = self.s
+        self.assertEqual(s.role_of(person("agent-chaukanna-safety")), "agent")
+        s.on_join(person("victim"))
+        s.on_join(person("agent-chaukanna-safety"))
+        await self.settle()
+        self.assertIsNone(s.call)                         # an agent alone never starts a call
+        s.on_join(person("caller-a", "+91 90000 00001"))
+        await self.settle()
+        call = s.call.call_id
+        s.on_leave(person("agent-chaukanna-safety", reason=rtc.DisconnectReason.CLIENT_INITIATED))
+        await self.settle(0.3)
+        self.assertEqual(s.call.call_id, call)            # nor ends one when it leaves
+        self.assertEqual(self.types(), ["call_started"])
+
     async def test_late_victim_gets_snapshot_with_unheard_whisper(self):
         s = self.s
         s.cfg.n8n_url = ""

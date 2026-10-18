@@ -433,9 +433,9 @@ function node(id,type,data,near){
 }
 function edge(a,b,kind){ if(!a||!b||a===b) return; const k=a.id+">"+b.id+">"+kind; if(G.edges.some(e=>e.k===k)) return; G.edges.push({k,a,b,kind,born:performance.now()}); }
 function pulse(n){ if(n) G.pulses.push({n,t:performance.now()}); }
-const REST={said:44,hit:58,type:96,whisper:62,n8n:92,about:150,listed:70,act:58,sms:60,
+const REST={agent:110,said:44,hit:58,type:96,whisper:62,n8n:92,about:150,listed:70,act:58,sms:60,
   dialed:42,to:92,ctype:74,onlist:96,alerts:58,is:26,family:110};
-const BIG = t => t==="caller"||t==="victim"||t==="guardian"||t==="incident";
+const BIG = t => t==="caller"||t==="victim"||t==="guardian"||t==="incident"||t==="agent";
 const LIGHT = t => t==="utt"||t==="ncall";       // many small nodes: weak repulsion
 function tick(){
   const N=G.nodes, n=N.length, cx=W/2, cy=H/2;
@@ -475,9 +475,10 @@ function draw(now){
     else if(e.kind==="to") col=alpha(css["ink-3"],.22);
     else if(e.kind==="alerts"||e.kind==="family"||e.kind==="is") col=alpha(css.legit,.6);
     else if(e.kind==="dialed") col=alpha(pcol(e.b.data.p||0),.6);
+    else if(e.kind==="agent") col=alpha(css.legit,.8);
     if(nb&&!(nb.has(e.a)&&nb.has(e.b))) col=alpha(css["ink-3"],.1);
     ctx.strokeStyle = age<1 ? alpha(css.trace,.9-.55*age) : col;
-    ctx.lineWidth=e.kind==="whisper"||e.kind==="listed"?1.5:(age<1?1.4:.8); ctx.setLineDash(e.kind==="whisper"||e.kind==="about"||e.kind==="family"?[3,4]:[]);
+    ctx.lineWidth=e.kind==="whisper"||e.kind==="listed"||e.kind==="agent"?1.5:(age<1?1.4:.8); ctx.setLineDash(e.kind==="whisper"||e.kind==="about"||e.kind==="family"?[3,4]:[]);
     ctx.beginPath(); ctx.moveTo(e.a.x,e.a.y); ctx.lineTo(e.b.x,e.b.y); ctx.stroke(); }
   ctx.setLineDash([]);
   for(const p of G.pulses){ const t=(now-p.t)/1000; if(t>1) continue; ctx.strokeStyle=alpha(p.c||css.trace,.9*(1-t)); ctx.lineWidth=2;
@@ -500,6 +501,7 @@ function draw(now){
     else if(n.type==="utt"){ const r=(2.8+Math.min(5.5,Math.sqrt((d.text||"").length)/1.6))*s;
       ctx.beginPath(); ctx.arc(n.x,n.y,r,0,6.283);
       if(d.speaker==="victim"){ ctx.fillStyle=css.canvas; ctx.fill(); ctx.strokeStyle=pcol(d.p); ctx.lineWidth=2; ctx.stroke(); }
+      else if(d.speaker==="agent"){ ctx.fillStyle=css.legit; ctx.fill(); }
       else { ctx.fillStyle=d.speaker==="sms"?css.trace:pcol(d.p); ctx.fill(); }
       if(n===nowUtt){ ctx.strokeStyle=css.ink; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(n.x,n.y,r+4.5,0,6.283); ctx.stroke(); } }
     else if(n.type==="caller"||n.type==="victim"){ const w=34*s,h=22*s; ctx.fillStyle=css.canvas;
@@ -508,6 +510,8 @@ function draw(now){
       ctx.fillStyle=ctx.strokeStyle; ctx.beginPath(); ctx.arc(n.x,n.y-1.5*s,3.6*s,0,6.283); ctx.fill();
       ctx.beginPath(); ctx.ellipse(n.x,n.y+7*s,6.5*s,3.4*s,0,Math.PI,0); ctx.fill(); }
     else if(n.type==="guardian"){ ctx.fillStyle=css.trace; hexPath(n.x,n.y,13*s); ctx.fill(); }
+    else if(n.type==="agent"){ ctx.fillStyle=d.left?css.canvas:css.legit; ctx.strokeStyle=css.legit; ctx.lineWidth=2; hexPath(n.x,n.y,12*s); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=d.left?css.legit:css.canvas; ctx.beginPath(); ctx.arc(n.x,n.y-1.5*s,3*s,0,6.283); ctx.fill(); ctx.beginPath(); ctx.ellipse(n.x,n.y+5.5*s,5.2*s,2.8*s,0,Math.PI,0); ctx.fill(); }
     else if(n.type==="signal"){ const r=(d.level===2?7:d.level===1?6:4.5)*s; ctx.fillStyle=css.canvas; ctx.strokeStyle=lcol(d.level); ctx.lineWidth=d.level===2?2:1.4;
       ctx.fillRect(n.x-r,n.y-r,2*r,2*r); ctx.strokeRect(n.x-r,n.y-r,2*r,2*r); if(d.level===2){ ctx.fillStyle=css.fraud; ctx.fillRect(n.x-r/2.6,n.y-r/2.6,r/1.3,r/1.3); } }
     else if(n.type==="stype"){ ctx.fillStyle=css.fraud; diamond(n.x,n.y,11*s); ctx.fill(); }
@@ -521,9 +525,9 @@ function draw(now){
     if(n.label && g>=1 && !dim){ const strong=BIG(n.type)||n.type==="stype"||n.type==="whisper"||(n.type==="num"&&n.data.listed);
       ctx.font=(strong?"700 ":"500 ")+((strong?11:10)/Math.max(.55,S)).toFixed(1)+"px "+MONO;
       ctx.fillStyle=n.type==="guardian"||n.type==="whisper"?css.trace:n.type==="stype"?css.fraud:n.type==="signal"?lcol(d.level):
-        n.type==="caller"&&d.listed?css.fraud:n.type==="victim"?css.legit:n.type==="action"&&d.ok!==false?css.legit:
+        n.type==="caller"&&d.listed?css.fraud:n.type==="victim"||n.type==="agent"?css.legit:n.type==="action"&&d.ok!==false?css.legit:
         n.type==="num"?(d.listed?css.fraud:d.trusted?css.legit:css["ink-2"]):n.type==="fam"?(d.ready?css.legit:css["ink-3"]):BIG(n.type)?css.ink:css["ink-2"];
-      const off = n.type==="caller"||n.type==="victim"?19:n.type==="guardian"?15:n.type==="num"||n.type==="fam"?15:11;
+      const off = n.type==="caller"||n.type==="victim"?19:n.type==="guardian"||n.type==="agent"?15:n.type==="num"||n.type==="fam"?15:11;
       ctx.fillText(n.label,n.x+off,n.y-(BIG(n.type)?10:8)); }
   }
   if(hoverN){ ctx.strokeStyle=css.trace; ctx.lineWidth=1.5/S; ctx.beginPath(); ctx.arc(hoverN.x,hoverN.y,15,0,6.283); ctx.stroke(); }
@@ -554,6 +558,7 @@ function describe(n){ const d=n.data;
   if(n.type==="utt") return `${d.speaker==="sms"?"OTP SMS on her phone":d.speaker} · ${mmss(d.t)} · pressure ${d.p} (${PNAME[d.p]})\n“${short(d.text,140)}”`;
   if(n.type==="caller") return `Caller ${d.number||""}${d.label&&d.label!==d.number?" · "+d.label:""}${d.listed?"\nOn the shared scam list":""}`;
   if(n.type==="victim") return mode==="network" ? `${d.name||VICTIM} · victim\n${d.calls} call${d.calls===1?"":"s"} to her` : `${VICTIM} · the victim\nOnly she hears the whispers`;
+  if(n.type==="agent") return `${d.name} · interception agent\nSpeaks only to ${VICTIM.split(" ")[0]}; the caller ${d.left?"could":"can"} no longer hear her`;
   if(n.type==="guardian") return "Chaukanna guardian\nHidden in the call: hears both legs, speaks only to the victim";
   if(n.type==="signal") return `Signal: ${sigName(d.name)} (${["neutral on its own","suspicious","critical"][d.level]})\nfirst heard at ${mmss(d.t)}`;
   if(n.type==="stype"&&mode!=="network") return `Scam type: ${typeName(d.name)}\nfrom ${mmss(d.t)}`;
@@ -573,10 +578,10 @@ function describe(n){ const d=n.data;
 // A beat is what one press of ▶ shows: a chunk verdict, the call start, the n8n incident, its reply, the end.
 // Smaller records (other n8n events, n8n replies, scam-list adds) ride along with the beat before them.
 let cur=null, beats=[], stageDone=-1, playing=false, nextAt=0, speed=1, applied=new Set();
-const MAJOR = r => r.type==="call_started"||r.type==="verdict"||r.type==="incident"||r.type==="call_ended"||(r.type==="n8n_event"&&r.event==="incident");
+const MAJOR = r => r.type==="call_started"||r.type==="verdict"||r.type==="incident"||r.type==="call_ended"||(r.type==="n8n_event"&&r.event==="incident")||(r.type==="agent"&&r.event!=="left");
 function buildBeats(recs){
   const B=[];
-  recs.forEach((r,i)=>{ if(MAJOR(r)||!B.length) B.push({kind:r.type==="n8n_event"?"n8n":r.type,rec:r,idx:[i]}); else B[B.length-1].idx.push(i); });
+  recs.forEach((r,i)=>{ if(MAJOR(r)||!B.length) B.push({kind:r.type==="n8n_event"?"n8n":r.type==="agent"?"agent_"+r.event:r.type,rec:r,idx:[i]}); else B[B.length-1].idx.push(i); });
   B.forEach((b,k)=>{ const nx=B[k+1];
     const gap = nx ? Math.max(0,(nx.rec.ts||0)-(b.rec.ts||0)) : 1;
     b.dur = b.kind==="call_started"?2000: b.kind==="n8n"?2300: b.kind==="incident"?2800: b.kind==="call_ended"?2600:
@@ -622,6 +627,12 @@ function applyRec(i){
       if(r.complaint_draft) act("1930","1930 draft ready",true,"waits for her approval in the app");
       break; }
     case "scam_list": if(caller()&&!caller().data.listed) listCaller(t); break;
+    case "agent":{ ensureCast(null); let A=G.byId.get("agent");
+      if(!A){ A=node("agent","agent",{name:r.agent,t},victim()); A.label=r.agent; edge(guardian(),A,"about"); edge(A,victim(),"agent");
+        const C=caller(); C.data.cut=true; C.label+=" · cut off"; G.pulses.push({n:victim(),t:performance.now(),c:css.legit}); }
+      if(r.event==="said"){ const U=node("u"+i,"utt",{speaker:"agent",text:r.text,p:0,t},A); edge(A,U,"said"); nowUtt=U; pulse(U); }
+      if(r.event==="left") A.data.left=true;
+      break; }
   }
 }
 function applyBeat(k){ for(const i of beats[k].idx) applyRec(i); }
@@ -665,6 +676,8 @@ function paintPanels(k){
   else if(b.kind==="n8n") banner(r.sent===false?"Pressure 2 → n8n incident (n8n was off for this replay)":"Pressure 2 → incident sent to n8n",css.ink);
   else if(b.kind==="incident") banner(`n8n: ${[r.family_alerted&&"family alerted",r.evidence_saved&&"evidence saved",r.blocklisted&&"caller blocklisted",r.complaint_draft&&"1930 draft ready"].filter(Boolean).join(" · ")||"incident recorded"}`,css.legit);
   else if(b.kind==="call_started"&&r.known_scammer) banner(`${r.caller_number} is on the scam list`,css.fraud);
+  else if(b.kind==="agent_joined") banner(`${r.agent} intercepted the call · the caller can no longer hear ${VICTIM.split(" ")[0]}`,css.legit);
+  else if(b.kind==="agent_said") banner(`${r.agent} to ${VICTIM.split(" ")[0]} only · “${short(r.text,90)}”`,css.legit);
   else if(b.kind==="call_ended"){ const p=r.peak_pressure||0; banner(p>=2?`Call ended · scam call · peak p${p}`:p===1?"Call ended · watched, no alarm":"Call ended · ordinary call, left alone",p>=2?css.fraud:p===1?css.unsure:css.legit); }
   else banner(null);
   paintVerdict(k);
@@ -688,6 +701,9 @@ function claimFor(b,k){
     `<span class="why">n8n alerts the family on Telegram, saves the evidence, adds the caller to the scam list and drafts the 1930 complaint for her to approve.${r.sent===false?" This replay ran with n8n switched off, so nothing was sent.":""}</span>`;
   if(b.kind==="incident") return `<span class="who">n8n replied · ${mmss(relT(r))}</span><span class="said">${esc(r.family_alert||"Incident recorded.")}</span>`+
     `<span class="src">incident ${esc(r.incident_id||"?")} · risk ${esc(r.risk_level||"?")} · reports for this number: ${esc(r.report_count??"?")}</span>`;
+  if(b.kind==="agent_joined") return `<span class="who">agent interception · ${mmss(relT(r))}</span><span class="said">${esc(r.agent)} joins the call and speaks to ${VICTIM} only.</span>`+
+    `<span class="why">Her app stops sending her voice to the caller and mutes the caller, so the scammer can no longer hear or pressure her. The agent knows what the call was about from the transcript so far.</span>`;
+  if(b.kind==="agent_said") return `<span class="who">${esc(r.agent)} · ${mmss(relT(r))} · to her only</span><span class="said">${esc(r.text)}</span>`;
   if(b.kind==="call_ended") return `<span class="who">hang-up · ${mmss(relT(r))}</span><span class="said">Call ended after ${Math.round(r.duration_seconds||relT(r))} seconds. Peak pressure ${r.peak_pressure}.</span>`;
   return "";
 }
@@ -703,6 +719,7 @@ function paintVerdict(k){
   if(ev) chips.push(`<span class="${ev.sent===false?"nt":"blk"}">N8N INCIDENT${ev.sent===false?" (OFF)":""}</span>`);
   if(inc){ if(inc.family_alerted) chips.push(`<span class="ok">FAMILY ALERTED</span>`); if(inc.evidence_saved) chips.push(`<span class="ok">EVIDENCE SAVED</span>`);
     if(inc.blocklisted) chips.push(`<span class="blk">BLOCKLISTED</span>`); if(inc.complaint_draft) chips.push(`<span class="nt">1930 DRAFT</span>`); }
+  const ag=cur.recs.find(r=>r.type==="agent"&&r.event==="joined"); if(ag) chips.push(`<span class="ok" title="at ${mmss(relT(ag))}">AGENT ${esc(ag.agent.toUpperCase())} INTERCEPTED</span>`);
   if(peak===0) chips.push(`<span class="ok">LEFT ALONE</span>`);
   const draft=inc?.complaint_draft;
   el.className="verdict "+cls;
@@ -762,7 +779,8 @@ function paintLists(){
       if(r.whisper) rows.push({k,t,cls:"k-whisper",txt:"whisper: "+clipName(r.whisper_clip),p:r.pressure});
       lastP=Math.max(lastP,r.pressure||0); }
     if(b.kind==="n8n") rows.push({k,t,cls:"k-n8n",txt:"n8n incident"+(r.sent===false?" (off in replay)":""),p:""});
-    if(b.kind==="incident") rows.push({k,t,cls:"k-n8n",txt:"family alerted, evidence saved",p:""}); });
+    if(b.kind==="incident") rows.push({k,t,cls:"k-n8n",txt:"family alerted, evidence saved",p:""});
+    if(b.kind==="agent_joined") rows.push({k,t,cls:"k-whisper",txt:"agent intercepted: "+r.agent,p:""}); });
   $("#moves").innerHTML=rows.length?rows.map(m=>`<li data-k="${m.k}" tabindex="0" title="Jump here"><span class="tm">${mmss(m.t)}</span><span class="${m.cls}">${esc(m.txt)}</span><span class="pv">${m.p===""?"":"p"+m.p}</span></li>`).join("")
     :`<li data-k="0" class="on" style="cursor:default"><span class="tm">—</span><span>nothing suspicious so far</span><span></span></li>`;
   $("#mvn").textContent=rows.length?rows.length+" moments":"";
@@ -773,11 +791,14 @@ function paintLists(){
     else if(r.type==="n8n_reply") s=`<span class="q">n8n</span> ← ${esc(r.event)} ${r.ok?"ok":"failed"} · ${(r.ms/1000).toFixed(1)} s${r.ok?"":" · "+esc(r.detail)}`;
     else if(r.type==="incident") s=`<span class="q">incident</span> ${esc(short(r.incident_id||"",13))} · family ${r.family_alerted?"✓":"✗"} · evidence ${r.evidence_saved?"✓":"✗"} · blocklist ${r.blocklisted?"✓":"✗"}`;
     else if(r.type==="scam_list") s=`<span class="q">scam_list</span> += ${esc(r.number)}`;
+    else if(r.type==="agent") s=`<span class="q">agent</span> ‹${esc(r.agent)}› ${esc(r.event)}${r.text?` “${esc(short(r.text,30))}”`:""}`;
     else if(r.type==="call_ended") s=`<span class="q">call_ended</span>(${Math.round(r.duration_seconds||0)} s, peak p${r.peak_pressure})`;
     else return "";
     return `<li data-i="${i}">${s}</li>`; }).join("");
   // transcript (lower section)
-  $("#tx").innerHTML=cur.recs.map((r,i)=>r.type!=="verdict"?"":
+  $("#tx").innerHTML=cur.recs.map((r,i)=>r.type==="agent"&&r.event==="said"?
+    `<li data-i="${i}"><span class="tm">${mmss(relT(r))}</span><span class="sp" style="color:${css.legit}">agent</span><span class="tt">${esc(r.text)}<small>${esc(r.agent.toUpperCase())} · TO HER ONLY</small></span><span class="pc"></span></li>`:
+    r.type!=="verdict"?"":
     `<li data-i="${i}"><span class="tm">${mmss(relT(r))}</span><span class="sp">${r.speaker==="sms"?"sms":esc(r.speaker)}</span><span class="tt" lang="${esc((r.language||"hi").slice(0,2))}">${esc(r.chunk_text)}${r.whisper?`<small>WHISPER ${esc(clipName(r.whisper_clip).toUpperCase())}</small>`:""}</span><span class="pc" style="color:${pcol(r.pressure||0)}">p${r.pressure}</span></li>`).join("");
   $("#tx-eyebrow").textContent=`${cur.title} · ${verdicts().length} chunks`;
   paintLatency();

@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 import replay
 import tokens
 from audio import Chunk, PauseChunker
-from config import DATA_TOPIC, GUARDIAN_IDENTITY, OTP_SMS_TOPIC, SAMPLE_RATE, Config, new_call_id
+from config import AGENT_PREFIX, DATA_TOPIC, GUARDIAN_IDENTITY, OTP_SMS_TOPIC, SAMPLE_RATE, Config, new_call_id
 from pipeline import CallState, Pipeline
 from stt import SttRouter
 
@@ -216,6 +216,8 @@ class LiveSession:
         ident = p.identity or ""
         if ident.startswith(GUARDIAN_IDENTITY):
             return "guardian"
+        if ident.startswith(AGENT_PREFIX) or participant_info(p).get("role") == "agent":
+            return "agent"                                    # an interception agent: neither caller nor victim
         v = self.cfg.victim_identity
         if ident == v or ident.startswith(v + "-") or participant_info(p).get("role") == "victim":
             return "victim"
@@ -307,7 +309,9 @@ class LiveSession:
     # ---- room events ----------------------------------------------------------------------
     def on_join(self, p) -> None:
         role = self.role_of(p)
-        if role == "guardian":
+        if role in ("guardian", "agent"):
+            if role == "agent":
+                log.info("agent %s joined", p.identity)
             return
         st = self.call
         if role == "victim":
@@ -357,7 +361,7 @@ class LiveSession:
         if track.kind != rtc.TrackKind.KIND_AUDIO:
             return
         role = self.role_of(participant)
-        if role == "guardian":
+        if role in ("guardian", "agent"):                     # the agent logs its own lines (tools/interceptor.py)
             return
         self.on_join(participant)
         c = TrackConsumer(self, track, participant, role, publication.sid)

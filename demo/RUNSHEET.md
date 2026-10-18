@@ -130,6 +130,28 @@ Its calls light up; everything else dims.
 > **Presenter:** "Every call, every number, every incident, joined in one graph, the same idea as fraud-ring
 > detection. One number calling many grandparents shows up as a ring, not as one call."
 
+## Optional finale: a judge talks to the scammer (`demo/stage.sh live hi` or `live en`)
+
+**One click, no terminal:** the **Chaukanna Stage** app launcher (`demo/chaukanna-stage.desktop`, installed in
+`~/.local/share/applications`) runs `demo/stage.sh up`: it starts whatever is down (classifier, token server, bridge,
+agent on standby), sets `adb reverse` for a phone on USB and opens the three-pane stage view; log in `logs/up.log`.
+On the stage view, pick Hindi or English and press **▶ Start live call**: the AI scammer calls Kamala from a fresh
+number, the button turns into **■ End call** (a clean hang-up), and the agent steps in at pressure 3. The scammer's
+lines go to `logs/live.log`. Kamala's phone has the same button ("Get a live scam call" on its home screen, in builds
+with `--dart-define=STAGE_URL=http://localhost:8787`; needs USB + `adb reverse tcp:8787 tcp:8787`, which `up` sets).
+If she presses hang-up in the app, the AI scammer hangs up too (topic `chaukanna.hangup`). `demo/stage.sh down` stops all of it. Tested 18 Oct 07:07: up in 6.5 s from cold,
+Start → on the line in ~7 s, End → the bridge saw the caller leave at once.
+
+`tools/ai_scammer.py` is a live, two-way scammer: it listens to Kamala's phone, Gemini 2.5 Flash writes its next line
+from the digital-arrest playbook while answering what was actually said, and Sarvam speaks it. Chaukanna judges both
+sides, so the judge's answers count too. Tested 17 Oct 23:49 on Kamala's phone: caution at 18 s, warnings at 28, 58
+and 67 s, n8n incident at 44 s; it threatened an FIR when refused, then hung up at 115 s.
+
+- Hand the phone to a judge: "He will call you. Talk to him however you like." **Do not mute**: it has to hear you.
+- It replies about 3 s after you stop talking; it ends when it hangs up, after 14 lines, or after 4 minutes.
+- Follow with `demo/stage.sh redial`: the same number calls back and is flagged at once.
+- If Gemini is slow or down, it falls back to the scripted lines, so it never goes silent.
+
 ## Lines to keep ready
 
 - **"Is this a real phone call?"**

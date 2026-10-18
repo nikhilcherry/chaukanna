@@ -86,6 +86,9 @@ is a 90-second narrated walkthrough for judges.
   call graph and gauge, the scam network zoomed onto the live caller (refreshes every 2.5 s during a call), and n8n's
   incident workflow step by step (`/console/api/n8n`: the run's steps, timings and status from the n8n API, never its
   outputs; waiting and running runs are found by id because the API lists finished runs only). Needs `N8N_API_KEY`.
+- **Live AI scammer** (`tools/ai_scammer.py`, `demo/stage.sh live [hi|en]`): a two-way scam call for the demo. It
+  listens to the victim's audio (Sarvam STT), Gemini 2.5 Flash writes the next line from a digital-arrest playbook while
+  answering what was said, Sarvam TTS speaks it. It only joins our own LiveKit room and never dials a real number.
 - **Status strip** above the bench: LiveKit room, bridge, victim phone, classifier, n8n, Supabase, Telegram, checked
   every 10 s (`/console/api/health`). The bridge's heartbeat file `calls/_bridge.json` says whether it is in the room.
 - The call API (`/console/api/...`) carries transcripts, so it answers only on this machine (loopback, which includes

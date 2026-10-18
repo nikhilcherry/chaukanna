@@ -22,6 +22,7 @@ import hmac
 import json
 import os
 import re
+import subprocess
 import threading
 import time
 import urllib.error
@@ -35,6 +36,7 @@ from dotenv import load_dotenv
 from livekit import api
 
 import calllog
+import procs
 import tokens
 from config import DEFAULT_CALL_LOG_DIR
 
@@ -190,8 +192,9 @@ def summarize_execution(ex: dict, kinds: dict[str, str]) -> dict:
     for name, runs in rd.items():
         for r in runs or []:
             main = ((r.get("data") or {}).get("main") or [])
+            status = r.get("executionStatus", "success")
             steps.append({"node": name, "kind": kinds.get(name, "step"), "t": r.get("startTime"), "ms": r.get("executionTime"),
-                          "ok": r.get("executionStatus", "success") == "success" and not r.get("error"),
+                          "ok": status in ("success", "waiting") and not r.get("error"), "waiting": status == "waiting",
                           "items": sum(len(x or []) for x in main)})
     try:
         j = rd["Normalize Event"][0]["data"]["main"][0][0]["json"]
@@ -270,6 +273,112 @@ def n8n_progress(call_id: str, since: float) -> dict:
     return {"ok": True, "workflow": wf, "executions": out}
 
 
+# --------------------------------------------------------------------------- agent interception (console)
+AGENTS_DIR = HERE / "agents"
+VOICES = ("ritu", "priya", "neha", "kavya", "roopa", "aditya", "rahul", "kabir", "rohan", "sumit", "amit", "dev", "shubh")
+LANGS = ("auto", "hi", "en", "kn")
+
+
+def agents_state() -> dict:
+    agents = []
+    for f in sorted(AGENTS_DIR.glob("*.json")):
+        try:
+            a = json.loads(f.read_text())
+            agents.append({k: a.get(k) for k in ("id", "name", "voice", "language", "auto_pressure", "instructions", "builtin")})
+        except (OSError, ValueError):
+            continue
+    status = {}
+    try:
+        status = json.loads((Path(call_log_dir()) / "_agent.json").read_text())
+        status["age_s"] = round(time.time() - status.get("ts", 0), 1)
+    except (OSError, ValueError):
+        pass
+    return {"agents": agents, "interceptor": status, "voices": VOICES, "languages": LANGS, "live": live_state()}
+
+
+def add_agent(body: dict) -> tuple[int, dict]:
+    name = str(body.get("name", "")).strip()
+    instructions = str(body.get("instructions", "")).strip()
+    voice, lang = body.get("voice", "ritu"), body.get("language", "auto")
+    try:
+        auto = int(body.get("auto_pressure", 3))
+    except (TypeError, ValueError):
+        auto = 3
+    if not 2 <= len(name) <= 40 or not 10 <= len(instructions) <= 800 or voice not in VOICES or lang not in LANGS or auto not in (2, 3):
+        return 400, {"error": "need a name (2-40 chars), instructions (10-800 chars), a known voice and language, auto_pressure 2 or 3"}
+    aid = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:30] or "agent"
+    path = AGENTS_DIR / f"{aid}.json"
+    if path.exists() and json.loads(path.read_text()).get("builtin"):
+        return 409, {"error": f"{aid} is a built-in agent; pick another name"}
+    profile = {"id": aid, "name": name, "voice": voice, "language": lang, "auto_pressure": auto, "instructions": instructions}
+    AGENTS_DIR.mkdir(exist_ok=True)
+    path.write_text(json.dumps(profile, ensure_ascii=False, indent=2) + "\n")
+    return 200, {"ok": True, "agent": profile}
+
+
+def request_intercept(body: dict) -> tuple[int, dict]:
+    """Ask the standing-by interceptor (tools/interceptor.py) to join the call that is on now."""
+    agent = str(body.get("agent", ""))
+    if not (AGENTS_DIR / f"{agent}.json").is_file():
+        return 404, {"error": f"no agent {agent!r}"}
+    st = calllog.read_status(call_log_dir()) or {}
+    if not st.get("in_call") or not st.get("call_id"):
+        return 409, {"error": "no call is on right now"}
+    Path(call_log_dir(), "_intercept.json").write_text(json.dumps({"call_id": st["call_id"], "agent": agent, "ts": time.time()}))
+    return 200, {"ok": True, "call_id": st["call_id"], "agent": agent}
+
+
+# --------------------------------------------------------------------------- one-click live call (stage.html)
+_live: dict = {"proc": None, "lang": "", "ts": 0.0}
+_live_lock = threading.Lock()
+
+
+def live_state() -> dict:
+    """off / starting (demo/stage.sh live-bg is still bringing the system up) / on (the AI scammer is in the room)."""
+    p = _live["proc"]
+    if procs.find("tools/ai_scammer.py"):
+        state = "on"
+    elif p is not None and p.poll() is None:
+        state = "starting"
+    else:
+        state = "off"
+    try:
+        phone = (HERE / "demo" / "stage" / ".scam_number").read_text().strip()
+    except OSError:
+        phone = ""
+    return {"state": state, "lang": _live["lang"], "phone": phone, "since": _live["ts"]}
+
+
+def start_live(body: dict) -> tuple[int, dict]:
+    """The stage page's "Start live call": make sure the system is up, then the AI scammer calls Kamala."""
+    lang = body.get("lang", "hi")
+    if lang not in ("hi", "en"):
+        return 400, {"error": "lang is hi or en"}
+    with _live_lock:
+        if live_state()["state"] != "off":
+            return 409, {"error": "the AI scammer is already calling"}
+        st = calllog.read_status(call_log_dir()) or {}
+        if st.get("in_call") and time.time() - st.get("ts", 0) < 15:
+            return 409, {"error": "a call is on right now; let it end first"}
+        (HERE / "logs").mkdir(exist_ok=True)
+        with open(HERE / "logs" / "live.log", "ab") as log:
+            _live.update(proc=subprocess.Popen(["bash", str(HERE / "demo" / "stage.sh"), "live-bg", lang], cwd=HERE,
+                                               stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                                               start_new_session=True),     # outlives a token server restart
+                         lang=lang, ts=time.time())
+    return 200, {"ok": True, "lang": lang, "victim_present": bool(st.get("victim_present"))}
+
+
+def stop_live() -> tuple[int, dict]:
+    on = procs.find("tools/ai_scammer.py")
+    n = procs.stop("tools/ai_scammer.py")                     # SIGTERM: it hangs up like Ctrl-C
+    p = _live["proc"]
+    if p is not None and p.poll() is None and p.pid not in on:   # still starting (live-bg execs into the scammer)
+        p.terminate()
+        n += 1
+    return 200, {"ok": True, "stopped": n}
+
+
 def network() -> dict:
     base = classifier_base()
     with ThreadPoolExecutor(3) as ex:
@@ -311,6 +420,9 @@ class H(BaseHTTPRequestHandler):
         if rest.startswith("api/"):
             if not self._console_allowed(q):
                 return self._send(403, b'{"error":"the console API answers on this machine only"}', cors=False)
+            if rest == "api/agents":
+                return self._send(200, json.dumps(agents_state(), ensure_ascii=False).encode(), cors=False,
+                                  extra=[("Cache-Control", "no-store")])
             if rest == "api/n8n":
                 since = float(q["since"]) if re.fullmatch(r"\d{9,11}(\.\d+)?", q.get("since", "")) else 0.0
                 call = q.get("call", "") if re.fullmatch(r"[A-Za-z0-9_-]{0,80}", q.get("call", "")) else ""
@@ -340,6 +452,27 @@ class H(BaseHTTPRequestHandler):
                 or not f.is_file() or f.suffix not in STATIC:
             return self._send(404, b'{"error":"not found"}')
         self._send(200, f.read_bytes(), STATIC[f.suffix])
+
+    def do_POST(self):
+        """Console actions: add an agent, ask for an interception, start or end the live AI call. Loopback (or
+        CONSOLE_KEY) only, like the call API: starting a call spends Sarvam + Gemini credit."""
+        u = urlparse(self.path)
+        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        if u.path not in ("/console/api/agents", "/console/api/intercept", "/console/api/live", "/console/api/live/stop"):
+            return self._send(404, b'{"error":"not found"}', cors=False)
+        if not self._console_allowed(q):
+            return self._send(403, b'{"error":"the console API answers on this machine only"}', cors=False)
+        n = int(self.headers.get("Content-Length") or 0)
+        if n > 8192:
+            return self._send(413, b'{"error":"too big"}', cors=False)
+        try:
+            body = json.loads(self.rfile.read(n) or b"{}")
+            assert isinstance(body, dict)
+        except (ValueError, AssertionError):
+            return self._send(400, b'{"error":"send a JSON object"}', cors=False)
+        code, out = {"/console/api/agents": add_agent, "/console/api/intercept": request_intercept,
+                     "/console/api/live": start_live, "/console/api/live/stop": lambda _: stop_live()}[u.path](body)
+        self._send(code, json.dumps(out, ensure_ascii=False).encode(), cors=False)
 
     def do_GET(self):
         u = urlparse(self.path)

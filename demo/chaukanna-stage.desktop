@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Chaukanna Stage
+Comment=Start the Chaukanna demo (classifier, bridge, agent) and open the three-pane stage view
+Exec=/home/nikhil/Projects/chaukanna-audio-bridge/demo/stage.sh app
+Icon=/home/nikhil/Projects/chaukanna-audio-bridge/demo/chaukanna-stage.svg
+Terminal=false
+Categories=Utility;
+StartupNotify=false
