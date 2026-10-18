@@ -1,0 +1,235 @@
+{
+  "stt_model": "saarika:v2.5",
+  "results": {
+    "warn_otp_short_hi.wav": {
+      "sha256": "f081a266bddbb2e047ad8ea0dc6a70c669c965a17bbe90e9ffac9a7a10b6f73e",
+      "stt_model": "saarika:v2.5",
+      "expected": "ओटीपी मत बताइए! ये फ्रॉड है।",
+      "heard": "ओटीपी मत बताइए, यह फ्रॉड है।",
+      "score": 0.958,
+      "ok": true,
+      "diffs": [
+        "ये -> यह"
+      ]
+    },
+    "warn_otp_short_kn.wav": {
+      "sha256": "858be23b953470224ed9d41845a9fb25c92580a7996c3eb007be9b2f6acb9635",
+      "stt_model": "saarika:v2.5",
+      "expected": "ಓಟಿಪಿ ಹೇಳಬೇಡಿ! ಇದು ಮೋಸ.",
+      "heard": "OTP ಹೇಳಬೇಡಿ, ಇದು ಮೋಸ.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_otp_short_en.wav": {
+      "sha256": "5fa1550f0ac2eb7d189b094989c6362cde45f7b950b7a48a20e4f82df196dd6c",
+      "stt_model": "saarika:v2.5",
+      "expected": "Don't share your OTP! It's a scam.",
+      "heard": "Do not share your OTP. It's a scam.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_otp_hi.wav": {
+      "sha256": "f3442e1c3b23373eea495e76c5066f0bfa3a97fcd661c965432c94958a3517fb",
+      "stt_model": "saarika:v2.5",
+      "expected": "सावधान! किसी को भी अपना ओटीपी या पिन न बताएं। बैंक और पुलिस कभी फ़ोन पर ओटीपी या पिन नहीं मांगते।",
+      "heard": "सावधान, किसी को भी अपना ओटीपी या पिन ना बताएँ। बैंक और पुलिस कभी फ़ोन पर ओटीपी या पिन नहीं मांगते।",
+      "score": 0.994,
+      "ok": true,
+      "diffs": [
+        "न -> ना"
+      ]
+    },
+    "warn_otp_kn.wav": {
+      "sha256": "2fe136f2858638305e902bf34ae2bb9b606577a06a431584e1c89c9dacaf1f6d",
+      "stt_model": "saarika:v2.5",
+      "expected": "ಎಚ್ಚರಿಕೆ! ನಿಮ್ಮ ಒಟಿಪಿ ಅಥವಾ ಪಿನ್ ಅನ್ನು ಯಾರಿಗೂ ಹೇಳಬೇಡಿ. ಬ್ಯಾಂಕ್ ಅಥವಾ ಪೊಲೀಸರು ಎಂದಿಗೂ ಫೋನ್‌ನಲ್ಲಿ ಒಟಿಪಿ ಅಥವಾ ಪಿನ್ ಕೇಳುವುದಿಲ್ಲ.",
+      "heard": "ಎಚ್ಚರಿಕೆ, ನಿಮ್ಮ ಓಟಿಪಿ ಅಥವಾ ಪಿನ್ ಅನ್ನು ಯಾರಿಗೂ ಹೇಳಬೇಡಿ. ಬ್ಯಾಂಕ್ ಅಥವಾ ಪೊಲೀಸರು ಎಂದಿಗೂ ಫೋನ್ನಲ್ಲಿ ಓಟಿಪಿ ಅಥವಾ ಪಿನ್ ಕೇಳುವುದಿಲ್ಲ.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_otp_en.wav": {
+      "sha256": "410ccf825e540dc555e30076a22716dd342c8bc4078e31fd9208c1075ff27e87",
+      "stt_model": "saarika:v2.5",
+      "expected": "Warning! Do not share your OTP or PIN with anyone. Banks and the police never ask for it over a call.",
+      "heard": "Warning, do not share your OTP or PIN with anyone. Banks and the police never ask for it over a call.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_digital_arrest_short_hi.wav": {
+      "sha256": "5ede0e47e0c2b17e19272d063a73efbcd7044b670b98fbbacc3d9955994381bd",
+      "stt_model": "saarika:v2.5",
+      "expected": "डिजिटल अरेस्ट फ्रॉड है! फ़ोन काटिए।",
+      "heard": "डिजिटल अरेस्ट फ्रॉड है, फ़ोन काटिए।",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_digital_arrest_short_kn.wav": {
+      "sha256": "2b5348490691cd57948743d28dee30c8cc59991dacc0e024869a09383a572e20",
+      "stt_model": "saarika:v2.5",
+      "expected": "ಡಿಜಿಟಲ್ ಅರೆಸ್ಟ್ ಮೋಸ! ಫೋನ್ ಕಟ್ ಮಾಡಿ.",
+      "heard": "ಡಿಜಿಟಲ್ ಅರೆಸ್ಟ್ ಮೋಸ ಫೋನ್ ಕಟ್ ಮಾಡಿ",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_digital_arrest_short_en.wav": {
+      "sha256": "660fa1ab8fe2f6c366f8e31e75a02cc78ef8021914a2df6c8b0a3bb234bb8913",
+      "stt_model": "saarika:v2.5",
+      "expected": "Digital arrest is a scam. Hang up!",
+      "heard": "Digital arrest is a scam, hang up.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_digital_arrest_hi.wav": {
+      "sha256": "7e05c66d32336bdf100d221811b72bae68cee7e6f6d3f8cdc325aaee03fa17d6",
+      "stt_model": "saarika:v2.5",
+      "expected": "सावधान! पुलिस, सीबीआई और अदालतें कभी फ़ोन या वीडियो कॉल पर डिजिटल अरेस्ट या पूछताछ नहीं करतीं। यह धोखा है। कॉल काट दें।",
+      "heard": "सावधान, पुलिस, सीबीआई और अदालतें कभी फोन या वीडियो कॉल पर डिजिटल अरेस्ट या पूछताछ नहीं करती। यह धोखा है, कॉल काट दें।",
+      "score": 0.996,
+      "ok": true,
+      "diffs": [
+        "करतीं -> करती"
+      ]
+    },
+    "warn_digital_arrest_kn.wav": {
+      "sha256": "9d3807810ecb104c8de7c59ec9e1286f38ed6ad18210f9b85803d506751c4849",
+      "stt_model": "saarika:v2.5",
+      "expected": "ಎಚ್ಚರಿಕೆ! ಪೊಲೀಸರು, ಸಿಬಿಐ ಮತ್ತು ನ್ಯಾಯಾಲಯಗಳು ಎಂದಿಗೂ ಫೋನ್ ಅಥವಾ ವಿಡಿಯೋ ಕರೆಯಲ್ಲಿ ಡಿಜಿಟಲ್ ಅರೆಸ್ಟ್ ಅಥವಾ ವಿಚಾರಣೆ ಮಾಡುವುದಿಲ್ಲ. ಇದು ವಂಚನೆ. ಕರೆಯನ್ನು ಕಟ್ ಮಾಡಿ.",
+      "heard": "ಎಚ್ಚರಿಕೆ, ಪೊಲೀಸರು, ಸಿಬಿಐ ಮತ್ತು ನ್ಯಾಯಾಲಯಗಳು ಎಂದಿಗೂ ಫೋನ್ ಅಥವಾ ವಿಡಿಯೋ ಕರೆಯಲ್ಲಿ ಡಿಜಿಟಲ್ ಅರೆಸ್ಟ್ ಅಥವಾ ವಿಚಾರಣೆ ಮಾಡುವುದಿಲ್ಲ. ಇವು ವಂಚನೆ. ಕರೆಯನ್ನು ಕಟ್ ಮಾಡಿ.",
+      "score": 0.993,
+      "ok": true,
+      "diffs": [
+        "ಇದು -> ಇವು"
+      ]
+    },
+    "warn_digital_arrest_en.wav": {
+      "sha256": "305b0323a3715eae5790eace543acf1bfeb2db7a00ce14930db5ab657567b066",
+      "stt_model": "saarika:v2.5",
+      "expected": "Warning! The police, the CBI and the courts never conduct a digital arrest or interrogation over a phone or video call. This is a scam. Hang up.",
+      "heard": "Warning. The police, the CBI, and the courts never conduct a digital arrest or interrogation over a phone or video call. This is a scam. Hang up.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_secrecy_short_hi.wav": {
+      "sha256": "1486330f8224b5ec3560e803106714cc74fd574e72579128c3f2add3b46b0bb0",
+      "stt_model": "saarika:v2.5",
+      "expected": "घरवालों से मत छुपाइए! हम उन्हें बता रहे हैं।",
+      "heard": "घर वालों से मत छुपाइए, हम उन्हें बता रहे हैं।",
+      "score": 0.988,
+      "ok": true,
+      "diffs": [
+        "घरवालों -> घर वालों"
+      ]
+    },
+    "warn_secrecy_short_kn.wav": {
+      "sha256": "0e2815e8b169234c922c52997512ca436e377b04e90b91a5a801fd5f93dd94d1",
+      "stt_model": "saarika:v2.5",
+      "expected": "ಮುಚ್ಚಿಡಬೇಡಿ! ಮನೆಯವರಿಗೆ ಹೇಳ್ತಿದ್ದೀವಿ.",
+      "heard": "ಮುಚ್ಚಿಡಬೇಡಿ, ಮನೆಯವರಿಗೆ ಹೇಳ್ತಿದ್ದೀವಿ.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_secrecy_short_en.wav": {
+      "sha256": "3010fbcacc7fb8c27475f33905b276d1285f33901afc9ac06147edecbfa2b0dd",
+      "stt_model": "saarika:v2.5",
+      "expected": "Don't keep it secret! We're alerting your family.",
+      "heard": "Do not keep it secret, we are alerting your family.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_secrecy_hi.wav": {
+      "sha256": "6e1b054562297f5bbd4a12aa4419a86220f1a4bdd4f413bcc3a109c4dbf9931a",
+      "stt_model": "saarika:v2.5",
+      "expected": "सावधान! यह कॉलर आपको सबसे अलग करने की कोशिश कर रहा है। हम अभी आपके भरोसेमंद परिवार के सदस्य को सूचित कर रहे हैं।",
+      "heard": "सावधान, यह कॉलर आपको सबसे अलग करने की कोशिश कर रहा है। हम अभी आपके भरोसेमंद परिवार के सदस्य को सूचित कर रहे हैं।",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_secrecy_kn.wav": {
+      "sha256": "8ed487346467015f2e0deb393f45899463c944315632b6c80ad164bbd9b0878d",
+      "stt_model": "saarika:v2.5",
+      "expected": "ಎಚ್ಚರಿಕೆ! ಈ ಕರೆ ಮಾಡಿದವರು ನಿಮ್ಮನ್ನು ಎಲ್ಲರಿಂದ ಪ್ರತ್ಯೇಕಿಸಲು ಪ್ರಯತ್ನಿಸುತ್ತಿದ್ದಾರೆ. ನಾವು ಈಗಲೇ ನಿಮ್ಮ ವಿಶ್ವಾಸಾರ್ಹ ಕುಟುಂಬ ಸದಸ್ಯರಿಗೆ ಮಾಹಿತಿ ನೀಡುತ್ತಿದ್ದೇವೆ.",
+      "heard": "ಎಚ್ಚರಿಕೆ, ಈ ಕರೆ ಮಾಡಿದವರು ನಿಮ್ಮನ್ನು ಎಲ್ಲರಿಂದ ಪ್ರತ್ಯೇಕಿಸಲು ಪ್ರಯತ್ನಿಸುತ್ತಿದ್ದಾರೆ. ನಾವು ಈಗಲೇ ನಿಮ್ಮ ವಿಶ್ವಾಸಾರ್ಹ ಕುಟುಂಬ ಸದಸ್ಯರಿಗೆ ಮಾಹಿತಿ ನೀಡುತ್ತಿದ್ದೇವೆ.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_secrecy_en.wav": {
+      "sha256": "11a6bad17a91647c7c6b4f8695883d211ef81eaca893ea418983c7697cf42a81",
+      "stt_model": "saarika:v2.5",
+      "expected": "Warning: this caller is trying to isolate you. We are alerting your trusted family contact right now.",
+      "heard": "Warning, this caller is trying to isolate you. We are alerting your trusted family contact right now.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_known_scammer_short_hi.wav": {
+      "sha256": "7cb4d5447d4118bb7c34d011e2e4c53dac731b516803f91a441418948157996d",
+      "stt_model": "saarika:v2.5",
+      "expected": "सावधान! ये जाना-माना फ्रॉड नंबर है।",
+      "heard": "सावधान, यह जाना माना फ्रॉड नंबर है।",
+      "score": 0.97,
+      "ok": true,
+      "diffs": [
+        "ये -> यह"
+      ]
+    },
+    "warn_known_scammer_short_kn.wav": {
+      "sha256": "c5d22acb9260aa8ba1541edce0c32101fef1846ab39c412a7946c861c8d1a331",
+      "stt_model": "saarika:v2.5",
+      "expected": "ಎಚ್ಚರ! ಇದು ಮೋಸಗಾರರ ನಂಬರ್.",
+      "heard": "ಎಚ್ಚರ, ಇದು ಮೋಸಗಾರರ ನಂಬರ್.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_known_scammer_short_en.wav": {
+      "sha256": "23cc04efa161c40c8a7a83dc9d32dc4f2c0534fe6d57fb9956726efc9724b62f",
+      "stt_model": "saarika:v2.5",
+      "expected": "Careful! This number is a known scammer.",
+      "heard": "Careful. This number is a known scammer.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_known_scammer_hi.wav": {
+      "sha256": "35b573e629f7246f1339115b6b3dcc2612ac8c29cb8cf7121317b3a7062b7078",
+      "stt_model": "saarika:v2.5",
+      "expected": "सावधान! इस फ़ोन नंबर की शिकायत पहले ही चौकन्ना नेटवर्क पर एक जाने-माने ठग के रूप में की जा चुकी है।",
+      "heard": "सावधान, इस फ़ोन नंबर की शिकायत पहले ही चौकन्ना नेटवर्क पर एक जाने माने ठग के रूप में की जा चुकी है।",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    },
+    "warn_known_scammer_kn.wav": {
+      "sha256": "61ae2dc4cf9883bf19b5b2d79c38657b8ff498a6545674206fcec13ad3ae2c27",
+      "stt_model": "saarika:v2.5",
+      "expected": "ಎಚ್ಚರಿಕೆ! ಈ ಫೋನ್ ನಂಬರ್ ಅನ್ನು ಚೌಕನ್ನ ನೆಟ್‌ವರ್ಕ್‌ನಲ್ಲಿ ಈಗಾಗಲೇ ಕುಖ್ಯಾತ ವಂಚಕ ಎಂದು ವರದಿ ಮಾಡಲಾಗಿದೆ.",
+      "heard": "ಎಚ್ಚರಿಕೆ, ಈ ಫೋನ್ ನಂಬರನ್ನು ಚೌಕನ್ನ ನೆಟ್ವರ್ಕ್ನಲ್ಲಿ ಈಗಾಗಲೇ ಕುಖ್ಯಾತ ವಂಚಕ ಎಂದು ವರದಿ ಮಾಡಲಾಗಿದೆ.",
+      "score": 0.983,
+      "ok": true,
+      "diffs": [
+        "ನಂಬರ್ ಅನ್ನು -> ನಂಬರನ್ನು"
+      ]
+    },
+    "warn_known_scammer_en.wav": {
+      "sha256": "8c8a91dae323f04feab0dedd5ccd42d083f30e89f1169fdc4a6fc63e56bf39e8",
+      "stt_model": "saarika:v2.5",
+      "expected": "Warning! This phone number has already been reported as a known scammer on the Chaukanna network.",
+      "heard": "Warning, this phone number has already been reported as a known scammer on the Chaukhanna network.",
+      "score": 1.0,
+      "ok": true,
+      "diffs": []
+    }
+  }
+}
