@@ -9,7 +9,7 @@ n8n handles the response: evidence goes to Supabase, the number goes on a shared
 
 Built at Hack Sprint 2026 (MIT Bengaluru, 17–18 Oct) by Nikhil, Shreyas, Koustav and Deekshitha (NMIT).
 
-▶ **Demo video:** [`media/chaukanna-demo.mp4`](media/chaukanna-demo.mp4) (1 min 54 s, laptop stage view and the victim's phone side by side). It is a real run on the
+▶ **Demo video:** [YouTube](https://youtu.be/8vpouj2xdso) · [`media/chaukanna-demo.mp4`](media/chaukanna-demo.mp4) (1 min 54 s, laptop stage view and the victim's phone side by side). It is a real run on the
 live stack, in real time. A robot caller plays a recorded Hindi digital-arrest script into the call, and
 everything after that is live: Sarvam STT, the classifier, the whispers, the interceptor agent and n8n.
 
