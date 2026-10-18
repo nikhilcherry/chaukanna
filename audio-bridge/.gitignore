@@ -1,0 +1,9 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+calls/
+demo/stage/.scam_number
+demo/stage/.counter
+demo/stage/phones.env
+logs/

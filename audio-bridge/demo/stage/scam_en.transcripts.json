@@ -1,0 +1,150 @@
+{
+ "format": 1,
+ "wav": "scam_en.wav",
+ "wav_sha256": "c1d6e00368ce201fc38edff4f1e74783b1f5e561a697ca353470fbfe7aa0e547",
+ "created": "2026-10-17T23:11:52+0530",
+ "stt": "saaras:v3/codemix",
+ "chunking": {
+  "min_s": 1.5,
+  "max_s": 4.0,
+  "pause_ms": 300,
+  "silence_rms": 120.0
+ },
+ "segments": [
+  {
+   "speaker": "caller",
+   "start": 0.34,
+   "end": 2.64,
+   "speech_end": 2.34,
+   "text": "Hello. Good afternoon.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 2.64,
+   "end": 5.08,
+   "speech_end": 4.78,
+   "text": "I am calling from Blue Dart Courier.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 5.08,
+   "end": 7.56,
+   "speech_end": 7.26,
+   "text": "A parcel has been booked in your name.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 12.2,
+   "end": 16.06,
+   "speech_end": 15.76,
+   "text": "Are you at home right now? I need to confirm your address.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 20.7,
+   "end": 24.7,
+   "speech_end": 24.54,
+   "text": "Madam, the parcel is held at Mumbai Customs.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 24.7,
+   "end": 27.64,
+   "speech_end": 27.34,
+   "text": "and it is linked to your Aadhaar card.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 32.32,
+   "end": 33.84,
+   "speech_end": 33.54,
+   "text": "We found drugs,",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 33.84,
+   "end": 36.02,
+   "speech_end": 35.72,
+   "text": "and fake passports inside.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 36.02,
+   "end": 39.38,
+   "speech_end": 39.08,
+   "text": "A money laundering case has been registered against you.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 44.14,
+   "end": 47.24,
+   "speech_end": 46.94,
+   "text": "I am transferring your call to the CBI officer.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 47.4,
+   "end": 49.66,
+   "speech_end": 49.36,
+   "text": "Do not tell anyone about this.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 49.66,
+   "end": 51.72,
+   "speech_end": 51.42,
+   "text": "and do not disconnect the call.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 56.42,
+   "end": 58.02,
+   "speech_end": 57.72,
+   "text": "For verification,",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 58.02,
+   "end": 61.76,
+   "speech_end": 61.74,
+   "text": "You have received an OTP on your phone. Tell me the OTP.",
+   "language": "en",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 61.76,
+   "end": 63.26,
+   "speech_end": 62.14,
+   "text": "Quickly",
+   "language": "en",
+   "source": "sarvam"
+  }
+ ]
+}

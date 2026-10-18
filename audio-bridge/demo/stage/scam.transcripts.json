@@ -1,0 +1,150 @@
+{
+ "format": 1,
+ "wav": "scam.wav",
+ "wav_sha256": "6115675d80ef33dd1e274e45c6d603257e8278507870fbd0e4980a89ad5206aa",
+ "created": "2026-10-17T23:11:52+0530",
+ "stt": "saaras:v3/codemix",
+ "chunking": {
+  "min_s": 1.5,
+  "max_s": 4.0,
+  "pause_ms": 300,
+  "silence_rms": 120.0
+ },
+ "segments": [
+  {
+   "speaker": "caller",
+   "start": 0.46,
+   "end": 4.46,
+   "speech_end": 4.22,
+   "text": "Hello नमस्ते मैं Blue Dart Courier से बोल रहा हूँ",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 4.62,
+   "end": 6.32,
+   "speech_end": 6.02,
+   "text": "आपके नाम से 1",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 6.32,
+   "end": 7.82,
+   "speech_end": 7.42,
+   "text": "पार्स आया है।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 12.4,
+   "end": 15.88,
+   "speech_end": 15.58,
+   "text": "क्या आप अभी घर पर हैं? पता confirm करना था।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 20.48,
+   "end": 23.72,
+   "speech_end": 23.42,
+   "text": "सर parcel मुंबई कस्टम्स में रुका हुआ है",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 23.72,
+   "end": 26.66,
+   "speech_end": 26.36,
+   "text": "और यह आपके Aadhaar card से लिंक है।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 31.26,
+   "end": 34.76,
+   "speech_end": 34.46,
+   "text": "इसमें drugs और fake passport मिले हैं।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 34.8,
+   "end": 38.12,
+   "speech_end": 37.86,
+   "text": "आपके खिलाफ money laundering का केस",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 38.12,
+   "end": 39.62,
+   "speech_end": 39.08,
+   "text": "दर्ज हुआ है।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 44.1,
+   "end": 48.1,
+   "speech_end": 48.1,
+   "text": "मैं अभी आपकी call CBI officer को transfer कर रहा हूँ।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 48.32,
+   "end": 50.66,
+   "speech_end": 50.36,
+   "text": "यह बात किसी को मत बताइए।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 50.66,
+   "end": 52.16,
+   "speech_end": 51.64,
+   "text": "फोन मत काटिए।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 57.24,
+   "end": 59.2,
+   "speech_end": 58.9,
+   "text": "Verification के लिए",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 59.2,
+   "end": 62.38,
+   "speech_end": 62.08,
+   "text": "आपके फ़ोन पर एक OTP आया है।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 62.38,
+   "end": 63.88,
+   "speech_end": 63.58,
+   "text": "वो जल्दी बताइए।",
+   "language": "hi",
+   "source": "sarvam"
+  }
+ ]
+}

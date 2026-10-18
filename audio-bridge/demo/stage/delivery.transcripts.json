@@ -1,0 +1,51 @@
+{
+ "format": 1,
+ "wav": "delivery.wav",
+ "wav_sha256": "91e964b2f0b23011c815cbeed07dfb807c2971a0d7b30da3c3d6c1b4c879875f",
+ "created": "2026-10-17T23:11:44+0530",
+ "stt": "saaras:v3/codemix",
+ "chunking": {
+  "min_s": 1.5,
+  "max_s": 4.0,
+  "pause_ms": 300,
+  "silence_rms": 120.0
+ },
+ "segments": [
+  {
+   "speaker": "caller",
+   "start": 0.3,
+   "end": 3.56,
+   "speech_end": 3.26,
+   "text": "नमस्ते आंटी। मैं Amazon delivery से बोल रहा हूँ।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 8.14,
+   "end": 12.14,
+   "speech_end": 12.0,
+   "text": "आपका parcel आ गया है मैं आपकी building के gate पर खड़ा हूँ",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 16.88,
+   "end": 20.34,
+   "speech_end": 20.04,
+   "text": "आप नीचे आ सकती हैं या मैं watchman को दे दूँ?",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 25.0,
+   "end": 28.94,
+   "speech_end": 28.64,
+   "text": "ठीक है आंटी मैं watchman के पास छोड़ देता हूं। धन्यवाद।",
+   "language": "hi",
+   "source": "sarvam"
+  }
+ ]
+}

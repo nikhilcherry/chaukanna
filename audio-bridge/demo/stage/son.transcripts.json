@@ -1,0 +1,69 @@
+{
+ "format": 1,
+ "wav": "son.wav",
+ "wav_sha256": "4139f6e2b67f2bbbf47c07d93775f6e89479554df74cfd07dd61eddc732e99cf",
+ "created": "2026-10-17T23:11:43+0530",
+ "stt": "saaras:v3/codemix",
+ "chunking": {
+  "min_s": 1.5,
+  "max_s": 4.0,
+  "pause_ms": 300,
+  "silence_rms": 120.0
+ },
+ "segments": [
+  {
+   "speaker": "caller",
+   "start": 0.3,
+   "end": 2.84,
+   "speech_end": 2.54,
+   "text": "हेलो माँ, मैं रदी बोल रहा हूँ।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 7.7,
+   "end": 10.66,
+   "speech_end": 10.36,
+   "text": "गैस cylinder वाला घर पर आया है।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 10.66,
+   "end": 12.8,
+   "speech_end": 12.5,
+   "text": "बुकिंग मैंने app से की थी।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 17.82,
+   "end": 21.72,
+   "speech_end": 21.42,
+   "text": "आपके फ़ोन पर Indian Gas का डिलीवरी कोड आया होगा।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 21.72,
+   "end": 23.64,
+   "speech_end": 23.34,
+   "text": "वो OTP मुझे बता दो।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 23.64,
+   "end": 25.34,
+   "speech_end": 25.04,
+   "text": "मैं उसको बोल देता हूं।",
+   "language": "hi",
+   "source": "sarvam"
+  }
+ ]
+}

@@ -1,0 +1,42 @@
+{
+ "format": 1,
+ "wav": "redial.wav",
+ "wav_sha256": "bc90fc3fd97a6eb27bd64f21243ec337d0d38f115a2b13d413353d640afb051d",
+ "created": "2026-10-17T23:11:40+0530",
+ "stt": "saaras:v3/codemix",
+ "chunking": {
+  "min_s": 1.5,
+  "max_s": 4.0,
+  "pause_ms": 300,
+  "silence_rms": 120.0
+ },
+ "segments": [
+  {
+   "speaker": "caller",
+   "start": 0.32,
+   "end": 2.52,
+   "speech_end": 2.22,
+   "text": "हेलो मैडम, कॉल कर गया था।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 2.52,
+   "end": 4.98,
+   "speech_end": 4.68,
+   "text": "मैं CBI ऑफिसर शर्मा बोल रहा हूं।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 9.64,
+   "end": 13.14,
+   "speech_end": 12.84,
+   "text": "आपका case अभी बंद नहीं हुआ है phone मत काटिए",
+   "language": "hi",
+   "source": "sarvam"
+  }
+ ]
+}

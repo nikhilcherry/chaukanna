@@ -1,0 +1,37 @@
+{
+ "call": "scam_en",
+ "voice": "aditya",
+ "seconds": 67.3,
+ "timeline": [
+  {
+   "start": 0.5,
+   "end": 7.4,
+   "text": "Hello, good afternoon. I am calling from Blue Dart courier. A parcel has been booked in your name."
+  },
+  {
+   "start": 12.4,
+   "end": 15.89,
+   "text": "Are you at home right now? I need to confirm your address."
+  },
+  {
+   "start": 20.89,
+   "end": 27.5,
+   "text": "Madam, the parcel is held at Mumbai customs, and it is linked to your Aadhaar card."
+  },
+  {
+   "start": 32.5,
+   "end": 39.31,
+   "text": "We found drugs and fake passports inside. A money laundering case has been registered against you."
+  },
+  {
+   "start": 44.31,
+   "end": 51.59,
+   "text": "I am transferring your call to the CBI officer. Do not tell anyone about this, and do not disconnect the call."
+  },
+  {
+   "start": 56.59,
+   "end": 62.25,
+   "text": "For verification, you have received an OTP on your phone. Tell me the OTP quickly."
+  }
+ ]
+}

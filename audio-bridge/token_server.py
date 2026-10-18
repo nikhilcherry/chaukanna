@@ -1,0 +1,507 @@
+"""Tiny token minter + static host for scammer_dialer.html (stdlib http.server).
+
+    python token_server.py            # http://localhost:8787  (open it, that's the dialer)
+
+Callers can only join as identity "caller-*", can publish audio, and cannot read data
+messages meant for the victim. The phone number goes into participant metadata, which
+the bridge reads as caller_number.
+
+GET /victim-token?key=<VICTIM_TOKEN_KEY> -> {"token","url"} for the Flutter app's
+--dart-define=LIVEKIT_TOKEN_URL. It is off (404) unless VICTIM_TOKEN_KEY is set, because a
+victim token can read the guardian's data messages and the dialer is meant to be public.
+
+GET /console/ is the guardian console (console/index.html): every call the bridge heard, replayed
+chunk by chunk, or followed live. Its call API (/console/api/...) carries transcripts, so it only
+answers on this machine (loopback) unless ?key=<CONSOLE_KEY> matches, and it sends no CORS header.
+/console/api/health checks every part of the system for the console's status strip, and
+/console/api/network joins the call logs, the classifier's lists and Supabase (through the n8n
+feed workflow, CONTRACTS §7) into one graph.
+"""
+import calendar
+import hmac
+import json
+import os
+import re
+import subprocess
+import threading
+import time
+import urllib.error
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse, urlsplit
+
+from dotenv import load_dotenv
+from livekit import api
+
+import calllog
+import procs
+import tokens
+from config import DEFAULT_CALL_LOG_DIR
+
+load_dotenv()
+HERE = Path(__file__).parent
+CONSOLE = HERE / "console"
+STATIC = {".html": "text/html; charset=utf-8", ".json": "application/json", ".jsonl": "application/x-ndjson",
+          ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml"}
+
+
+def mint(room: str, identity: str, name: str, phone: str) -> str:
+    grants = api.VideoGrants(room_join=True, room=room, can_publish=True, can_subscribe=True, can_publish_data=False)
+    return (api.AccessToken(os.environ["LIVEKIT_API_KEY"], os.environ["LIVEKIT_API_SECRET"])
+            .with_identity(identity).with_name(name or identity)
+            .with_metadata(json.dumps({"phone": phone})).with_grants(grants).to_jwt())
+
+
+def call_log_dir() -> str:
+    return os.getenv("CALL_LOG_DIR", DEFAULT_CALL_LOG_DIR)
+
+
+# --------------------------------------------------------------------------- system checks (console)
+UA = "chaukanna-console/1"           # Cloudflare in front of n8n rejects urllib's default user agent
+_cache: dict[str, tuple[float, object]] = {}
+_cache_lock = threading.Lock()
+
+
+def cached(key: str, ttl: float, fn):
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit and time.monotonic() - hit[0] < ttl:
+            return hit[1]
+    val = fn()
+    with _cache_lock:
+        _cache[key] = (time.monotonic(), val)
+    return val
+
+
+def get_json(url: str, headers: dict | None = None, timeout: float = 4.0):
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json", **(headers or {})})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read() or b"null")
+
+
+def probe(fn) -> dict:
+    """Run one check; never raises. {"ok", "ms", "data" | "error"}."""
+    t0 = time.monotonic()
+    try:
+        return {"ok": True, "data": fn(), "ms": int((time.monotonic() - t0) * 1000)}
+    except urllib.error.HTTPError as e:
+        err = f"HTTP {e.code}"
+    except (urllib.error.URLError, OSError) as e:
+        err = str(getattr(e, "reason", e))[:120]
+    except ValueError:
+        err = "not JSON"
+    return {"ok": False, "error": err, "ms": int((time.monotonic() - t0) * 1000)}
+
+
+def classifier_base() -> str:
+    u = os.getenv("CLASSIFIER_URL", "http://localhost:8010/classify").rstrip("/")
+    return u[: -len("/classify")] if u.endswith("/classify") else u
+
+
+def n8n_urls() -> tuple[str, str]:
+    """(health URL, console feed URL) derived from N8N_WEBHOOK_URL; CONSOLE_FEED_URL overrides the feed."""
+    hook = os.getenv("N8N_WEBHOOK_URL", "")
+    if not hook:
+        return "", os.getenv("CONSOLE_FEED_URL", "")
+    p = urlsplit(hook)
+    base = f"{p.scheme}://{p.netloc}"
+    return base + "/healthz", os.getenv("CONSOLE_FEED_URL") or base + "/webhook/chaukanna-network"
+
+
+def supabase_feed() -> dict:
+    """Supabase incidents, scam numbers and trusted contacts via the n8n feed (no transcripts)."""
+    _, url = n8n_urls()
+    key = os.getenv("CONSOLE_FEED_KEY", "")
+    if not url or not key:
+        return {"ok": False, "error": "CONSOLE_FEED_KEY / N8N_WEBHOOK_URL not set", "ms": 0}
+    return cached("feed", 8, lambda: probe(lambda: get_json(url, {"X-Chaukanna-Key": key}, timeout=8)))
+
+
+def system_health() -> dict:
+    health_url, _ = n8n_urls()
+    with ThreadPoolExecutor(4) as ex:
+        cls = ex.submit(probe, lambda: get_json(classifier_base() + "/health", timeout=2))
+        n8n = ex.submit(probe, lambda: urllib.request.urlopen(
+            urllib.request.Request(health_url, headers={"User-Agent": UA}), timeout=3).status) if health_url else None
+        feed = ex.submit(supabase_feed)
+        cls, n8n, feed = cls.result(), (n8n.result() if n8n else {"ok": False, "error": "N8N_WEBHOOK_URL not set"}), feed.result()
+    st = calllog.read_status(call_log_dir()) if call_log_dir() else None
+    age = round(time.time() - st["ts"], 1) if st else None
+    bridge_ok = st is not None and age is not None and age < 3 * float(st.get("every_s") or 5)
+    fam = (feed.get("data") or {}).get("trusted_contacts") or []
+    out = {
+        "livekit": {"ok": bridge_ok, "detail": f"room {st.get('room')}" if bridge_ok else "the bridge is not in the room"},
+        "bridge": {"ok": bridge_ok, "age_s": age, "in_call": bool(st and st.get("in_call")),
+                   "detail": ("in a call" if st.get("in_call") else "listening") if bridge_ok else
+                   (f"last heartbeat {age:.0f}s ago" if age is not None else "no heartbeat yet")},
+        "victim_phone": {"ok": bool(bridge_ok and st.get("victim_present")),
+                         "detail": "connected" if bridge_ok and st.get("victim_present") else "not in the room"},
+        "classifier": {"ok": cls["ok"] and not (cls.get("data") or {}).get("circuit_open"),
+                       "detail": (f"{cls['data'].get('backend')} · {cls['data'].get('known_numbers')} listed numbers"
+                                  + (" · model circuit open" if cls["data"].get("circuit_open") else "")) if cls["ok"] else cls["error"]},
+        "n8n": {"ok": n8n["ok"], "detail": f"{n8n['ms']} ms" if n8n["ok"] else n8n.get("error", "")},
+        "supabase": {"ok": feed["ok"], "detail": (f"{len(feed['data'].get('incidents', []))} incidents" if feed["ok"]
+                                                  else feed.get("error", ""))},
+        "telegram": {"ok": bool(feed["ok"] and any(c.get("telegram_ready") for c in fam)),
+                     "detail": ("family chat id set" if any(c.get("telegram_ready") for c in fam) else
+                                "no real family chat id yet") if feed["ok"] else "unknown (Supabase unreachable)"},
+        "calls_log": {"ok": bool(call_log_dir()), "detail": call_log_dir() or "CALL_LOG_DIR is off"},
+        "checked": time.time(),
+    }
+    return out
+
+
+# --------------------------------------------------------------------------- n8n, step by step (console)
+_n8n_done: dict[str, dict] = {}     # finished executions never change: summarize once
+_n8n_lock = threading.Lock()
+N8N_KINDS = (("supabase", "database"), ("datatable", "database"), ("telegram", "telegram"), ("gemini", "ai"),
+             ("langchain", "ai"), ("openai", "ai"), ("httprequest", "http"), ("code", "code"),
+             ("respondtowebhook", "reply"), ("webhook", "trigger"),
+             ("wait", "wait"), (".if", "logic"), ("switch", "logic"), ("filter", "logic"), ("merge", "logic"), ("set", "code"))
+
+
+def n8n_api(path: str, timeout: float = 6):
+    key = os.getenv("N8N_API_KEY", "")
+    if not key:
+        raise ValueError("N8N_API_KEY not set")
+    base = os.getenv("N8N_API_URL", "http://localhost:5678/api/v1").rstrip("/")
+    return get_json(base + path, {"X-N8N-API-KEY": key}, timeout)
+
+
+def n8n_workflow_id() -> str:
+    return os.getenv("N8N_INCIDENT_WORKFLOW_ID", "3pABmPIJpygXS1Md")
+
+
+def n8n_kinds() -> dict[str, str]:
+    """Node name -> a short kind (database, telegram, ai, code, logic, ...) for icons."""
+    def load():
+        out = {}
+        for n in n8n_api(f"/workflows/{n8n_workflow_id()}").get("nodes", []):
+            t = n.get("type", "").lower()
+            out[n["name"]] = next((k for key, k in N8N_KINDS if key in t), "step")
+        return out
+    return cached("n8n-kinds", 600, load)
+
+
+def summarize_execution(ex: dict, kinds: dict[str, str]) -> dict:
+    """Which steps ran, when, how long, and whether they worked. Outputs are dropped: they carry transcripts."""
+    rd = ((ex.get("data") or {}).get("resultData") or {}).get("runData") or {}
+    steps, call_id, event = [], None, None
+    for name, runs in rd.items():
+        for r in runs or []:
+            main = ((r.get("data") or {}).get("main") or [])
+            status = r.get("executionStatus", "success")
+            steps.append({"node": name, "kind": kinds.get(name, "step"), "t": r.get("startTime"), "ms": r.get("executionTime"),
+                          "ok": status in ("success", "waiting") and not r.get("error"), "waiting": status == "waiting",
+                          "items": sum(len(x or []) for x in main)})
+    try:
+        j = rd["Normalize Event"][0]["data"]["main"][0][0]["json"]
+        call_id, event = j.get("call_id"), j.get("event")
+    except (KeyError, IndexError, TypeError):
+        pass
+    steps.sort(key=lambda s: s["t"] or 0)
+    return {"id": str(ex.get("id")), "status": ex.get("status"), "started": ex.get("startedAt"), "stopped": ex.get("stoppedAt"),
+            "call_id": call_id, "event": event, "steps": steps}
+
+
+_n8n_absent: set[int] = set()       # ids that 404'd below the newest id found: never there
+_n8n_meta: dict[int, dict] = {}     # id -> {"workflowId", "startedAt", "status"} for ids found by probing
+_n8n_hi = 0                         # newest execution id seen
+
+
+def _utc(ts: str | None) -> float:
+    try:
+        return calendar.timegm(time.strptime((ts or "")[:19], "%Y-%m-%dT%H:%M:%S"))   # n8n gives UTC
+    except ValueError:
+        return 0.0
+
+
+def n8n_progress(call_id: str, since: float) -> dict:
+    """The incident workflow's executions for one call, step by step, including ones still running.
+    The public API lists only finished executions, so running and waiting ones (an incident waits for
+    the victim's approval) are found by id: the gaps in the listing, and a few ids above the newest."""
+    global _n8n_hi
+    wf = n8n_workflow_id()
+    try:
+        kinds = n8n_kinds()
+        listing = cached("n8n-list", 1.0, lambda: n8n_api(f"/executions?workflowId={wf}&limit=15"))
+    except (ValueError, urllib.error.URLError, OSError) as e:
+        return {"ok": False, "error": str(getattr(e, "reason", e))[:120], "executions": []}
+    rows = {int(r["id"]): r for r in listing.get("data", [])}
+    with _n8n_lock:
+        _n8n_hi = max([_n8n_hi, *rows])
+        lo = min(rows) if rows else _n8n_hi
+        probe = [i for i in range(lo, _n8n_hi + 13) if i not in rows and i not in _n8n_absent]
+    newest_found, missing = 0, []
+    for i in probe:
+        meta = _n8n_meta.get(i)
+        if meta is None or meta.get("status") in ("running", "new", "waiting"):
+            try:
+                meta = n8n_api(f"/executions/{i}", timeout=3)
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    missing.append(i)
+                continue
+            except (ValueError, urllib.error.URLError, OSError):
+                continue
+            _n8n_meta[i] = {k: meta.get(k) for k in ("workflowId", "startedAt", "status")}
+        newest_found = max(newest_found, i)
+        if _n8n_meta[i].get("workflowId") == wf:
+            rows[i] = _n8n_meta[i]
+    with _n8n_lock:
+        _n8n_hi = max(_n8n_hi, newest_found)
+        _n8n_absent.update(i for i in missing if i < _n8n_hi)   # a gap below a real run never fills
+    out = []
+    for eid, row in sorted(rows.items()):
+        if since and _utc(row.get("startedAt")) < since - 5:
+            continue
+        with _n8n_lock:
+            summary = _n8n_done.get(str(eid))
+        if summary is None:
+            try:
+                summary = summarize_execution(n8n_api(f"/executions/{eid}?includeData=true"), kinds)
+            except (ValueError, urllib.error.URLError, OSError):
+                continue
+            if summary["status"] in ("success", "error", "crashed", "canceled"):
+                with _n8n_lock:
+                    _n8n_done[str(eid)] = summary
+        if not call_id or summary["call_id"] == call_id:
+            out.append(summary)
+    out.sort(key=lambda s: s["started"] or "")
+    return {"ok": True, "workflow": wf, "executions": out}
+
+
+# --------------------------------------------------------------------------- agent interception (console)
+AGENTS_DIR = HERE / "agents"
+VOICES = ("ritu", "priya", "neha", "kavya", "roopa", "aditya", "rahul", "kabir", "rohan", "sumit", "amit", "dev", "shubh")
+LANGS = ("auto", "hi", "en", "kn")
+
+
+def agents_state() -> dict:
+    agents = []
+    for f in sorted(AGENTS_DIR.glob("*.json")):
+        try:
+            a = json.loads(f.read_text())
+            agents.append({k: a.get(k) for k in ("id", "name", "voice", "language", "auto_pressure", "instructions", "builtin")})
+        except (OSError, ValueError):
+            continue
+    status = {}
+    try:
+        status = json.loads((Path(call_log_dir()) / "_agent.json").read_text())
+        status["age_s"] = round(time.time() - status.get("ts", 0), 1)
+    except (OSError, ValueError):
+        pass
+    return {"agents": agents, "interceptor": status, "voices": VOICES, "languages": LANGS, "live": live_state()}
+
+
+def add_agent(body: dict) -> tuple[int, dict]:
+    name = str(body.get("name", "")).strip()
+    instructions = str(body.get("instructions", "")).strip()
+    voice, lang = body.get("voice", "ritu"), body.get("language", "auto")
+    try:
+        auto = int(body.get("auto_pressure", 3))
+    except (TypeError, ValueError):
+        auto = 3
+    if not 2 <= len(name) <= 40 or not 10 <= len(instructions) <= 800 or voice not in VOICES or lang not in LANGS or auto not in (2, 3):
+        return 400, {"error": "need a name (2-40 chars), instructions (10-800 chars), a known voice and language, auto_pressure 2 or 3"}
+    aid = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:30] or "agent"
+    path = AGENTS_DIR / f"{aid}.json"
+    if path.exists() and json.loads(path.read_text()).get("builtin"):
+        return 409, {"error": f"{aid} is a built-in agent; pick another name"}
+    profile = {"id": aid, "name": name, "voice": voice, "language": lang, "auto_pressure": auto, "instructions": instructions}
+    AGENTS_DIR.mkdir(exist_ok=True)
+    path.write_text(json.dumps(profile, ensure_ascii=False, indent=2) + "\n")
+    return 200, {"ok": True, "agent": profile}
+
+
+def request_intercept(body: dict) -> tuple[int, dict]:
+    """Ask the standing-by interceptor (tools/interceptor.py) to join the call that is on now."""
+    agent = str(body.get("agent", ""))
+    if not (AGENTS_DIR / f"{agent}.json").is_file():
+        return 404, {"error": f"no agent {agent!r}"}
+    st = calllog.read_status(call_log_dir()) or {}
+    if not st.get("in_call") or not st.get("call_id"):
+        return 409, {"error": "no call is on right now"}
+    Path(call_log_dir(), "_intercept.json").write_text(json.dumps({"call_id": st["call_id"], "agent": agent, "ts": time.time()}))
+    return 200, {"ok": True, "call_id": st["call_id"], "agent": agent}
+
+
+# --------------------------------------------------------------------------- one-click live call (stage.html)
+_live: dict = {"proc": None, "lang": "", "ts": 0.0}
+_live_lock = threading.Lock()
+
+
+def live_state() -> dict:
+    """off / starting (demo/stage.sh live-bg is still bringing the system up) / on (the AI scammer is in the room)."""
+    p = _live["proc"]
+    if procs.find("tools/ai_scammer.py"):
+        state = "on"
+    elif p is not None and p.poll() is None:
+        state = "starting"
+    else:
+        state = "off"
+    try:
+        phone = (HERE / "demo" / "stage" / ".scam_number").read_text().strip()
+    except OSError:
+        phone = ""
+    return {"state": state, "lang": _live["lang"], "phone": phone, "since": _live["ts"]}
+
+
+def start_live(body: dict) -> tuple[int, dict]:
+    """The stage page's "Start live call": make sure the system is up, then the AI scammer calls Kamala."""
+    lang = body.get("lang", "hi")
+    if lang not in ("hi", "en"):
+        return 400, {"error": "lang is hi or en"}
+    with _live_lock:
+        if live_state()["state"] != "off":
+            return 409, {"error": "the AI scammer is already calling"}
+        st = calllog.read_status(call_log_dir()) or {}
+        if st.get("in_call") and time.time() - st.get("ts", 0) < 15:
+            return 409, {"error": "a call is on right now; let it end first"}
+        (HERE / "logs").mkdir(exist_ok=True)
+        with open(HERE / "logs" / "live.log", "ab") as log:
+            _live.update(proc=subprocess.Popen(["bash", str(HERE / "demo" / "stage.sh"), "live-bg", lang], cwd=HERE,
+                                               stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                                               start_new_session=True),     # outlives a token server restart
+                         lang=lang, ts=time.time())
+    return 200, {"ok": True, "lang": lang, "victim_present": bool(st.get("victim_present"))}
+
+
+def stop_live() -> tuple[int, dict]:
+    on = procs.find("tools/ai_scammer.py")
+    n = procs.stop("tools/ai_scammer.py")                     # SIGTERM: it hangs up like Ctrl-C
+    p = _live["proc"]
+    if p is not None and p.poll() is None and p.pid not in on:   # still starting (live-bg execs into the scammer)
+        p.terminate()
+        n += 1
+    return 200, {"ok": True, "stopped": n}
+
+
+def network() -> dict:
+    base = classifier_base()
+    with ThreadPoolExecutor(3) as ex:
+        nums = ex.submit(probe, lambda: get_json(base + "/scam_numbers", timeout=2))
+        trusted = ex.submit(probe, lambda: get_json(base + "/trusted_numbers", timeout=2))
+        feed = ex.submit(supabase_feed)
+        nums, trusted, feed = nums.result(), trusted.result(), feed.result()
+    return {
+        "calls": calllog.summarize(call_log_dir(), limit=300) if call_log_dir() else [],
+        "classifier": {"ok": nums["ok"], "scam_numbers": (nums.get("data") or {}).get("numbers", []),
+                       "trusted": (trusted.get("data") or {}).get("numbers", []), "error": nums.get("error")},
+        "supabase": {"ok": feed["ok"], **({k: feed["data"].get(k, []) for k in ("incidents", "scam_numbers", "trusted_contacts")}
+                                          if feed["ok"] else {"error": feed.get("error")})},
+        "default_victim_id": os.getenv("VICTIM_ID", "demo-victim-1"),
+        "checked": time.time(),
+    }
+
+
+class H(BaseHTTPRequestHandler):
+    def _send(self, code, body: bytes, ctype="application/json", cors=True, extra=()):
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        if cors:
+            self.send_header("Access-Control-Allow-Origin", "*")
+        for k, v in extra:
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _console_allowed(self, q: dict) -> bool:
+        want = os.getenv("CONSOLE_KEY", "")
+        if want and hmac.compare_digest(q.get("key", "").encode(), want.encode()):
+            return True
+        return self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+
+    def _console(self, u) -> None:
+        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        rest = u.path[len("/console/"):]
+        if rest.startswith("api/"):
+            if not self._console_allowed(q):
+                return self._send(403, b'{"error":"the console API answers on this machine only"}', cors=False)
+            if rest == "api/agents":
+                return self._send(200, json.dumps(agents_state(), ensure_ascii=False).encode(), cors=False,
+                                  extra=[("Cache-Control", "no-store")])
+            if rest == "api/n8n":
+                since = float(q["since"]) if re.fullmatch(r"\d{9,11}(\.\d+)?", q.get("since", "")) else 0.0
+                call = q.get("call", "") if re.fullmatch(r"[A-Za-z0-9_-]{0,80}", q.get("call", "")) else ""
+                return self._send(200, json.dumps(n8n_progress(call, since)).encode(), cors=False,
+                                  extra=[("Cache-Control", "no-store")])
+            if rest in ("api/health", "api/network"):
+                body = cached(rest, 4, system_health) if rest == "api/health" else cached(rest, 2, network)
+                return self._send(200, json.dumps(body, ensure_ascii=False).encode(), cors=False,
+                                  extra=[("Cache-Control", "no-store")])
+            if rest == "api/calls":
+                rows = calllog.summarize(call_log_dir())
+                return self._send(200, json.dumps({"calls": rows, "dir_set": bool(call_log_dir())}).encode(),
+                                  cors=False, extra=[("Cache-Control", "no-store")])
+            m = re.fullmatch(r"api/calls/([A-Za-z0-9_-]{1,80})", rest)
+            if m:
+                start = int(q["from"]) if q.get("from", "").isdigit() else 0
+                recs = calllog.read_call(call_log_dir(), m.group(1), start) if call_log_dir() else None
+                if recs is None:
+                    return self._send(404, b'{"error":"no such call"}', cors=False)
+                return self._send(200, json.dumps({"from": start, "records": recs}, ensure_ascii=False).encode(),
+                                  cors=False, extra=[("Cache-Control", "no-store")])
+            return self._send(404, b'{"error":"not found"}', cors=False)
+        if rest == "":
+            rest = "index.html"
+        f = (CONSOLE / rest).resolve()
+        if not re.fullmatch(r"[A-Za-z0-9_./-]{1,120}", rest) or ".." in rest or CONSOLE.resolve() not in f.parents \
+                or not f.is_file() or f.suffix not in STATIC:
+            return self._send(404, b'{"error":"not found"}')
+        self._send(200, f.read_bytes(), STATIC[f.suffix])
+
+    def do_POST(self):
+        """Console actions: add an agent, ask for an interception, start or end the live AI call. Loopback (or
+        CONSOLE_KEY) only, like the call API: starting a call spends Sarvam + Gemini credit."""
+        u = urlparse(self.path)
+        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        if u.path not in ("/console/api/agents", "/console/api/intercept", "/console/api/live", "/console/api/live/stop"):
+            return self._send(404, b'{"error":"not found"}', cors=False)
+        if not self._console_allowed(q):
+            return self._send(403, b'{"error":"the console API answers on this machine only"}', cors=False)
+        n = int(self.headers.get("Content-Length") or 0)
+        if n > 8192:
+            return self._send(413, b'{"error":"too big"}', cors=False)
+        try:
+            body = json.loads(self.rfile.read(n) or b"{}")
+            assert isinstance(body, dict)
+        except (ValueError, AssertionError):
+            return self._send(400, b'{"error":"send a JSON object"}', cors=False)
+        code, out = {"/console/api/agents": add_agent, "/console/api/intercept": request_intercept,
+                     "/console/api/live": start_live, "/console/api/live/stop": lambda _: stop_live()}[u.path](body)
+        self._send(code, json.dumps(out, ensure_ascii=False).encode(), cors=False)
+
+    def do_GET(self):
+        u = urlparse(self.path)
+        if u.path == "/console":
+            return self._send(302, b"", "text/plain", extra=[("Location", "/console/" + (f"?{u.query}" if u.query else ""))])
+        if u.path.startswith("/console/"):
+            return self._console(u)
+        if u.path in ("/", "/scammer_dialer.html"):
+            return self._send(200, (HERE / "scammer_dialer.html").read_bytes(), "text/html; charset=utf-8")
+        if u.path == "/token":
+            q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            room = q.get("room") or os.getenv("LIVEKIT_ROOM", "chaukanna")
+            ident = re.sub(r"[^a-zA-Z0-9_-]", "", q.get("identity", ""))[:40] or "dialer"
+            if not ident.startswith("caller-"):
+                ident = "caller-" + ident
+            tok = mint(room, ident, q.get("name", ""), q.get("phone", ""))
+            return self._send(200, json.dumps({"token": tok, "url": os.getenv("LIVEKIT_URL", ""), "room": room, "identity": ident}).encode())
+        if u.path == "/victim-token":
+            want = os.getenv("VICTIM_TOKEN_KEY", "")
+            got = parse_qs(u.query).get("key", [""])[0]
+            if not want or not hmac.compare_digest(got.encode(), want.encode()):
+                return self._send(404, b'{"error":"not found"}')
+            room = os.getenv("LIVEKIT_ROOM", "chaukanna")
+            tok = tokens.mint("victim", room, ttl=tokens.parse_ttl(os.getenv("VICTIM_TOKEN_TTL", "12h")))
+            return self._send(200, json.dumps({"token": tok, "url": os.getenv("LIVEKIT_URL", ""), "room": room, "identity": "victim"}).encode())
+        self._send(404, b'{"error":"not found"}')
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("TOKEN_SERVER_PORT", "8787"))
+    print(f"dialer + token server on http://0.0.0.0:{port}")
+    ThreadingHTTPServer(("0.0.0.0", port), H).serve_forever()

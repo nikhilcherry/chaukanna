@@ -1,0 +1,60 @@
+{
+ "format": 1,
+ "wav": "synthetic_innocent_call_hinglish.wav",
+ "wav_sha256": "6e651c0c8b41827549287386b60270d1c91fec243a66139ad8ec7a19e0ad642c",
+ "created": "2026-10-15T20:07:35+0530",
+ "stt": "saaras:v3/codemix",
+ "chunking": {
+  "min_s": 1.5,
+  "max_s": 4.0,
+  "pause_ms": 300,
+  "silence_rms": 120.0
+ },
+ "segments": [
+  {
+   "speaker": "caller",
+   "start": 0.22,
+   "end": 4.18,
+   "speech_end": 3.88,
+   "text": "नमस्ते आंटी मैं Amazon delivery से रवि बोल रहा हूँ।",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "victim",
+   "start": 4.5,
+   "end": 6.3,
+   "speech_end": 6.0,
+   "text": "हाँ बेटा बोलो",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 6.54,
+   "end": 10.22,
+   "speech_end": 10.18,
+   "text": "आपका parcel आ गया है मैं gate पर हूँ आप नीचे आ सकते हैं",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "caller",
+   "start": 10.22,
+   "end": 11.72,
+   "speech_end": 10.58,
+   "text": "ठीक है",
+   "language": "hi",
+   "source": "sarvam"
+  },
+  {
+   "speaker": "victim",
+   "start": 11.14,
+   "end": 12.98,
+   "speech_end": 12.68,
+   "text": "हाँ 2 मिनट में आती हूँ",
+   "language": "hi",
+   "source": "sarvam"
+  }
+ ]
+}
