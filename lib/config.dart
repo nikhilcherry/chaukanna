@@ -50,6 +50,11 @@ class AppConfig {
   /// Hang up automatically a few seconds after a known-scammer warning.
   static const autoBlockKnownScammers = bool.fromEnvironment('AUTO_BLOCK_KNOWN', defaultValue: true);
 
+  /// Stage demo only: the laptop running the bridge's token_server (e.g. http://localhost:8787 over
+  /// `adb reverse tcp:8787 tcp:8787`). Set = the idle screen offers "Get a live scam call", which asks it
+  /// (POST /console/api/live) to have the AI scammer call this phone. Empty = no such button.
+  static const stageUrl = String.fromEnvironment('STAGE_URL');
+
   static bool get phoneLayerConfigured => callerTokenUrl.isNotEmpty && liveKitConfigured;
 
   static bool get liveKitConfigured => livekitTokenUrl.isNotEmpty || (livekitUrl.isNotEmpty && livekitToken.isNotEmpty);

@@ -22,13 +22,24 @@ class CallerInfo {
 /// incident message, and it reconnects with backoff if the room drops. Mic and
 /// remote audio are switched per call rather than by leaving the room.
 class LiveKitTransport {
-  LiveKitTransport({required this.onData, required this.onCallerJoined, required this.onCallerLeft, required this.log});
+  LiveKitTransport({
+    required this.onData,
+    required this.onCallerJoined,
+    required this.onCallerLeft,
+    required this.log,
+    this.onAgentJoined,
+    this.onAgentLeft,
+  });
 
   static const guardianIdentity = 'chaukanna-guardian';
 
   final void Function(List<int> data, String? topic) onData;
   final void Function(CallerInfo caller) onCallerJoined;
   final void Function(String identity) onCallerLeft;
+
+  /// A Chaukanna agent (identity `agent-*`) joined to intercept the call, or left.
+  final void Function(String identity, String name)? onAgentJoined;
+  final void Function(String identity)? onAgentLeft;
   final void Function(String message, {bool important}) log;
 
   final ValueNotifier<LinkState> state = ValueNotifier(LinkState.off);
@@ -40,12 +51,17 @@ class LiveKitTransport {
   bool _disposed = false;
   bool _micOn = false;
   bool _remoteAudioOn = true;
+  bool _intercepted = false;
   bool _speaker = AppConfig.speakerByDefault;
 
   String get roomName => _room?.name ?? '';
 
+  static const agentPrefix = 'agent-';
+
+  static bool isAgent(String identity) => identity.startsWith(agentPrefix);
+
   static bool isCaller(String identity) =>
-      identity.isNotEmpty && identity != guardianIdentity && identity != AppConfig.victimIdentity;
+      identity.isNotEmpty && identity != guardianIdentity && identity != AppConfig.victimIdentity && !isAgent(identity);
 
   Future<void> start() async {
     if (!AppConfig.liveKitConfigured) {
@@ -79,9 +95,11 @@ class LiveKitTransport {
         ..on<ParticipantConnectedEvent>((e) => _joined(e.participant))
         ..on<ParticipantDisconnectedEvent>((e) {
           if (isCaller(e.participant.identity)) onCallerLeft(e.participant.identity);
+          if (isAgent(e.participant.identity)) onAgentLeft?.call(e.participant.identity);
         })
         ..on<TrackSubscribedEvent>((e) {
-          if (!_remoteAudioOn && e.track is RemoteAudioTrack) unawaited(e.track.disable());
+          final muteCaller = _intercepted && isCaller(e.participant.identity);
+          if ((!_remoteAudioOn || muteCaller) && e.track is RemoteAudioTrack) unawaited(e.track.disable());
         })
         ..on<RoomReconnectingEvent>((_) => state.value = LinkState.reconnecting)
         ..on<RoomReconnectedEvent>((_) => state.value = LinkState.connected)
@@ -118,6 +136,10 @@ class LiveKitTransport {
   }
 
   void _joined(RemoteParticipant p) {
+    if (isAgent(p.identity)) {
+      onAgentJoined?.call(p.identity, p.name.isNotEmpty ? p.name : p.identity);
+      return;
+    }
     if (!isCaller(p.identity)) return;
     var number = '';
     try {
@@ -126,6 +148,35 @@ class LiveKitTransport {
     } catch (_) {}
     if (number.isEmpty) number = p.name.isNotEmpty ? p.name : p.identity;
     onCallerJoined(CallerInfo(p.identity, number));
+  }
+
+  /// Agent interception: while [on], only the guardian and the [agents] may hear the victim's mic
+  /// (the caller hears nothing), and the caller's audio is muted on this phone, so she hears only the agent.
+  Future<void> setIntercepted(bool on, Iterable<String> agents) async {
+    _intercepted = on;
+    final room = _room;
+    if (room == null) return;
+    try {
+      room.localParticipant?.setTrackSubscriptionPermissions(
+        allParticipantsAllowed: !on,
+        trackPermissions: on
+            ? [
+                const ParticipantTrackPermission(guardianIdentity, true, null),
+                for (final a in agents) ParticipantTrackPermission(a, true, null),
+              ]
+            : const [],
+      );
+      for (final p in room.remoteParticipants.values.where((p) => isCaller(p.identity))) {
+        for (final pub in p.audioTrackPublications) {
+          final track = pub.track;
+          if (track == null) continue;
+          await (on || !_remoteAudioOn ? track.disable() : track.enable());
+        }
+      }
+      log(on ? 'Intercepted: the caller can no longer hear this phone' : 'Interception over');
+    } catch (e) {
+      log('Interception switch failed: $e', important: true);
+    }
   }
 
   void _onDisconnected(Room room, DisconnectReason? reason) {
@@ -186,6 +237,19 @@ class LiveKitTransport {
   }
 
   /// Tell the guardian what an OTP SMS on this phone is for (CONTRACTS.md §6). Never the code.
+  /// She hung up on the caller. A real phone call is ended by the phone layer; a caller that is software (the
+  /// stage's AI scammer, bridge tools/ai_scammer.py) only learns it from this message, since her muted mic
+  /// looks the same as tapping Mute.
+  Future<void> sendHangUp(String callId) async {
+    final me = _room?.localParticipant;
+    if (me == null) return;
+    try {
+      await me.publishData(utf8.encode(jsonEncode({'call_id': callId})), reliable: true, topic: 'chaukanna.hangup');
+    } catch (e) {
+      log('Hang-up not sent to the room: $e');
+    }
+  }
+
   Future<bool> sendOtpSms(Map<String, Object?> context) async {
     final me = _room?.localParticipant;
     if (me == null) return false;

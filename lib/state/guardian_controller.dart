@@ -120,6 +120,8 @@ class GuardianController extends ChangeNotifier {
         onCallerJoined: _onCallerJoined,
         onCallerLeft: _onCallerLeft,
         log: (m, {important = false}) => _log(m, important: important),
+        onAgentJoined: _onAgentJoined,
+        onAgentLeft: _onAgentLeft,
       );
       t.state.addListener(_notify);
       _transport = t;
@@ -372,15 +374,12 @@ class GuardianController extends ChangeNotifier {
   /// so it can tell a delivery code from a payment OTP. The code itself never leaves the phone.
   void _watchOtpSms() {
     if (_transport == null || kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
-    _smsSub = SmsWatcher.messages().listen(
-      (sms) {
-        final ctx = classifyOtpSms(sms.sender, sms.body);
-        if (ctx == null) return;
-        _log('OTP SMS: ${ctx.describe()} (the code stays on this phone)');
-        unawaited(_transport?.sendOtpSms(ctx.toJson()));
-      },
-      onError: (Object e) => _log('SMS watch unavailable: $e'),
-    );
+    _smsSub = SmsWatcher.messages().listen((sms) {
+      final ctx = classifyOtpSms(sms.sender, sms.body);
+      if (ctx == null) return;
+      _log('OTP SMS: ${ctx.describe()} (the code stays on this phone)');
+      unawaited(_transport?.sendOtpSms(ctx.toJson()));
+    }, onError: (Object e) => _log('SMS watch unavailable: $e'));
   }
 
   void _tick() {
@@ -552,6 +551,28 @@ class GuardianController extends ChangeNotifier {
     if (m.callId.isEmpty || callId == null || m.callId == callId) unawaited(endCall(reason: 'The caller hung up'));
   }
 
+  // ---- agent interception --------------------------------------------------
+  final Map<String, String> _agents = {};
+
+  /// The Chaukanna agent who has taken over the call, if any.
+  String? get agentOnLine => _agents.isEmpty ? null : _agents.values.first;
+
+  void _onAgentJoined(String identity, String name) {
+    if (_disposed) return;
+    _agents[identity] = name;
+    _log('Agent $name joined: the call is intercepted', important: true);
+    _emit('$name from Chaukanna is on the line for you. The caller can no longer hear you.');
+    unawaited(_transport?.setIntercepted(true, _agents.keys));
+    _notify();
+  }
+
+  void _onAgentLeft(String identity) {
+    if (_disposed || _agents.remove(identity) == null) return;
+    _log('Agent left');
+    if (_agents.isEmpty) unawaited(_transport?.setIntercepted(false, const []));
+    _notify();
+  }
+
   void _onCallerJoined(CallerInfo info) {
     if (_disposed) return;
     if (phase == CallPhase.active && !simulated) {
@@ -671,9 +692,11 @@ class GuardianController extends ChangeNotifier {
     _whisperToken++;
     if (whisper.playing) whisper = WhisperState(WhisperStatus.stopped, clip: whisper.clip);
     // Hanging up (or an auto-block) must end the real phone call too.
-    if (_phoneCallActive && (reason == 'You hung up' || reason.startsWith('Blocked'))) {
+    final hungUp = reason == 'You hung up' || reason.startsWith('Blocked');
+    if (_phoneCallActive && hungUp) {
       unawaited(_phone?.endCall());
     }
+    if (hungUp && !simulated) unawaited(_transport?.sendHangUp(callId ?? ''));
     _micPausedForWhisper = false;
     _callerDucked = false;
     alarmActive = false;
@@ -783,6 +806,10 @@ class GuardianController extends ChangeNotifier {
   }
 
   Future<void> _playWhisper(String clip, String lang) async {
+    if (_agents.isNotEmpty) {
+      _log('Whisper $clip skipped: an agent is talking to her');
+      return;
+    }
     if (!_gate.tryAcquire(clip, _now())) {
       _log('Whisper $clip skipped: already played in the last ${_gate.window.inSeconds} s');
       return;

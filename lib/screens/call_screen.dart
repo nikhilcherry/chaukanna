@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config.dart';
 import '../models/scam_profile.dart';
 import '../services/livekit_service.dart';
+import '../services/stage_client.dart';
 import '../state/guardian_controller.dart';
 import '../theme.dart';
 import '../widgets/guardian_badge.dart';
@@ -132,6 +134,11 @@ class CallScreen extends StatelessWidget {
                   final banners = [
                     if (c.micPausedForWhisper)
                       const _Banner(Icons.mic_off, 'Your microphone is paused while Chaukanna warns you.'),
+                    if (c.agentOnLine != null)
+                      _Banner(
+                        Icons.support_agent,
+                        '${c.agentOnLine} is on the line for you. The caller can no longer hear you.',
+                      ),
                     if (c.incident != null) _ResponseBanner(c: c),
                   ];
                   // The alert block never takes more than ~55% of what is left (it scrolls
@@ -410,6 +417,10 @@ class _IdleView extends StatelessWidget {
             ],
           ),
           if (c.phoneLayerAvailable) ...[const SizedBox(height: 18), const PhoneProtectionCard()],
+          if (AppConfig.stageUrl.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _LiveCallCard(ready: c.link == LinkState.connected),
+          ],
           const SizedBox(height: 26),
           Text('Demo simulator', style: display(24, color: Pal.ink)),
           const SizedBox(height: 4),
@@ -489,6 +500,89 @@ class _IdleView extends StatelessWidget {
               label: const Text('Debug log'),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Stage demo: one tap and the laptop's AI scammer calls this phone, live (STAGE_URL).
+class _LiveCallCard extends StatefulWidget {
+  const _LiveCallCard({required this.ready});
+  final bool ready;
+
+  @override
+  State<_LiveCallCard> createState() => _LiveCallCardState();
+}
+
+class _LiveCallCardState extends State<_LiveCallCard> {
+  final _stage = StageClient();
+  String _lang = 'hi';
+  bool _busy = false;
+  String? _note;
+  bool _failed = false;
+
+  Future<void> _start() async {
+    setState(() {
+      _busy = true;
+      _note = null;
+    });
+    final err = await _stage.startLiveCall(_lang);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _failed = err != null;
+      _note = err ?? 'Calling you now. Answer and talk back.';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Live demo call', style: display(22, color: Pal.ink)),
+          const SizedBox(height: 4),
+          const Text(
+            'An AI scammer calls you right now. Talk back to it; Chaukanna listens and steps in.',
+            style: TextStyle(fontSize: 16, height: 1.4, color: Pal.dim, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<String>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: 'hi', label: Text('हिंदी')),
+              ButtonSegment(value: 'en', label: Text('English')),
+            ],
+            selected: {_lang},
+            onSelectionChanged: _busy ? null : (s) => setState(() => _lang = s.first),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 64,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: Pal.red, foregroundColor: Colors.white),
+              onPressed: widget.ready && !_busy ? _start : null,
+              icon: _busy
+                  ? const SizedBox.square(
+                      dimension: 24,
+                      child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+                    )
+                  : const Icon(Icons.phone_callback_rounded, size: 30),
+              label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Get a live scam call')),
+            ),
+          ),
+          if (!widget.ready || _note != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                !widget.ready ? 'Waiting for the call server…' : _note!,
+                style: TextStyle(fontSize: 15, color: _failed ? Pal.red : Pal.dim, fontWeight: FontWeight.w600),
+              ),
+            ),
         ],
       ),
     );
