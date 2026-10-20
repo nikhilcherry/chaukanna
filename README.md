@@ -1,122 +1,84 @@
-# Chaukanna (चौकन्ना): live scam-call guardian
+<div align="center">
 
-![license](https://img.shields.io/badge/license-MIT-lightgrey) ![hackathon](https://img.shields.io/badge/Hack%20Sprint-2026-5a45c9) ![eval](https://img.shields.io/badge/scam%20calls%20caught-28%2F28-3fb950) ![false alarms](https://img.shields.io/badge/false%20alarms-0%2F19-3fb950)
+# Chaukanna (चौकन्ना)
+### A scam-call guardian that listens to the call with you.
 
-![Chaukanna](media/cover.png)
+![license](https://img.shields.io/badge/license-MIT-lightgrey) ![Hack Sprint](https://img.shields.io/badge/Hack%20Sprint-2026-5a45c9) ![Flutter](https://img.shields.io/badge/Flutter-02569B?logo=flutter&logoColor=white) ![LiveKit](https://img.shields.io/badge/LiveKit-WebRTC-111) ![n8n](https://img.shields.io/badge/n8n-EA4B71)
 
-**Chaukanna listens to the call with you. When a caller starts a digital-arrest, KYC or OTP script, it whispers a
-warning that only you can hear, in your language. On a critical call an AI safety agent cuts the scammer off.
-n8n handles the response: evidence goes to Supabase, the number goes on a shared scam list, and Gemini drafts a
-1930 cybercrime complaint for you to approve.**
+**[▶ Watch the 2-minute demo](https://youtu.be/8vpouj2xdso)**
 
-Built at Hack Sprint 2026 (MIT Bengaluru, 17–18 Oct) by Nikhil, Shreyas, Koustav and Deekshitha (NMIT).
+<img src="media/demo-whisper.gif" alt="A digital-arrest call: Chaukanna warns the victim in Hindi, then escalates to a critical alarm" width="760">
 
-▶ **Demo video:** [YouTube](https://youtu.be/8vpouj2xdso) · [`media/chaukanna-demo.mp4`](media/chaukanna-demo.mp4) (1 min 54 s, laptop stage view and the victim's phone side by side). It is a real run on the
-live stack, in real time. A robot caller plays a recorded Hindi digital-arrest script into the call, and
-everything after that is live: Sarvam STT, the classifier, the whispers, the interceptor agent and n8n.
+<sub>A real run on the live stack, not a mock-up. The scammer is a robot playing a recorded Hindi script into the call.</sub>
 
-![Stage view at the end of the demo call](media/stage-view.png)
+</div>
 
-## Screens
+When a caller starts a digital-arrest, KYC or OTP script, Chaukanna **whispers a warning only the victim hears, in their language**. On a critical call an AI safety agent cuts the scammer off, and an n8n workflow saves the evidence, blocklists the number and drafts the 1930 cybercrime complaint for a human to approve.
 
-<table>
-  <tr>
-    <td align="center"><img src="app/docs/screenshots/app-1-idle.png" width="190"><br><sub>Idle, guardian on</sub></td>
-    <td align="center"><img src="app/docs/screenshots/app-3-call-rising-pressure.png" width="190"><br><sub>Pressure rising mid-call</sub></td>
-    <td align="center"><img src="app/docs/screenshots/app-4-alarm-digital-arrest-hi.png" width="190"><br><sub>Whisper + alarm (Hindi)</sub></td>
-    <td align="center"><img src="app/docs/screenshots/app-8-post-call-complaint.png" width="190"><br><sub>Drafted 1930 complaint</sub></td>
-  </tr>
-</table>
+| 28 / 28 | 0 / 19 | ~0.3 s |
+|:---:|:---:|:---:|
+| scam calls caught, right type named | false alarms on ordinary calls | per verdict (keyword fast path under 5 ms) |
 
-| Live stage console | n8n incident workflow |
-|---|---|
-| ![Stage console following a call](audio-bridge/docs/screenshots/console.png) | ![n8n incident-response canvas](incident-responder/docs/screenshots/n8n-canvas.png) |
+## Why it exists
 
-## The problem
-
-Digital-arrest scams run on panic. A fake courier, police or CBI caller keeps the victim on the line, tells
-them to keep it secret, and asks for OTPs and transfers. The right response is a checklist: hang up, call the
-bank, call 1930, keep evidence, warn the family. Under panic almost nobody gets through it in time, and the
-victims are mostly elders and first-time digital users. Static block-lists miss new numbers, and the scripts
-keep changing language.
+Digital-arrest scams run on panic. The right response is a checklist (hang up, call the bank, call 1930, keep evidence, warn the family) and under panic almost nobody gets through it in time. The victims are mostly elders and first-time digital users, and block-lists miss new numbers. Chaukanna does the checklist for them, live.
 
 ## How it works
 
 ```
- Caller ─┐                                   ┌─ Victim's phone (Flutter app)
-         └──────── LiveKit room ─────────────┘      ▲ whisper + alarm (only she hears it)
-                        │                            │
-              audio-bridge (hears each leg separately)
-                        │ 4 s chunks
-                  Sarvam STT (hi / en / kn)
-                        │
-        classifier: keyword fast path (<5 ms) + Jev typed verdict (~0.3 s), Gemini fallback
-          {scam_type, pressure 0–3, asks_otp_or_pin, demands_secrecy, known_scammer}
-                        │
-     ┌──────────────────┼──────────────────────────────┐
-  P2: whisper      P3: AI safety agent joins,     n8n incident workflow
-  (Sarvam TTS,     talks to the victim only,      evidence → Supabase, caller blocklisted,
-  pre-generated)   caller is cut off              Gemini drafts the 1930 complaint (she approves),
-                                                  family alert on Telegram
+Caller ──┐                                  ┌── Victim's phone (Flutter): whisper + alarm
+         └────────── LiveKit room ──────────┘
+                          │
+              audio-bridge: hears each leg separately, 4 s chunks
+                          │
+                 Sarvam STT (hi / en / kn)
+                          │
+      classifier: keyword fast path + Jev typed verdict, Gemini fallback
+                          │
+       ┌──────────────────┼───────────────────────────┐
+   whisper (P2)    AI safety agent (P3)         n8n incident workflow
+   pre-generated   talks to the victim,         evidence → Supabase, number blocklisted,
+   TTS clip        scammer is cut off           Gemini drafts the 1930 complaint, family alerted
 ```
 
-| Step | What happens | Tech |
-|---|---|---|
-| Listen | The call runs through a LiveKit room. The bridge hears caller and victim on separate legs | Flutter, LiveKit (WebRTC), Python |
-| Understand | Streaming Indic STT, then a typed verdict per chunk | Sarvam STT, keywords, Jev (TypeSafe), Gemini fallback |
-| Intervene | A whisper in the victim's language at P2. At P3 an AI agent takes over the call | Sarvam TTS (bulbul:v3), Gemini 2.5 Flash |
-| Respond | Evidence log, shared scam-number list, complaint draft, family alert | n8n (self-hosted), Supabase, Telegram |
-| Watch | One stage view follows the call graph, the scam network and n8n step by step | `audio-bridge/console/stage.html` |
+| Screen | |
+|---|---|
+| ![Victim's phone: whisper and alarm](app/docs/screenshots/app-4-alarm-digital-arrest-hi.png) | ![Stage console following a call](audio-bridge/docs/screenshots/console.png) |
 
-**What it gets right:**
+## Decisions worth knowing
 
-- **Few false alarms.** A delivery agent asking for a gas-delivery code, or your son asking for an OTP from his
-  saved number, stays at P1 with no whisper. A bank OTP, a threat, a secrecy demand or a "galti se bheja"
-  excuse escalates.
-- **Repeat callers.** Once a number is reported it is on the shared list, so the scammer's next call is
-  flagged in its first sentence.
-- **OTP SMS context.** The app reads only the purpose of an incoming OTP SMS (payment, bank login, SIM, …)
-  so the guardian knows what the OTP would unlock.
-- **Eval:** Jev caught 28 of 28 scam calls and named the right type in all 28, with 0 false alarms on 19
-  ordinary calls (`classifier/` eval set).
-
-## Repository layout
-
-Each folder was its own repo during the hackathon. They were merged here with their full git history.
-
-| Folder | What it is | Original repo |
-|---|---|---|
-| [`app/`](app/) | Flutter Android app for the victim: live risk, whispers, alarm, post-call complaint | `chaukanna_app` |
-| [`audio-bridge/`](audio-bridge/) | LiveKit guardian, Sarvam STT, call logs, stage console, robot and AI scam callers, interceptor agent | `chaukanna-audio-bridge` |
-| [`classifier/`](classifier/) | FastAPI verdict service (keywords + Jev + Gemini), scam and trusted lists, eval set | `chaukanna-classifier` |
-| [`incident-responder/`](incident-responder/) | n8n workflows (incident response, console feed), Supabase schema and seeds | `chaukanna-incident-responder` |
-| [`tts-assets/`](tts-assets/) | Generates the whisper clips with Sarvam TTS in hi / en / kn | `tts_asset_generator` |
-| [`deck/`](deck/) | Pitch deck (PDF + PPTX), slide images, the build plan | — |
-| [`media/`](media/) | Demo video, cover image, stage screenshot | — |
-
-Every component follows the same message formats and ports, defined in `CONTRACTS.md` (a copy is in each
-folder).
+- **Two-speed classifier.** A keyword path answers in under 5 ms so the first whisper is never late. A typed verdict from Jev (about 0.3 s) refines it, and Gemini is the fallback.
+- **Whispers are pre-generated.** The Hindi, English and Kannada clips are rendered ahead of time with Sarvam TTS, so a warning plays instantly with no synthesis on the call path.
+- **False alarms are a feature to protect.** A delivery agent asking for a gas-delivery code, or your son asking for an OTP from his saved number, stays quiet. A bank OTP request, a threat or a secrecy demand escalates.
+- **Repeat callers get caught earlier.** Once a number is reported it lands on a shared list, so the next call is flagged in its first sentence.
+- **A human files the complaint.** The 1930 complaint is drafted, never submitted automatically.
 
 ## Run it
 
-You need a LiveKit server, a Sarvam API key, a Gemini key (and optionally a TypeSafe/Jev key), plus n8n and
-Supabase for the response side. Each folder's README covers its own setup. Copy each `.env.example` to `.env`;
-keys are never committed.
+Needs a LiveKit server, a Sarvam key, a Gemini key (Jev optional), plus n8n and Supabase for the response side. Copy each `.env.example` to `.env`; no keys are committed.
 
 ```bash
 cd classifier/classifier_service && pip install -r requirements.txt && python main.py   # :8010
-cd audio-bridge  && pip install -r requirements.txt && demo/stage.sh up    # token server, bridge, stage view
-demo/stage.sh run                 # the four scripted stage calls (delivery, scam, son, redial)
-demo/stage.sh live hi             # or talk to a live AI scammer yourself
+cd audio-bridge && pip install -r requirements.txt && demo/stage.sh up                  # token server, bridge, stage view
+demo/stage.sh run                                                                       # the four scripted calls
 ```
-
-The n8n workflow JSON is in `incident-responder/incident_responder/`; import it and attach your Supabase and
-Telegram credentials. The app builds with `flutter build apk` plus the `--dart-define`s listed in `app/README.md`.
 
 ## Honest limits
 
-- The demo calls are app-to-app over LiveKit. Android blocks third-party apps from recording the other side of
-  an ordinary SIM call (the app's mic is marked `silenced` during a call). Real phone numbers would need call
-  forwarding into a SIP trunk (Exotel / Plivo / Twilio → LiveKit SIP), which is a next step.
-- The 1930 complaint is drafted, never filed automatically. A human confirms it.
-- Telegram family alerts work, but the demo has no real family chat id configured.
+- Demo calls are app-to-app over LiveKit. Android blocks third-party apps from recording the other side of a normal SIM call, so real numbers would need call forwarding into a SIP trunk (Exotel, Plivo or Twilio into LiveKit SIP). That is the next step.
+- The Telegram family alert works, but the demo has no real family chat id configured.
+
+## Repository
+
+| Folder | What it is |
+|---|---|
+| [`app/`](app/) | Flutter Android app for the victim |
+| [`audio-bridge/`](audio-bridge/) | LiveKit guardian, Sarvam STT, stage console, scam-caller robots, interceptor agent |
+| [`classifier/`](classifier/) | FastAPI verdict service, scam and trusted lists, eval set |
+| [`incident-responder/`](incident-responder/) | n8n workflows and the Supabase schema |
+| [`tts-assets/`](tts-assets/) | Whisper clip generator |
+| [`deck/`](deck/) · [`media/`](media/) | Pitch deck, demo video and stills |
+
+Full write-up, with every component's layout and setup: [`docs/DETAILS.md`](docs/DETAILS.md).
+
+Built at Hack Sprint 2026 (MIT Bengaluru, 17 to 18 Oct) by Nikhil, Shreyas, Koustav and Deekshitha (NMIT).
