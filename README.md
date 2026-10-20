@@ -1,5 +1,7 @@
 # Chaukanna (चौकन्ना): live scam-call guardian
 
+![license](https://img.shields.io/badge/license-MIT-lightgrey) ![hackathon](https://img.shields.io/badge/Hack%20Sprint-2026-5a45c9) ![eval](https://img.shields.io/badge/scam%20calls%20caught-28%2F28-3fb950) ![false alarms](https://img.shields.io/badge/false%20alarms-0%2F19-3fb950)
+
 ![Chaukanna](media/cover.png)
 
 **Chaukanna listens to the call with you. When a caller starts a digital-arrest, KYC or OTP script, it whispers a
@@ -14,6 +16,21 @@ live stack, in real time. A robot caller plays a recorded Hindi digital-arrest s
 everything after that is live: Sarvam STT, the classifier, the whispers, the interceptor agent and n8n.
 
 ![Stage view at the end of the demo call](media/stage-view.png)
+
+## Screens
+
+<table>
+  <tr>
+    <td align="center"><img src="app/docs/screenshots/app-1-idle.png" width="190"><br><sub>Idle, guardian on</sub></td>
+    <td align="center"><img src="app/docs/screenshots/app-3-call-rising-pressure.png" width="190"><br><sub>Pressure rising mid-call</sub></td>
+    <td align="center"><img src="app/docs/screenshots/app-4-alarm-digital-arrest-hi.png" width="190"><br><sub>Whisper + alarm (Hindi)</sub></td>
+    <td align="center"><img src="app/docs/screenshots/app-8-post-call-complaint.png" width="190"><br><sub>Drafted 1930 complaint</sub></td>
+  </tr>
+</table>
+
+| Live stage console | n8n incident workflow |
+|---|---|
+| ![Stage console following a call](audio-bridge/docs/screenshots/console.png) | ![n8n incident-response canvas](incident-responder/docs/screenshots/n8n-canvas.png) |
 
 ## The problem
 
