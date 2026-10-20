@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 360" font-family="Inter, system-ui, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c2362f"/></marker>
+  <style>.bg{fill:#fbf6f5}.box{fill:#fff;stroke:#ead2cf;stroke-width:1.5}.hub{fill:#2a1513}.t{font-size:14px;font-weight:600;fill:#2a1513}.s{font-size:11.5px;fill:#7a5c58}.w{fill:#fff}.ws{fill:#ead2cf}.l{stroke:#c2362f;stroke-width:2;fill:none}.k{font-size:11px;font-weight:700;fill:#c2362f}</style></defs>
+  <rect class="bg" width="920" height="360" rx="14"/>
+  <text x="30" y="36" class="t" style="font-size:17px">A call, from first word to filed evidence</text>
+
+  <rect class="box" x="30" y="70" width="150" height="56" rx="9"/><text x="105" y="95" text-anchor="middle" class="t">Caller</text><text x="105" y="112" text-anchor="middle" class="s">the scammer</text>
+  <rect class="box" x="30" y="150" width="150" height="56" rx="9"/><text x="105" y="175" text-anchor="middle" class="t">Victim's phone</text><text x="105" y="192" text-anchor="middle" class="s">Flutter app</text>
+  <rect class="hub" x="215" y="96" width="140" height="84" rx="10"/><text x="285" y="128" text-anchor="middle" class="t w">LiveKit room</text><text x="285" y="148" text-anchor="middle" class="s ws">audio-bridge hears</text><text x="285" y="163" text-anchor="middle" class="s ws">each leg separately</text>
+  <rect class="box" x="390" y="96" width="140" height="84" rx="10"/><text x="460" y="128" text-anchor="middle" class="t">Sarvam STT</text><text x="460" y="148" text-anchor="middle" class="s">Hindi, English, Kannada</text><text x="460" y="163" text-anchor="middle" class="s">4 s chunks</text>
+  <rect class="hub" x="565" y="96" width="150" height="84" rx="10"/><text x="640" y="128" text-anchor="middle" class="t w">Classifier</text><text x="640" y="148" text-anchor="middle" class="s ws">keywords, Jev verdict,</text><text x="640" y="163" text-anchor="middle" class="s ws">Gemini fallback</text>
+  <text x="626" y="209" text-anchor="end" class="k">pressure 0-3, OTP ask, secrecy, known scammer</text>
+
+  <path class="l" d="M180 98 H198 V128 H215" marker-end="url(#a)"/><path class="l" d="M180 178 H198 V148 H215" marker-end="url(#a)"/>
+  <path class="l" d="M355 138 H390" marker-end="url(#a)"/><path class="l" d="M530 138 H565" marker-end="url(#a)"/>
+  <path class="l" d="M640 180 V196"/>
+  <path class="l" d="M165 226 H755"/>
+  <path class="l" d="M640 196 V226"/>
+  <path class="l" d="M165 226 V248" marker-end="url(#a)"/><path class="l" d="M460 226 V248" marker-end="url(#a)"/><path class="l" d="M755 226 V248" marker-end="url(#a)"/>
+
+  <rect class="box" x="30" y="248" width="270" height="88" rx="10"/><text x="165" y="274" text-anchor="middle" class="t">P2: whisper</text><text x="165" y="295" text-anchor="middle" class="s">pre-generated TTS clip in the victim's</text><text x="165" y="311" text-anchor="middle" class="s">language, only they hear it</text>
+  <rect class="box" x="325" y="248" width="270" height="88" rx="10"/><text x="460" y="274" text-anchor="middle" class="t">P3: AI safety agent</text><text x="460" y="295" text-anchor="middle" class="s">joins the call, talks to the victim</text><text x="460" y="311" text-anchor="middle" class="s">only, the scammer is cut off</text>
+  <rect class="box" x="620" y="248" width="270" height="88" rx="10"/><text x="755" y="274" text-anchor="middle" class="t">n8n incident workflow</text><text x="755" y="295" text-anchor="middle" class="s">evidence to Supabase, number blocklisted,</text><text x="755" y="311" text-anchor="middle" class="s">1930 complaint drafted, family alerted</text>
+</svg>

@@ -25,21 +25,7 @@ Digital-arrest scams run on panic. The right response is a checklist (hang up, c
 
 ## How it works
 
-```
-Caller ──┐                                  ┌── Victim's phone (Flutter): whisper + alarm
-         └────────── LiveKit room ──────────┘
-                          │
-              audio-bridge: hears each leg separately, 4 s chunks
-                          │
-                 Sarvam STT (hi / en / kn)
-                          │
-      classifier: keyword fast path + Jev typed verdict, Gemini fallback
-                          │
-       ┌──────────────────┼───────────────────────────┐
-   whisper (P2)    AI safety agent (P3)         n8n incident workflow
-   pre-generated   talks to the victim,         evidence → Supabase, number blocklisted,
-   TTS clip        scammer is cut off           Gemini drafts the 1930 complaint, family alerted
-```
+![Pipeline: caller and victim in a LiveKit room, speech to text, classifier, then whisper, AI safety agent and n8n workflow](docs/pipeline.svg)
 
 | Screen | |
 |---|---|
